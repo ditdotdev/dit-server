@@ -11,6 +11,13 @@ var testShell = tasks.register<Exec>("testShell") {
         }
     }
     commandLine(args)
+    
+    // Skip shell tests in CI environments where ZFS modules are not available
+    onlyIf {
+        val isCI = System.getenv("CI") != null
+        val skipShellTests = System.getProperty("skip.shell.tests") == "true"
+        !isCI && !skipShellTests
+    }
 }
 
 tasks.named("check").configure {
