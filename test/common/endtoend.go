@@ -120,7 +120,7 @@ func (e *EndToEndTest) RunTitanKubernetes(entryPoint string, parameters ...strin
 	if !imageSpecified {
 		image := os.Getenv("TITAN_IMAGE")
 		if image == "" {
-			image = "titandata/titan:latest"
+			image = "datadatdat/titan:latest"
 		}
 		parameters = append(parameters, fmt.Sprintf("titanImage=%s", image))
 	}
@@ -324,7 +324,7 @@ func (e *EndToEndTest) MkdirSsh(path string) error {
 
 func (e *EndToEndTest) StartSsh() error {
 	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"),
-		"--network", e.Identity, "titandata/ssh-test-server:latest").Run()
+		"--network", e.Identity, "datadatdat/ssh-test-server:latest").Run()
 }
 
 func (e *EndToEndTest) StopSsh() error {
