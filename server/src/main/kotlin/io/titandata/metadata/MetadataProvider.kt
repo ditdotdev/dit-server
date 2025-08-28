@@ -278,7 +278,7 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         val uuid = UUID.fromString(volumeSet)
         return Commits.select {
             Commits.volumeSet eq uuid
-        }.count() == 0
+        }.count() == 0L
     }
 
     fun listInactiveVolumeSets(): List<String> {
@@ -398,11 +398,11 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         val id = Commits.insert {
             it[Commits.repo] = repo
             it[Commits.volumeSet] = UUID.fromString(volumeSet)
-            it[sourceCommit] = getCommitSource(volumeSet)
-            it[timestamp] = getTimestamp(commit)
-            it[guid] = commit.id
-            it[metadata] = gson.toJson(commit.properties)
-            it[state] = VolumeState.ACTIVE
+            it[Commits.sourceCommit] = getCommitSource(volumeSet)
+            it[Commits.timestamp] = getTimestamp(commit).toString()
+            it[Commits.guid] = commit.id
+            it[Commits.metadata] = gson.toJson(commit.properties)
+            it[Commits.state] = VolumeState.ACTIVE
         } get Commits.id
         @Suppress("UNCHECKED_CAST")
         val tags = commit.properties["tags"] as Map<String, String>?
@@ -569,8 +569,8 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         Commits.update({
             Commits.id eq id
         }) {
-            it[timestamp] = getTimestamp(commit)
-            it[metadata] = gson.toJson(commit.properties)
+            it[Commits.timestamp] = getTimestamp(commit).toString()
+            it[Commits.metadata] = gson.toJson(commit.properties)
         }
         Tags.deleteWhere {
             Tags.commit eq id
