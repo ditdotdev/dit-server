@@ -27,7 +27,7 @@ import io.titandata.models.Remote
 import io.titandata.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
-@UseExperimental(KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class RemotesApiTest : StringSpec() {
 
     var services = ServiceLocator(mockk())

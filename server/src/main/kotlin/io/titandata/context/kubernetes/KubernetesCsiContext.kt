@@ -39,6 +39,8 @@ import io.titandata.remote.RemoteServer
 import io.titandata.shell.CommandException
 import io.titandata.shell.CommandExecutor
 import java.io.FileReader
+import kotlin.io.path.createTempFile
+import kotlin.io.path.writeText
 import org.slf4j.LoggerFactory
 
 /**
@@ -182,7 +184,7 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         val size = config["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$pvc-$commitId"
 
-        val file = createTempFile()
+        val file = createTempFile().toFile()
         try {
             file.writeText("apiVersion: snapshot.storage.k8s.io/v1alpha1\n" +
                     "kind: VolumeSnapshot\n" +
@@ -220,7 +222,7 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         val name = "$newVolumeSet-$volumeName"
         val snapshotName = "$sourceVolumeSet-$volumeName-$sourceCommit"
 
-        val file = createTempFile()
+        val file = createTempFile().toFile()
         try {
             file.writeText("apiVersion: v1\n" +
                     "kind: PersistentVolumeClaim\n" +

@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.Table
  * is ongoing.
  */
 object Operations : Table("operations") {
-    val id = uuid("id").primaryKey()
+    val id = uuid("id")
     val repo = varchar("repo", 64)
     val metadataOnly = bool("metadata_only")
     val remoteParameters = varchar("remote_parameters", 8192)
@@ -16,4 +16,6 @@ object Operations : Table("operations") {
     val commitId = varchar("commit_id", 64)
     val type = enumerationByName("type", 4, Operation.Type::class)
     val state = enumerationByName("state", 16, Operation.State::class)
+
+    override val primaryKey = PrimaryKey(id)
 }

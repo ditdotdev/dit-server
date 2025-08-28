@@ -96,7 +96,7 @@ class KubernetesRunner() {
     }
 }
 
-fun main(args: Array<String>) {
+fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
     val gson = GsonBuilder().create()
 
     val basePath = System.getProperty("basePath") ?: error("missing basePath property")

@@ -31,7 +31,7 @@ import java.util.UUID
 class DockerZfsContextTest : StringSpec() {
 
     @SpyK
-    var nopProvider = NopRemoteServer()
+    var nopRemoteServer = NopRemoteServer()
 
     @MockK
     lateinit var executor: CommandExecutor
@@ -258,26 +258,26 @@ class DockerZfsContextTest : StringSpec() {
 
         "sync volumes invokes provider volume sync" {
             val op = createRemoteOperation()
-            context.syncVolumes(nopProvider, op,
+            context.syncVolumes(nopRemoteServer, op,
                     listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
                     Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
             verify {
-                nopProvider.syncDataStart(op)
-                nopProvider.syncDataEnd(op, any(), true)
-                nopProvider.syncDataVolume(op, any(), "vol", "/path", "/vol", "/scratch")
+                nopRemoteServer.syncDataStart(op)
+                nopRemoteServer.syncDataEnd(op, any(), true)
+                nopRemoteServer.syncDataVolume(op, any(), "vol", "/path", "/vol", "/scratch")
             }
         }
 
         "failure in sync volumes invokes end with failure flag" {
             val op = createRemoteOperation()
-            every { nopProvider.syncDataVolume(any(), any(), any(), any(), any(), any()) } throws Exception()
+            every { nopRemoteServer.syncDataVolume(any(), any(), any(), any(), any(), any()) } throws Exception()
             shouldThrow<Exception> {
-                context.syncVolumes(nopProvider, op,
+                context.syncVolumes(nopRemoteServer, op,
                         listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
                         Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
             }
             verify {
-                nopProvider.syncDataEnd(op, any(), false)
+                nopRemoteServer.syncDataEnd(op, any(), false)
             }
         }
     }

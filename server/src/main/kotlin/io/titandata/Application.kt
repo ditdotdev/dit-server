@@ -157,7 +157,7 @@ fun Application.mainProvider(services: ServiceLocator) {
 }
 
 @KtorExperimentalAPI
-fun main(args: Array<String>) {
+fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
     val server = embeddedServer(CIO, (System.getProperty("titan.port") ?: "5001").toInt(),
             module = Application::main)
     server.start(wait = true)

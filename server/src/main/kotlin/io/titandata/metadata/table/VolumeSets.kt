@@ -1,7 +1,7 @@
 package io.titandata.metadata.table
 
 import io.titandata.metadata.MetadataProvider
-import org.jetbrains.exposed.dao.UUIDTable
+import org.jetbrains.exposed.dao.id.UUIDTable
 
 /*
  * Volume sets represent one or more volumes that are part of a repository. They always have unique UUIDs, and form

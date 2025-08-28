@@ -1,7 +1,5 @@
 package io.titandata.metadata.table
 
-import io.titandata.metadata.table.Remotes.primaryKey
-import io.titandata.metadata.table.Remotes.references
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
 
@@ -10,7 +8,9 @@ import org.jetbrains.exposed.sql.Table
  * part of the primary key with the commit ID.
  */
 object Tags : Table("tags") {
-    val commit = integer("commit").references(Commits.id, onDelete = ReferenceOption.CASCADE).primaryKey()
-    val key = varchar("key", 64).primaryKey()
+    val commit = integer("commit").references(Commits.id, onDelete = ReferenceOption.CASCADE)
+    val key = varchar("key", 64)
     val value = varchar("value", 64)
+
+    override val primaryKey = PrimaryKey(commit, key)
 }
