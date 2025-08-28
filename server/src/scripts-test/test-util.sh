@@ -21,11 +21,11 @@ util_script=/test/src/scripts/util.sh
 
    export TITAN_IDENTITY=test
    export TITAN_PORT=6001
-   export TITAN_IMAGE=titandata/titan:test
+   export TITAN_IMAGE=datadatdat/titan:test
    source $util_script
    [ $IDENTITY = "test" ]
    [ $PORT = "6001" ]
-   [ $IMAGE = "titandata/titan:test" ]
+   [ $IMAGE = "datadatdat/titan:test" ]
 }
 
 @test "derived variables set correctly" {

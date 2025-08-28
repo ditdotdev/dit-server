@@ -68,6 +68,6 @@ func (s *KubernetesConfigTestSuite) TestKubernetesConfig_002_GetConfiguration() 
 		s.Equal(s.KubeContext, res.Properties["context"])
 		s.Equal(s.StorageClass, res.Properties["storageClass"])
 		s.Equal(s.SnapshotClass, res.Properties["snapshotClass"])
-		s.Equal("titandata/titan:latest", res.Properties["titanImage"])
+		s.Equal("datadatdat/titan:latest", res.Properties["titanImage"])
 	}
 }

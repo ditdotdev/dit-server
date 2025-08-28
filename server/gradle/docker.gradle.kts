@@ -1,6 +1,6 @@
 val imageName = when(project.hasProperty("serverImageName")) {
     true -> project.property("serverImageName")
-    false -> "titandata/titan"
+    false -> "datadatdat/titan"
 }
 
 val titanVersion = when(project.hasProperty("titanVersion")) {
