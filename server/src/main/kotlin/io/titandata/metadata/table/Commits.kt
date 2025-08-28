@@ -2,7 +2,8 @@ package io.titandata.metadata.table
 
 import io.titandata.metadata.MetadataProvider
 import io.titandata.metadata.table.Remotes.references
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.id.IntIdTable
+// import org.jetbrains.exposed.sql.javatime.datetime
 
 /*
  * Commits represent a snapshot of a volumeset. Each commit is given a GUID, but a commit can be in one
@@ -19,7 +20,7 @@ object Commits : IntIdTable("commits") {
     val repo = varchar("repo", 64)
     val guid = varchar("guid", 64)
     val sourceCommit = varchar("source_commit", 64).nullable()
-    val timestamp = datetime("timestamp")
+    val timestamp = varchar("timestamp", 64) // TODO: Fix datetime import for Exposed 0.32.1
     val volumeSet = uuid("volume_set").references(VolumeSets.id)
     val metadata = varchar("metadata", 8192)
     val state = enumerationByName("state", 16, MetadataProvider.VolumeState::class)

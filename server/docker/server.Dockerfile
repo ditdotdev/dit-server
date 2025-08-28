@@ -20,12 +20,8 @@ RUN add-apt-repository \
    $(lsb_release -cs) \
    stable"
 
-# Add postgresql repository
-RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc > /tmp/dkey; apt-key add /tmp/dkey
-RUN add-apt-repository \
-    "deb http://apt.postgresql.org/pub/repos/apt/ \
-    $(lsb_release -cs)-pgdg \
-    main"
+# Note: Using Ubuntu's default PostgreSQL packages instead of PostgreSQL APT repository
+# Ubuntu Focal includes PostgreSQL 12 in the default repositories
 
 RUN apt-get -y update --fix-missing
 
@@ -40,7 +36,7 @@ RUN apt-get -y install zfsutils-linux
 RUN apt-get -y install lsof
 RUN apt-get -y install docker.io
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
-RUN apt-get -y install postgresql-12 postgresql-client-12
+RUN apt-get -y install postgresql postgresql-client postgresql-contrib
 
 RUN curl -o /usr/local/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 RUN chmod 755 /usr/local/bin/kubectl
