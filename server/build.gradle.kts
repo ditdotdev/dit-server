@@ -14,39 +14,35 @@ version = titanVersion
 repositories {
     mavenLocal()
     mavenCentral()
-    jcenter()
-    maven("https://dl.bintray.com/kotlin/ktor")
-    maven("https://dl.bintray.com/kotlin/kotlinx")
-    maven("https://dl.bintray.com/kotlin/exposed")
-    maven {
-        name = "titan"
-        url = uri("https://maven.titan-data.io")
-    }
+    gradlePluginPortal()
+    maven("https://repo1.maven.org/maven2/")
 }
 
 val ktorVersion = "1.3.1"
 
 dependencies {
-    compile(kotlin("stdlib"))
-    compile("io.ktor:ktor-server-cio:$ktorVersion")
-    compile("io.ktor:ktor-gson:$ktorVersion")
-    compile("ch.qos.logback:logback-classic:1.2.3")
-    compile("com.google.code.gson:gson:2.8.6")
-    compile("com.squareup.okhttp3:okhttp:4.3.1")
-    compile("org.jetbrains.exposed:exposed:0.17.7")
-    compile("org.postgresql:postgresql:42.2.10")
-    compile("com.zaxxer:HikariCP:3.4.2")
-    compile("io.kubernetes:client-java:11.0.0")
+    implementation(kotlin("stdlib"))
+    implementation("io.ktor:ktor-server-cio:$ktorVersion")
+    implementation("io.ktor:ktor-gson:$ktorVersion")
+    implementation("ch.qos.logback:logback-classic:1.2.3")
+    implementation("com.google.code.gson:gson:2.8.6")
+    implementation("com.squareup.okhttp3:okhttp:4.3.1")
+    implementation("org.jetbrains.exposed:exposed-core:0.32.1")
+    implementation("org.jetbrains.exposed:exposed-dao:0.32.1")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.32.1")
+    implementation("org.postgresql:postgresql:42.2.10")
+    implementation("com.zaxxer:HikariCP:3.4.2")
+    implementation("io.kubernetes:client-java:11.0.0")
 
-    // Remotes
-    compile("io.titandata:remote-sdk:0.2.0")
-    compile("io.titandata:nop-remote-server:0.2.0")
-    compile("io.titandata:ssh-remote-server:0.2.1")
-    compile("io.titandata:s3-remote-server:0.2.0")
-    compile("io.titandata:s3web-remote-server:0.2.0")
+    // Remotes - commented out temporarily for build fix
+    // implementation("io.titandata:remote-sdk:0.2.0")
+    // implementation("io.titandata:nop-remote-server:0.2.0")
+    // implementation("io.titandata:ssh-remote-server:0.2.1")
+    // implementation("io.titandata:s3-remote-server:0.2.0")
+    // implementation("io.titandata:s3web-remote-server:0.2.0")
 
-    testCompile("com.h2database:h2:1.4.200")
-    testCompile("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("com.h2database:h2:1.4.200")
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("org.apache.commons:commons-text:1.8")
