@@ -36,7 +36,7 @@ import io.titandata.models.Error
 import io.titandata.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
-@UseExperimental(KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class RepositoriesApiTest : StringSpec() {
 
     @MockK

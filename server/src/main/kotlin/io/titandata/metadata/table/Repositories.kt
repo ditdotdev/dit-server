@@ -8,6 +8,8 @@ import org.jetbrains.exposed.sql.Table
  * (only volumes and/or volumesets have such state), so these exist entirely within titan metadata.
  */
 object Repositories : Table() {
-    val name = varchar("name", 64).primaryKey()
+    val name = varchar("name", 64)
     val metadata = varchar("metadata", 8192)
+
+    override val primaryKey = PrimaryKey(name)
 }

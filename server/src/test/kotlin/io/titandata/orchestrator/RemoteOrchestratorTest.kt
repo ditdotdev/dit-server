@@ -35,10 +35,10 @@ class RemoteOrchestratorTest : StringSpec() {
     val params = RemoteParameters("nop")
 
     @SpyK
-    var nopProvider = NopRemoteServer()
+    var nopRemoteServer = NopRemoteServer()
 
     @SpyK
-    var sshProvider = SshRemoteServer()
+    var sshRemoteServer = SshRemoteServer()
 
     @InjectMockKs
     @OverrideMockKs
@@ -54,8 +54,8 @@ class RemoteOrchestratorTest : StringSpec() {
             services.metadata.createRepository(Repository(name = "foo"))
         }
         MockKAnnotations.init(this)
-        services.setRemoteProvider("nop", nopProvider)
-        services.setRemoteProvider("ssh", sshProvider)
+        services.setRemoteProvider("nop", nopRemoteServer)
+        services.setRemoteProvider("ssh", sshRemoteServer)
     }
 
     override fun afterTest(testCase: TestCase, result: TestResult) {
@@ -227,7 +227,7 @@ class RemoteOrchestratorTest : StringSpec() {
         }
 
         "list remote commits succeeds" {
-            every { nopProvider.listCommits(any(), any(), any()) } returns
+            every { nopRemoteServer.listCommits(any(), any(), any()) } returns
                     listOf("one" to emptyMap(), "two" to emptyMap())
             services.remotes.addRemote("foo", Remote("nop", "origin"))
             val result = services.remotes.listRemoteCommits("foo", "origin", params, null)
@@ -237,7 +237,7 @@ class RemoteOrchestratorTest : StringSpec() {
         }
 
         "list remote commits fails with invalid parameters" {
-            every { nopProvider.listCommits(any(), any(), any()) } returns
+            every { nopRemoteServer.listCommits(any(), any(), any()) } returns
                     listOf("one" to emptyMap(), "two" to emptyMap())
             services.remotes.addRemote("foo", Remote("nop", "origin"))
             shouldThrow<IllegalArgumentException> {
@@ -281,7 +281,7 @@ class RemoteOrchestratorTest : StringSpec() {
             services.remotes.addRemote("foo", Remote("ssh", "origin", mapOf("address" to "host", "username" to "user",
                     "path" to "/path", "port" to 8022)))
             val slot = slot<Map<String, Any>>()
-            every { sshProvider.listCommits(capture(slot), any(), any()) } returns emptyList()
+            every { sshRemoteServer.listCommits(capture(slot), any(), any()) } returns emptyList()
             val result = services.remotes.listRemoteCommits("foo", "origin", RemoteParameters("ssh", mapOf("password" to "pass")), null)
             result.size shouldBe 0
             slot.captured["port"] shouldBe 8022
@@ -289,7 +289,7 @@ class RemoteOrchestratorTest : StringSpec() {
         }
 
         "get remote commit succeeds" {
-            every { nopProvider.getCommit(any(), any(), any()) } returns emptyMap()
+            every { nopRemoteServer.getCommit(any(), any(), any()) } returns emptyMap()
             services.remotes.addRemote("foo", Remote("nop", "origin"))
             val result = services.remotes.getRemoteCommit("foo", "origin", params, "id")
             result.id shouldBe "id"
@@ -307,7 +307,7 @@ class RemoteOrchestratorTest : StringSpec() {
             services.remotes.addRemote("foo", Remote("ssh", "origin", mapOf("address" to "host", "username" to "user",
                     "path" to "/path", "port" to 8022)))
             val slot = slot<Map<String, Any>>()
-            every { sshProvider.getCommit(capture(slot), any(), any()) } returns emptyMap()
+            every { sshRemoteServer.getCommit(capture(slot), any(), any()) } returns emptyMap()
             val result = services.remotes.getRemoteCommit("foo", "origin", RemoteParameters("ssh", mapOf("password" to "pass")), "id")
             result.id shouldBe "id"
             slot.captured["port"] shouldBe 8022
@@ -315,7 +315,7 @@ class RemoteOrchestratorTest : StringSpec() {
         }
 
         "get remote commit fails with invalid parameters" {
-            every { nopProvider.getCommit(any(), any(), any()) } returns emptyMap()
+            every { nopRemoteServer.getCommit(any(), any(), any()) } returns emptyMap()
             services.remotes.addRemote("foo", Remote("nop", "origin"))
             shouldThrow<IllegalArgumentException> {
                 services.remotes.getRemoteCommit("foo", "origin", RemoteParameters("nop", mapOf("a" to "b")), "id")

@@ -27,7 +27,7 @@ import io.titandata.context.docker.DockerZfsContext
 import io.titandata.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
-@UseExperimental(KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class VolumesApiTest : StringSpec() {
 
     lateinit var vs: String

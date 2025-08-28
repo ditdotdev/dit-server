@@ -47,7 +47,7 @@ import java.util.UUID
 import kotlinx.coroutines.time.delay
 import org.jetbrains.exposed.sql.transactions.transaction
 
-@UseExperimental(KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class OperationsApiTest : StringSpec() {
 
     @SpyK

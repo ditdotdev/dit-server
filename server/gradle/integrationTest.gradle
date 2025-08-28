@@ -1,3 +1,10 @@
+configurations {
+    integrationTestImplementation.extendsFrom implementation
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom runtimeOnly
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 sourceSets {
     integrationTest {
         kotlin.srcDir 'src/integration-test/kotlin'
@@ -8,13 +15,8 @@ sourceSets {
 }
 
 dependencies {
-    integrationTestCompile sourceSets.main.output
-    integrationTestCompile sourceSets.test.output
-    integrationTestCompile configurations.compile
-    integrationTestCompile configurations.testCompile
-    integrationTestRuntime configurations.runtime
-    integrationTestRuntime configurations.testRuntime
-    integrationTestRuntime configurations.testImplementation
+    integrationTestImplementation sourceSets.main.output
+    integrationTestImplementation sourceSets.test.output
 }
 
 task integrationTest(type: Test) {
@@ -25,11 +27,9 @@ task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 
-    binResultsDir = file("$buildDir/integration-test-results/binary/integrationTest")
-
     reports {
-        html.destination = file("$buildDir/reports/integration-test")
-        junitXml.destination = file("$buildDir/integration-test-results")
+        html.outputLocation = file("$buildDir/reports/integration-test")
+        junitXml.outputLocation = file("$buildDir/integration-test-results")
     }
 
     testLogging {

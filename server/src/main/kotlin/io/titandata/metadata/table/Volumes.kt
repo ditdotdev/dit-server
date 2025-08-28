@@ -1,8 +1,6 @@
 package io.titandata.metadata.table
 
 import io.titandata.metadata.MetadataProvider
-import io.titandata.metadata.table.Remotes.primaryKey
-import io.titandata.metadata.table.Remotes.references
 import org.jetbrains.exposed.sql.Table
 
 /*
@@ -15,9 +13,11 @@ import org.jetbrains.exposed.sql.Table
  * that all volumes are explicitly deleted prior to deleting the volumeset.
  */
 object Volumes : Table("volumes") {
-    val volumeSet = uuid("volume_set").references(VolumeSets.id).primaryKey()
-    val name = varchar("name", 64).primaryKey()
+    val volumeSet = uuid("volume_set").references(VolumeSets.id)
+    val name = varchar("name", 64)
     val metadata = varchar("metadata", 8192)
     val config = varchar("config", 8192)
     val state = enumerationByName("state", 16, MetadataProvider.VolumeState::class)
+
+    override val primaryKey = PrimaryKey(volumeSet, name)
 }
