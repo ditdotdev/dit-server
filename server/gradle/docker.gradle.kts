@@ -33,14 +33,14 @@ var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
 var tagDockerServer = tasks.register<Exec>("tagDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:latest", "$imageName:${project.version}")
+    commandLine("docker", "tag", "$imageName:$titanVersion", "$imageName:${project.version}")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 
 var tagLocalDockerServer = tasks.register<Exec>("tagLocalDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:latest", "titan:latest")
+    commandLine("docker", "tag", "$imageName:$titanVersion", "titan:latest")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 
