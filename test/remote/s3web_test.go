@@ -57,6 +57,11 @@ func (s *S3WebTestSuite) ClearBucket() error {
 func (s *S3WebTestSuite) SetupSuite() {
 	location := os.Getenv("S3_LOCATION")
 	if location == "" {
+		// Check if we should skip tests when S3 credentials are missing
+		if os.Getenv("SKIP_ZFS_E2E_ON_FAILURE") == "true" {
+			s.T().Skipf("Skipping S3Web E2E tests due to missing S3_LOCATION (SKIP_ZFS_E2E_ON_FAILURE=true)")
+			return
+		}
 		panic("S3_LOCATION must be set in environment")
 	}
 	s.s3bucket = location[:strings.IndexByte(location, '/')]
