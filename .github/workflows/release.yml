@@ -52,4 +52,4 @@ jobs:
       - name: Publish docker image
         run: |
           docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
-          ./gradlew publishDockerVersion publishDockerLatest -PserverImageName=datadatdat/titan -PtitanVersion=${GITHUB_REF#refs/tags/}
+          ./gradlew publishDockerVersion tagDockerLatest publishDockerLatest -PserverImageName=datadatdat/titan -PtitanVersion=${GITHUB_REF#refs/tags/}
