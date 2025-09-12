@@ -116,6 +116,15 @@ function get_filesystem_zfs_version() {
 #
 function load_zfs_module() {
   local directory=$1
+  
+  # First check if ZFS is already built into the kernel
+  if grep -q "^nodev.*zfs" /proc/filesystems 2>/dev/null; then
+    echo "ZFS is built into the kernel"
+    check_zfs_device  # Ensure /dev/zfs exists
+    return 0
+  fi
+  
+  # Try loading as a module
   depmod -b $directory >/dev/null 2>&1
   modprobe -d $directory zfs >/dev/null 2>&1
 }

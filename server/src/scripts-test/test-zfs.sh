@@ -71,7 +71,8 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   function depmod() { /bin/true; }
   function modprobe() { /bin/true; }
-  export -f depmod modprobe
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modprobe grep
   run load_zfs_module /system/lib
   [ $status -eq 0 ]
   [ -z "$output" ]
@@ -81,7 +82,8 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   function depmod() { /bin/true; }
   function modprobe() { /bin/false; }
-  export -f depmod modprobe
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modprobe grep
   run load_zfs_module /system/lib
   [ $status -eq 1 ]
   [ -z "$output" ]
@@ -91,10 +93,27 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   function depmod() { /bin/false; }
   function modprobe() { /bin/true; }
-  export -f depmod modprobe
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modprobe grep
   run load_zfs_module /system/lib
   [ $status -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "load zfs module succeeds with built-in ZFS" {
+  source $zfs_script
+  function grep() { 
+    if [[ "$*" == *"/proc/filesystems"* ]]; then
+      return 0  # ZFS is built-in
+    else
+      return 1
+    fi
+  }
+  function check_zfs_device() { /bin/true; }
+  export -f grep check_zfs_device
+  run load_zfs_module /system/lib
+  [ $status -eq 0 ]
+  [[ "$output" == *"ZFS is built into the kernel"* ]]
 }
 
 @test "exact minimum zfs version is compatible" {
@@ -250,7 +269,8 @@ util_script=/test/src/scripts/util.sh
   function depmod() { /bin/true; }
   function modinfo() { echo "0.8.0"; }
   function modprobe() { /bin/false; }
-  export -f depmod modinfo modprobe
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modinfo modprobe grep
   run load_zfs /system/lib system
   [ $status -eq 1 ]
   echo $output
@@ -267,7 +287,8 @@ util_script=/test/src/scripts/util.sh
   function depmod() { /bin/true; }
   function modinfo() { echo "0.8.0"; }
   function modprobe() { /bin/true; }
-  export -f depmod modinfo modprobe
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modinfo modprobe grep
   mkdir -p $testdir
   run load_zfs /system/lib system $testdir
   [ $status -eq 0 ]
@@ -376,7 +397,8 @@ util_script=/test/src/scripts/util.sh
   function depmod() { /bin/true; }
   function modprobe() { /bin/false; }
   function curl() { /bin/true; }
-  export -f uname tar depmod modprobe curl
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f uname tar depmod modprobe curl grep
 
   mkdir -p $testdir/dst
   touch $testdir/foo.tar.gz
@@ -654,7 +676,8 @@ util_script=/test/src/scripts/util.sh
   function depmod() { /bin/true; }
   function modprobe() { /bin/false; }
   function docker() { /bin/true; }
-  export -f depmod modprobe docker
+  function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
+  export -f depmod modprobe docker grep
 
   local testdir=/tmp/test.$$
   mkdir -p $testdir
