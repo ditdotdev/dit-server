@@ -118,44 +118,44 @@ util_script=/test/src/scripts/util.sh
 
 @test "exact minimum zfs version is compatible" {
   source $zfs_script
-  run zfs_version_compatible "0.8.0"
+  run zfs_version_compatible "2.0.0"
   [ $status -eq 0 ]
 }
 
 @test "patch zfs version is ignored" {
   source $zfs_script
-  run zfs_version_compatible "0.8.1"
+  run zfs_version_compatible "2.0.1"
   [ $status -eq 0 ]
 }
 
 @test "zfs version qualifier is ignored" {
   source $zfs_script
-  run zfs_version_compatible "0.8.2-rc5"
+  run zfs_version_compatible "2.1.5-rc5"
   [ $status -eq 0 ]
 }
 
 @test "greater minor version is compatible" {
   source $zfs_script
-  run zfs_version_compatible "0.9.2-rc5"
+  run zfs_version_compatible "2.2.0-rc5"
   [ $status -eq 0 ]
 }
 
 @test "lesser minor version is incompatible" {
   source $zfs_script
-  run zfs_version_compatible "0.7.1"
+  run zfs_version_compatible "1.9.1"
   [ $status -eq 1 ]
 }
 
 @test "older patch version is incompatible" {
   source $zfs_script
-  run zfs_version_compatible "0.8.8"
+  run zfs_version_compatible "1.9.8"
   echo $output
   [ $status -eq 1 ]
 }
 
 @test "different major version is incompatible" {
   source $zfs_script
-  run zfs_version_compatible "1.8.0"
+  run zfs_version_compatible "3.0.0"
   [ $status -eq 1 ]
 }
 
@@ -167,13 +167,13 @@ util_script=/test/src/scripts/util.sh
 
 @test "exact version matches" {
   source $zfs_script
-  run zfs_version_matches "0.8.2-1"
+  run zfs_version_matches "2.1.5-1"
   [ $status -eq 0 ]
 }
 
 @test "exact version incompatible" {
   source $zfs_script
-  run zfs_version_matches "0.8.1-1"
+  run zfs_version_matches "2.1.4-1"
   [ $status -eq 1 ]
 }
 
@@ -197,7 +197,7 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   source $util_script
   function lsmod() { echo "zfs "; }
-  function cat() { echo "0.7.0"; }
+  function cat() { echo "1.9.0"; }
   export -f lsmod cat
   run check_running_zfs
   [ $status -eq 1 ]
@@ -211,7 +211,7 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   source $util_script
   function lsmod() { echo "zfs "; }
-  function cat() { echo "0.8.0"; }
+  function cat() { echo "2.1.5"; }
   export -f lsmod cat
   run check_running_zfs
   [ $status -eq 0 ]
@@ -267,7 +267,7 @@ util_script=/test/src/scripts/util.sh
   source $zfs_script
   source $util_script
   function depmod() { /bin/true; }
-  function modinfo() { echo "0.8.0"; }
+  function modinfo() { echo "2.1.5"; }
   function modprobe() { /bin/false; }
   function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
   export -f depmod modinfo modprobe grep
@@ -285,7 +285,7 @@ util_script=/test/src/scripts/util.sh
   source $util_script
   local testdir=/tmp/test.$$
   function depmod() { /bin/true; }
-  function modinfo() { echo "0.8.0"; }
+  function modinfo() { echo "2.1.5"; }
   function modprobe() { /bin/true; }
   function grep() { return 1; }  # Mock grep to return false for built-in ZFS check
   export -f depmod modinfo modprobe grep
