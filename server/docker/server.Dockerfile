@@ -50,13 +50,10 @@ COPY src/scripts/* /titan/
 
 RUN /titan/get-userland
 
-# Build Specific Titan docker proxy instead of download to prevent arch issues
+# Download pre-built docker-volume-proxy binary with unified volume naming fix from S3
+# TODO: Update CDN to point to datadatdat organization and use CDN URL instead
 #
-RUN curl -O -L "https://golang.org/dl/go1.16.8.linux-$(dpkg --print-architecture).tar.gz"
-RUN tar -C /usr/local -xzf go1.16.8.linux-$(dpkg --print-architecture).tar.gz
-RUN git clone https://github.com/titan-data/titan-docker-proxy
-RUN cd titan-docker-proxy && PATH=/usr/local/go/bin/:$PATH go mod download && PATH=/usr/local/go/bin/:$PATH go build ./cmd/docker-volume-proxy
-RUN cp /titan-docker-proxy/docker-volume-proxy /titan/docker-volume-proxy
+RUN curl -fssL https://datadatdat-maven.s3.amazonaws.com/titan-docker-proxy/docker-volume-proxy -o /titan/docker-volume-proxy
 RUN chmod 755 /titan/docker-volume-proxy
 
 RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/titan"' >> /etc/bash.bashrc

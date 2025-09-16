@@ -52,6 +52,29 @@ function mount_database() {
 }
 
 #
+# Fix database permissions and handle version incompatibilities
+#
+function fix_database_permissions() {
+  local db_dir=$1
+  
+  # Ensure proper ownership of database directory
+  echo "Fixing database directory ownership"
+  chown -R postgres:postgres $db_dir
+  
+  # Check for PostgreSQL version incompatibility
+  if [[ -f $db_dir/PG_VERSION ]]; then
+    local db_version=$(cat $db_dir/PG_VERSION)
+    local server_version="12"
+    if [[ "$db_version" != "$server_version" ]]; then
+      echo "WARNING: Database version $db_version incompatible with server version $server_version"
+      echo "Clearing database directory for fresh initialization"
+      rm -rf $db_dir/*
+      chown postgres:postgres $db_dir
+    fi
+  fi
+}
+
+#
 # Initialize the database
 #
 function start_database() {
@@ -89,6 +112,7 @@ function start_database() {
 DB_DIR=/var/lib/$TITAN_IDENTITY/mnt/_db
 if [[ $TITAN_CONTEXT = "docker-zfs" ]]; then
   mount_database $DB_DIR
+  fix_database_permissions $DB_DIR
   start_database $DB_DIR
 
   # Forward docker volume requests to titan-server
