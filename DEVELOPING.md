@@ -11,6 +11,27 @@ There are a few key components of the overall architecture:
      docker volume API.
   * `titan` - A Docker image that provides a runtime environment for `titan-server`, as well as
      the means to execute ZFS commands within that container.
+
+## Docker Images
+
+The titan system uses multiple Docker images:
+
+1. **`datadatdat/titan:latest`** - The main server image containing:
+   - Titan server JAR and runtime environment
+   - ZFS utilities and kernel module support
+   - PostgreSQL database for metadata storage
+   - Docker-in-Docker capabilities
+   - docker-volume-proxy binary for volume management
+
+2. **`datadatdat/zfs-builder:latest`** - ZFS module builder used when:
+   - No precompiled ZFS modules exist for the current kernel
+   - Custom ZFS modules need to be compiled for compatibility
+   - Automatic fallback when zfs-releases doesn't have matching binaries
+
+3. **`datadatdat/ssh-test-server:latest`** - Testing infrastructure:
+   - SSH server for end-to-end remote testing
+   - Only pulled during test execution
+   - Not required for normal titan operation
       
 Of these, the docker image is by far the most complicated, as we have to go through several
 different hoops to get ZFS usable within containers on arbitrary host systems.
@@ -59,8 +80,8 @@ To do this, we have to accomplish a few key things:
 The first of these is covered extensively in the the comments to the
 [launch script](server/src/scripts/launch), where we try to either leverage existing ZFS modules,
 install pre-built ones, or build new ones on the fly. We first try to pull precompiled kernel binaries from
-[zfs-releases](https://github.com/titan-data/zfs-releases), and fall back to using
-[zfs-builder](https://github.com/titan-data/zfs-builder) to build custom modules if no
+[zfs-releases](https://github.com/titan-data/zfs-releases), and fall back to using the
+`datadatdat/zfs-builder:latest` Docker image to build custom modules if no
 precompiled binaries can be found.
 
 The second piece requires that we leverage an external volume (`titan-data`) to store any ZFS
