@@ -101,16 +101,33 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    private fun convertRepository(it: ResultRow) = Repository(
-            name = it[Repositories.name],
-            properties = gson.fromJson(it[Repositories.metadata], object : TypeToken<Map<String, Any>>() {}.type)
-    )
+    private fun convertRepository(it: ResultRow): Repository {
+        val name = it[Repositories.name]
+        val metadata = it[Repositories.metadata]
+        println("DEBUG convertRepository: name=$name, metadata='$metadata'")
+        val properties: Map<String, Any> = if (metadata == null || metadata == "null") {
+            println("DEBUG convertRepository: metadata is null or 'null', using empty map")
+            emptyMap()
+        } else {
+            try {
+                gson.fromJson(metadata, object : TypeToken<Map<String, Any>>() {}.type) as? Map<String, Any> ?: emptyMap()
+            } catch (e: Exception) {
+                println("DEBUG convertRepository: failed to parse metadata '$metadata', using empty map: ${e.message}")
+                emptyMap()
+            }
+        }
+        println("DEBUG convertRepository: parsed_properties=$properties")
+        return Repository(name = name, properties = properties)
+    }
 
     fun createRepository(repo: Repository) {
+        val safeProperties = repo.properties ?: emptyMap<String, Any>()
+        val serialized = gson.toJson(safeProperties)
+        println("DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, safeProperties=$safeProperties, serialized='$serialized'")
         try {
             Repositories.insert {
                 it[name] = repo.name
-                it[metadata] = gson.toJson(repo.properties)
+                it[metadata] = serialized
             }
         } catch (e: ExposedSQLException) {
             throw ObjectExistsException("repository '${repo.name}' already exists")
