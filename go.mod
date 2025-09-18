@@ -4,7 +4,7 @@ require (
 	github.com/antihax/optional v1.0.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/google/uuid v1.6.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/titan-data/titan-client-go v0.1.1
 	golang.org/x/crypto v0.36.0
 	k8s.io/api v0.34.1
