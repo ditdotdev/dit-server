@@ -2,7 +2,7 @@ module github.com/titan-data/titan-server
 
 require (
 	github.com/antihax/optional v1.0.0
-	github.com/aws/aws-sdk-go v1.27.0
+	github.com/aws/aws-sdk-go v1.55.8
 	github.com/google/uuid v1.1.1
 	github.com/stretchr/testify v1.4.0
 	github.com/titan-data/titan-client-go v0.1.1
