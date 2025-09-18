@@ -3,7 +3,7 @@
 ![](https://github.com/titan-data/titan-server/workflows/Nightly%20Tests/badge.svg)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/titan-data/titan-server)
 
-<!-- Test AWS credentials fix - PR5 -->
+<!-- Test AWS credentials fix - PR7 -->
 
 This repository contains the docker container that is used by the
 [Titan](https://github.com/titan-data/titan) data management tool. This docker container
