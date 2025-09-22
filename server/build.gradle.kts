@@ -41,15 +41,16 @@ dependencies {
     implementation("org.postgresql:postgresql:42.2.10")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("io.kubernetes:client-java:11.0.0")
+    implementation("io.titandata:command-executor:0.1.1")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("io.titandata:remote-sdk:0.2.1")
-        implementation("io.titandata:nop-remote-server:0.2.0")
-        implementation("io.titandata:ssh-remote-server:0.2.1")
-        implementation("io.titandata:s3-remote-server:0.2.0")
-        implementation("io.titandata:s3web-remote-server:0.2.0")
+        implementation("io.titandata:remote-sdk:0.2.2")
+        implementation("io.titandata:nop-remote-server:0.2.2")
+        implementation("io.titandata:ssh-remote-server:0.2.2")
+        implementation("io.titandata:s3-remote-server:0.2.1")
+        implementation("io.titandata:s3web-remote-server:0.2.2")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")

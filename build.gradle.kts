@@ -9,7 +9,7 @@ buildscript {
 
     dependencies {
         classpath("com.github.ben-manes:gradle-versions-plugin:0.27.0")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.22")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")
     }
 }
 
@@ -29,10 +29,10 @@ allprojects {
     apply(plugin = "com.github.ben-manes.versions")
 
     tasks.withType<KotlinCompile>().configureEach {
-        kotlinOptions {
-            jvmTarget = "1.8"
-            allWarningsAsErrors = false  // Temporarily disabled for Exposed 0.32.1 upgrade
-            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+            allWarningsAsErrors.set(false)  // Temporarily disabled for Exposed 0.32.1 upgrade
+            freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
         }
     }
 
