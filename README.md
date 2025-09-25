@@ -11,6 +11,14 @@ project and community, see [titan-data.io](https://titan-data.io).
 
 This is an internal dependency of Titan, and should never need to be run by itself.
 
+## CI/CD Pipeline
+
+This repository includes a comprehensive Pull Request 2 workflow with:
+- Cross-platform testing (Ubuntu, Windows, macOS)
+- Multi-version Go support (1.21, 1.22, 1.23)
+- Security scanning and code quality checks
+- Coverage reporting and performance benchmarks
+
 ## Contributing
 
 The ZFS builder project follows the Titan community best practices:
