@@ -150,9 +150,9 @@ jobs:
         run: go mod download
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.5.0
+          version: latest
           working-directory: .
           args: --config .golangci.yml --timeout 5m
 
