@@ -98,7 +98,7 @@ func TestKubernetesWorkflowTestSuite(t *testing.T) {
 func (s *KubernetesWorkflowTestSuite) WaitForPod(name string) error {
 	ready := false
 	for ok := true; ok; ok = !ready {
-		res, err := s.Clientset.CoreV1().Pods(s.namespace).Get(name, apiV1.GetOptions{})
+		res, err := s.Clientset.CoreV1().Pods(s.namespace).Get(context.TODO(), name, apiV1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (s *KubernetesWorkflowTestSuite) WaitForPod(name string) error {
 }
 
 func (s *KubernetesWorkflowTestSuite) LaunchPod(name string, claim string) error {
-	_, err := s.Clientset.CoreV1().Pods(s.namespace).Create(&coreV1.Pod{
+	_, err := s.Clientset.CoreV1().Pods(s.namespace).Create(context.TODO(), &coreV1.Pod{
 		ObjectMeta: apiV1.ObjectMeta{
 			Name: name,
 		},
@@ -147,7 +147,7 @@ func (s *KubernetesWorkflowTestSuite) LaunchPod(name string, claim string) error
 				},
 			}},
 		},
-	})
+	}, apiV1.CreateOptions{})
 	return err
 }
 
@@ -192,7 +192,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_012_LaunchPod() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_013_WriteData() {
-	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo one > /data/out; sync; sleep 1;").Run()
+	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo one > /data/out; sync; sleep 1;").Run() // #nosec G204 - controlled kubectl command in test
 	s.e.NoError(err)
 }
 
@@ -227,12 +227,12 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_021_CommitStatus() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_022_UpdateData() {
-	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo two > /data/out; sync; sleep 1;").Run()
+	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo two > /data/out; sync; sleep 1;").Run() // #nosec G204 - controlled kubectl command in test
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_023_DeletePod() {
-	err := exec.Command("kubectl", "delete", "pod", "--grace-period=0", "--force", s.pod1).Run()
+	err := exec.Command("kubectl", "delete", "pod", "--grace-period=0", "--force", s.pod1).Run() // #nosec G204 - controlled kubectl command in test
 	s.e.NoError(err)
 }
 
@@ -254,14 +254,14 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_031_LaunchNewPod() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_032_VerifyContents() {
-	out, err := exec.Command("kubectl", "exec", s.pod2, "cat", "/data/out").Output()
+	out, err := exec.Command("kubectl", "exec", s.pod2, "cat", "/data/out").Output() // #nosec G204 - controlled kubectl command in test
 	if s.e.NoError(err) {
 		s.Equal("one", strings.TrimSpace(string(out)))
 	}
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_033_DeleteClonedPod() {
-	err := exec.Command("kubectl", "delete", "pod", "--grace-period=0", "--force", s.pod2).Run()
+	err := exec.Command("kubectl", "delete", "pod", "--grace-period=0", "--force", s.pod2).Run() // #nosec G204 - controlled kubectl command in test
 	s.e.NoError(err)
 }
 

@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const dockerZfsContext = "docker-zfs"
+
 /*
  * Utility class for managing endtoend tests of titan-server. There are two types of
  * containers we care about: the titan server container and a remote SSH container. The titan
@@ -102,7 +104,7 @@ func (e *EndToEndTest) RunTitanDocker(entryPoint string, daemon bool) error {
 		"-e", fmt.Sprintf("TITAN_PORT=%d", e.Port),
 		e.Image, "/bin/bash", fmt.Sprintf("/titan/%s", entryPoint))
 
-	return exec.Command("docker", args...).Run()
+	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
 }
 
 /*
@@ -136,18 +138,18 @@ func (e *EndToEndTest) RunTitanKubernetes(entryPoint string, parameters ...strin
 		fmt.Sprintf("/titan/%s", entryPoint),
 	}
 
-	return exec.Command("docker", args...).Run()
+	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
 }
 
 /*
  * Start the server depending on the context type.
  */
 func (e *EndToEndTest) StartServer(parameters ...string) error {
-	err := exec.Command("docker", "volume", "create", fmt.Sprintf("%s-data", e.Identity)).Run()
+	err := exec.Command("docker", "volume", "create", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204 - controlled docker command in test
 	if err != nil {
 		return err
 	}
-	if e.Context == "docker-zfs" {
+	if e.Context == dockerZfsContext {
 		return e.RunTitanDocker("launch", true)
 	} else {
 		return e.RunTitanKubernetes("run", parameters...)
@@ -166,7 +168,7 @@ func (e *EndToEndTest) GetContainer(t string) string {
  */
 func (e *EndToEndTest) GetPrimaryContainer() string {
 	var containerType string
-	if e.Context == "docker-zfs" {
+	if e.Context == dockerZfsContext {
 		containerType = "launch"
 	} else {
 		containerType = "server"
@@ -187,11 +189,11 @@ func (e *EndToEndTest) WaitForServer() error {
 		} else {
 			tried++
 			if tried == waitRetries {
-				logs, err := exec.Command("docker", "logs", e.GetPrimaryContainer()).CombinedOutput()
+				logs, err := exec.Command("docker", "logs", e.GetPrimaryContainer()).CombinedOutput() // #nosec G204 - controlled docker logs command in test
 				if err != nil {
 					return err
 				}
-				return errors.New(fmt.Sprintf("timeoed out waiting for server to start: %s", logs))
+				return fmt.Errorf("timeoed out waiting for server to start: %s", logs)
 			}
 			time.Sleep(time.Duration(waitTimeout) * time.Second)
 		}
@@ -203,32 +205,32 @@ func (e *EndToEndTest) WaitForServer() error {
  * Restart the server. This only works for docker-zfs.
  */
 func (e *EndToEndTest) RestartServer() error {
-	return exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run()
+	return exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204 - controlled docker rm command in test
 }
 
 /*
  * Stop the server completely, including the launch container for docker-zfs.
  */
 func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
-	if e.Context == "docker-zfs" {
-		err := exec.Command("docker", "rm", "-f", e.GetContainer("launch")).Run()
+	if e.Context == dockerZfsContext {
+		err := exec.Command("docker", "rm", "-f", e.GetContainer("launch")).Run() // #nosec G204 - controlled docker rm command in test
 		if err != nil && !ignoreErrors {
 			return err
 		}
 	}
-	err := exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run()
+	err := exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204 - controlled docker rm command in test
 	if err != nil && !ignoreErrors {
 		return err
 	}
 
-	if e.Context == "docker-zfs" {
+	if e.Context == dockerZfsContext {
 		err = e.RunTitanDocker("teardown", false)
 		if err != nil && !ignoreErrors {
 			return err
 		}
 	}
 
-	err = exec.Command("docker", "volume", "rm", fmt.Sprintf("%s-data", e.Identity)).Run()
+	err = exec.Command("docker", "volume", "rm", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204 - controlled docker command in test
 	if err != nil && !ignoreErrors {
 		return err
 	}
@@ -253,7 +255,7 @@ func (e *EndToEndTest) GetVolumePath(repo string, volume string) (string, error)
 func (e *EndToEndTest) ExecServer(args ...string) (string, error) {
 	fullArgs := []string{"exec", e.GetContainer("server")}
 	fullArgs = append(fullArgs, args...)
-	out, err := exec.Command("docker", fullArgs...).Output()
+	out, err := exec.Command("docker", fullArgs...).Output() // #nosec G204 - controlled docker command in test
 	if err != nil {
 		return "", err
 	}
@@ -270,7 +272,7 @@ func (e *EndToEndTest) WriteFile(repo string, volume string, filename string, co
 		return err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	return exec.Command("docker", "exec", e.GetContainer("server"), "sh", "-c",
+	return exec.Command("docker", "exec", e.GetContainer("server"), "sh", "-c", // #nosec G204 - controlled docker exec command in test
 		fmt.Sprintf("echo -n \"%s\" > %s", content, path)).Run()
 }
 
@@ -283,7 +285,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
 		return "", err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	out, err := exec.Command("docker", "exec", e.GetContainer("server"), "cat", path).Output()
+	out, err := exec.Command("docker", "exec", e.GetContainer("server"), "cat", path).Output() // #nosec G204 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -294,7 +296,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
  * Check to see whether the given path exists on the server
  */
 func (e *EndToEndTest) PathExists(path string) bool {
-	err := exec.Command("docker", "exec", e.GetContainer("server"), "ls", path).Run()
+	err := exec.Command("docker", "exec", e.GetContainer("server"), "ls", path).Run() // #nosec G204 - controlled docker command in test
 	return err != nil
 }
 
@@ -302,12 +304,12 @@ func (e *EndToEndTest) PathExists(path string) bool {
  * Write to a file on the SSH server.
  */
 func (e *EndToEndTest) WriteFileSsh(path string, content string) error {
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "sh", "-c",
+	return exec.Command("docker", "exec", e.GetContainer("ssh"), "sh", "-c", // #nosec G204 - controlled docker exec command in test
 		fmt.Sprintf("echo \"%s\" > %s", content, path)).Run()
 }
 
 func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
-	out, err := exec.Command("docker", "exec", e.GetContainer("ssh"), "cat", path).Output()
+	out, err := exec.Command("docker", "exec", e.GetContainer("ssh"), "cat", path).Output() // #nosec G204 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -315,20 +317,20 @@ func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
 }
 
 func (e *EndToEndTest) MkdirSsh(path string) error {
-	err := exec.Command("docker", "exec", e.GetContainer("ssh"), "mkdir", "-p", path).Run()
+	err := exec.Command("docker", "exec", e.GetContainer("ssh"), "mkdir", "-p", path).Run() // #nosec G204 - controlled docker command in test
 	if err != nil {
 		return err
 	}
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "chown", sshUser, path).Run()
+	return exec.Command("docker", "exec", e.GetContainer("ssh"), "chown", sshUser, path).Run() // #nosec G204 - controlled docker command in test
 }
 
 func (e *EndToEndTest) StartSsh() error {
-	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"),
+	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"), // #nosec G204 - controlled docker run command in test
 		"--network", e.Identity, "datadatdat/ssh-test-server:latest").Run()
 }
 
 func (e *EndToEndTest) StopSsh() error {
-	return exec.Command("docker", "rm", "-f", e.GetContainer("ssh")).Run()
+	return exec.Command("docker", "rm", "-f", e.GetContainer("ssh")).Run() // #nosec G204 - controlled docker rm command in test
 }
 
 func (e *EndToEndTest) WaitForSsh() error {
@@ -337,7 +339,7 @@ func (e *EndToEndTest) WaitForSsh() error {
 	for ok := true; ok; ok = !success {
 		sshConfig := &ssh.ClientConfig{
 			User:            sshUser,
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec G106 - testing environment SSH connection
 			Auth: []ssh.AuthMethod{
 				ssh.Password(sshPassword),
 			},
@@ -355,17 +357,17 @@ func (e *EndToEndTest) WaitForSsh() error {
 		if !success {
 			tried++
 			if tried == waitRetries {
-				logs, err := exec.Command("docker", "logs", e.GetContainer("test-ssh")).CombinedOutput()
+				logs, err := exec.Command("docker", "logs", e.GetContainer("test-ssh")).CombinedOutput() // #nosec G204 - controlled docker logs command in test
 				if err != nil {
 					return err
 				}
-				return errors.New(fmt.Sprintf("timed out waiting for SSH server to start: %s", logs))
+				return fmt.Errorf("timed out waiting for SSH server to start: %s", logs)
 			}
 			time.Sleep(time.Duration(waitTimeout) * time.Second)
 		}
 	}
 
-	out, err := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+	out, err := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", // #nosec G204 - controlled docker inspect command in test
 		e.GetContainer("ssh")).Output()
 	if err != nil {
 		return err
@@ -419,17 +421,17 @@ func (e *EndToEndTest) TeardownStandardSsh() {
 func (e *EndToEndTest) APIError(err error, code string) bool {
 	if openApiError, ok := err.(titan.GenericOpenAPIError); ok {
 		if titanApiError, ok := openApiError.Model().(titan.ApiError); ok {
-			return e.Suite.Equal(code, titanApiError.Code, titanApiError.Message)
+			return e.Equal(code, titanApiError.Code, titanApiError.Message)
 		}
 	}
-	return e.Suite.Error(err)
+	return e.Error(err)
 }
 
 func (e *EndToEndTest) NoError(err error) bool {
 	if err != nil {
 		if openApiError, ok := err.(titan.GenericOpenAPIError); ok {
 			if titanApiError, ok := openApiError.Model().(titan.ApiError); ok {
-				return e.Suite.Fail("unexpected error", titanApiError.Message)
+				return e.Fail("unexpected error", titanApiError.Message)
 			}
 		}
 	}
@@ -459,9 +461,9 @@ func (e *EndToEndTest) WaitForOperation(id string) ([]titan.ProgressEntry, error
 			case "COMPLETE":
 				completed = true
 			case "ABORT":
-				return result, errors.New(fmt.Sprintf("operation aborted: %s", p.Message))
+				return result, fmt.Errorf("operation aborted: %s", p.Message)
 			case "FAILED":
-				return result, errors.New(fmt.Sprintf("operation failed: %s", p.Message))
+				return result, fmt.Errorf("operation failed: %s", p.Message)
 			}
 			if p.Id > lastEntry {
 				lastEntry = p.Id

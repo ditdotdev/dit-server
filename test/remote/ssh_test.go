@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	titan "github.com/titan-data/titan-client-go"
 	endtoend "github.com/titan-data/titan-server/test/common"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -18,9 +18,7 @@ type SshTestSuite struct {
 	e   *endtoend.EndToEndTest
 	ctx context.Context
 
-	sshHost      string
 	remoteParams titan.RemoteParameters
-	currentOp    titan.Operation
 }
 
 func (s *SshTestSuite) SetupSuite() {
@@ -316,7 +314,7 @@ func (s *SshTestSuite) TestSsh_054_ListCommitsBadPassword() {
 }
 
 func (s *SshTestSuite) TestSsh_060_CopyKey() {
-	key, err := ioutil.ReadFile("id_rsa.pub")
+	key, err := os.ReadFile("id_rsa.pub")
 	if s.e.NoError(err) {
 		err = s.e.WriteFileSsh("/home/test/.ssh/authorized_keys", string(key))
 		s.e.NoError(err)
@@ -324,7 +322,7 @@ func (s *SshTestSuite) TestSsh_060_CopyKey() {
 }
 
 func (s *SshTestSuite) TestSsh_061_ListCommitsKey() {
-	key, err := ioutil.ReadFile("id_rsa")
+	key, err := os.ReadFile("id_rsa")
 	if s.e.NoError(err) {
 		res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", titan.RemoteParameters{
 			Provider:   "ssh",
@@ -338,7 +336,7 @@ func (s *SshTestSuite) TestSsh_061_ListCommitsKey() {
 }
 
 func (s *SshTestSuite) TestSsh_062_PullCommitKey() {
-	key, err := ioutil.ReadFile("id_rsa")
+	key, err := os.ReadFile("id_rsa")
 	if s.e.NoError(err) {
 		_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
 		if s.e.NoError(err) {
