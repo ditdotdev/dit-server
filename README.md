@@ -36,3 +36,5 @@ see the [Development Guidelines](DEVELOPING.md).
 
 This is code is licensed under the Apache License 2.0. Full license is
 available [here](./LICENSE).
+
+<!-- Build trigger: Testing modernized CI/CD workflow -->
