@@ -6,9 +6,9 @@ package remote
 import (
 	"context"
 	"github.com/antihax/optional"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/suite"
 	titan "github.com/titan-data/titan-client-go"
 	endtoend "github.com/titan-data/titan-server/test/common"
@@ -26,21 +26,20 @@ type S3TestSuite struct {
 	s3path       string
 	remote       titan.Remote
 	remoteParams titan.RemoteParameters
-	currentOp    titan.Operation
 }
 
 func (s *S3TestSuite) ClearBucket() error {
-	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
 	}
-	svc := s3.New(sess)
-	res, err := svc.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(s.s3bucket), Prefix: aws.String(s.s3path)})
+	svc := s3.NewFromConfig(cfg)
+	res, err := svc.ListObjects(context.TODO(), &s3.ListObjectsInput{Bucket: aws.String(s.s3bucket), Prefix: aws.String(s.s3path)})
 	if err != nil {
 		return err
 	}
 	for _, obj := range res.Contents {
-		_, err = svc.DeleteObject(&s3.DeleteObjectInput{
+		_, err = svc.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 			Bucket: aws.String(s.s3bucket),
 			Key:    obj.Key,
 		})
@@ -68,11 +67,11 @@ func (s *S3TestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		panic(err)
 	}
-	creds, err := sess.Config.Credentials.Get()
+	creds, err := cfg.Credentials.Retrieve(context.TODO())
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +84,7 @@ func (s *S3TestSuite) SetupSuite() {
 			"path":      s.s3path,
 			"accessKey": creds.AccessKeyID,
 			"secretKey": creds.SecretAccessKey,
-			"region":    sess.Config.Region,
+			"region":    cfg.Region,
 		},
 	}
 
