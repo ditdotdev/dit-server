@@ -46,11 +46,11 @@ dependencies {
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("io.titandata:remote-sdk:0.2.2")
-        implementation("io.titandata:nop-remote-server:0.2.2")
-        implementation("io.titandata:ssh-remote-server:0.2.2")
-        implementation("io.titandata:s3-remote-server:0.2.1")
-        implementation("io.titandata:s3web-remote-server:0.2.2")
+        implementation("io.titandata:remote-sdk:0.2.3")
+        implementation("io.titandata:nop-remote-server:0.2.3")
+        implementation("io.titandata:ssh-remote-server:0.2.3")
+        implementation("io.titandata:s3-remote-server:0.2.3")
+        implementation("io.titandata:s3web-remote-server:0.2.3")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
