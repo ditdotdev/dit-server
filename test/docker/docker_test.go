@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors
+ * Copyright Datadatdat.
  */
 package docker
 
@@ -7,8 +7,8 @@ import (
 	"context"
 	"github.com/antihax/optional"
 	"github.com/stretchr/testify/suite"
-	titan "github.com/titan-data/titan-client-go"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	datadatdat "github.com/datadatdat/datadatdat-client-go"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"strings"
 	"testing"
 	"time"
@@ -20,8 +20,8 @@ type WorkflowTestSuite struct {
 	ctx context.Context
 
 	volumeMountpoint string
-	remoteParams     titan.RemoteParameters
-	currentOp        titan.Operation
+	remoteParams     datadatdat.RemoteParameters
+	currentOp        datadatdat.Operation
 }
 
 func (s *WorkflowTestSuite) SetupSuite() {
@@ -29,7 +29,7 @@ func (s *WorkflowTestSuite) SetupSuite() {
 	s.e.SetupStandardDocker()
 	s.ctx = context.Background()
 
-	s.remoteParams = titan.RemoteParameters{
+	s.remoteParams = datadatdat.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{},
 	}
@@ -60,7 +60,7 @@ func (s *WorkflowTestSuite) TestLocal_002_EmptyRepoList() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_003_CreateRepository() {
-	res, _, err := s.e.RepoApi.CreateRepository(s.ctx, titan.Repository{
+	res, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{"a": "b"},
 	})
@@ -92,7 +92,7 @@ func (s *WorkflowTestSuite) TestLocal_005_ListRepositoryPresent() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_006_CreateDuplicate() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, titan.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	})
@@ -100,7 +100,7 @@ func (s *WorkflowTestSuite) TestLocal_006_CreateDuplicate() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_010_CreateVolume() {
-	res, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", titan.Volume{
+	res, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	})
@@ -112,7 +112,7 @@ func (s *WorkflowTestSuite) TestLocal_010_CreateVolume() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_011_CreateVolumeBadRepo() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "bar", titan.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "bar", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	})
@@ -120,7 +120,7 @@ func (s *WorkflowTestSuite) TestLocal_011_CreateVolumeBadRepo() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_012_CreateVolumeDuplicate() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", titan.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	})
@@ -176,7 +176,7 @@ func (s *WorkflowTestSuite) TestLocal_020_LastCommitEmpty() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_021_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -190,7 +190,7 @@ func (s *WorkflowTestSuite) TestLocal_021_CreateCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_022_DuplicateCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id:         "id",
 		Properties: map[string]interface{}{},
 	})
@@ -211,7 +211,7 @@ func (s *WorkflowTestSuite) TestLocal_024_GetBadCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_025_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id", titan.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id", datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
@@ -248,7 +248,7 @@ func (s *WorkflowTestSuite) TestLocal_030_ListCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_031_FilterOut() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &titan.ListCommitsOpts{
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
 		Tag: optional.NewInterface([]string{"a=c"}),
 	})
 	if s.e.NoError(err) {
@@ -257,7 +257,7 @@ func (s *WorkflowTestSuite) TestLocal_031_FilterOut() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_032_FilterPresent() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &titan.ListCommitsOpts{
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
 		Tag: optional.NewInterface([]string{"a=B"}),
 	})
 	if s.e.NoError(err) {
@@ -267,7 +267,7 @@ func (s *WorkflowTestSuite) TestLocal_032_FilterPresent() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_033_FilterCompound() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &titan.ListCommitsOpts{
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
 		Tag: optional.NewInterface([]string{"a=B", "c"}),
 	})
 	s.Len(res, 1)
@@ -345,7 +345,7 @@ func (s *WorkflowTestSuite) TestLocal_046_SourceCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_050_AddRemote() {
-	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", titan.Remote{
+	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", datadatdat.Remote{
 		Provider:   "nop",
 		Name:       "a",
 		Properties: map[string]interface{}{},
@@ -364,7 +364,7 @@ func (s *WorkflowTestSuite) TestLocal_051_GetRemote() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_052_DuplicateRemote() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", titan.Remote{
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", datadatdat.Remote{
 		Provider:   "nop",
 		Name:       "a",
 		Properties: map[string]interface{}{},
@@ -400,7 +400,7 @@ func (s *WorkflowTestSuite) TestLocal_056_DeleteNonExistentRemote() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_057_UpdateRemote() {
-	_, _, err := s.e.RemoteApi.UpdateRemote(s.ctx, "foo", "a", titan.Remote{
+	_, _, err := s.e.RemoteApi.UpdateRemote(s.ctx, "foo", "a", datadatdat.Remote{
 		Provider:   "nop",
 		Name:       "b",
 		Properties: map[string]interface{}{},
@@ -442,7 +442,7 @@ func (s *WorkflowTestSuite) TestLocal_062_GetOperation() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_063_ListOperations() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &titan.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal(s.currentOp.Id, res[0].Id)
@@ -465,7 +465,7 @@ func (s *WorkflowTestSuite) TestLocal_064_GetPushProgress() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_065_ListNotPresent() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &titan.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -492,7 +492,7 @@ func (s *WorkflowTestSuite) TestLocal_071_GetPull() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_072_ListPullOperation() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &titan.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal(s.currentOp.Id, res[0].Id)
@@ -529,7 +529,7 @@ func (s *WorkflowTestSuite) TestLocal_081_ListMultipleCommits() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_082_FilterOutCommit() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &titan.ListCommitsOpts{Tag: optional.NewInterface([]string{"a=B"})})
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{Tag: optional.NewInterface([]string{"a=B"})})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -542,7 +542,7 @@ func (s *WorkflowTestSuite) TestLocal_083_PushBadCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_090_AbortOperation() {
-	params := titan.RemoteParameters{
+	params := datadatdat.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{"delay": 10},
 	}

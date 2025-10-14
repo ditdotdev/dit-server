@@ -3,8 +3,8 @@ package docker
 import (
 	"context"
 	"github.com/stretchr/testify/suite"
-	titanclient "github.com/titan-data/titan-client-go"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	datadatdatclient "github.com/datadatdat/datadatdat-client-go"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"testing"
 )
 
@@ -23,7 +23,7 @@ func (s *TeardownTestSuite) TearDownSuite() {
 }
 
 func (s *TeardownTestSuite) TestTeardown_001_CreateRepository() {
-	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background(), titanclient.Repository{
+	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background(), datadatdatclient.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{"a": "b"},
 	})

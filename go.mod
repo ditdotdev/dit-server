@@ -1,4 +1,4 @@
-module github.com/titan-data/titan-server
+module github.com/datadatdat/datadatdat-server
 
 require (
 	github.com/antihax/optional v1.0.0
@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.88.4
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.11.1
-	github.com/titan-data/titan-client-go v0.1.1
+	github.com/datadatdat/datadatdat-client-go v1.0.0
 	golang.org/x/crypto v0.43.0
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1

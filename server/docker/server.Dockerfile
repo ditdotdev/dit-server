@@ -42,20 +42,20 @@ RUN curl -o /usr/local/bin/kubectl -LO https://storage.googleapis.com/kubernetes
 RUN chmod 755 /usr/local/bin/kubectl
 
 ################################################
-# Titan software installation and configuration
+# Datadatdat software installation and configuration
 ################################################
 
-COPY build/libs/titan-server.jar /titan/
-COPY src/scripts/* /titan/
+COPY build/libs/datadatdat-server.jar /datadatdat/
+COPY src/scripts/* /datadatdat/
 
-RUN /titan/get-userland
+RUN /datadatdat/get-userland
 
 # Download pre-built docker-volume-proxy binary with unified volume naming fix from S3
 # TODO: Update CDN to point to datadatdat organization and use CDN URL instead
 #
-RUN curl -fssL https://datadatdat-maven.s3.amazonaws.com/titan-docker-proxy/docker-volume-proxy -o /titan/docker-volume-proxy
-RUN chmod 755 /titan/docker-volume-proxy
+RUN curl -fssL https://datadatdat-maven.s3.amazonaws.com/datadatdat-docker-proxy/docker-volume-proxy -o /datadatdat/docker-volume-proxy
+RUN chmod 755 /datadatdat/docker-volume-proxy
 
-RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/titan"' >> /etc/bash.bashrc
+RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/datadatdat"' >> /etc/bash.bashrc
 
-WORKDIR /titan
+WORKDIR /datadatdat

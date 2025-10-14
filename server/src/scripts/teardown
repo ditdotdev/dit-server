@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 #
@@ -13,10 +13,10 @@
 #   * Uninstall ZFS modules, if we were responsible for installing them in the first place
 #   * Remove the local, including the underlying datafile
 #
-# It should be run as part of 'titan uninstall', as well as after endtoend tests.
+# It should be run as part of 'datadatdat uninstall', as well as after endtoend tests.
 
 source $(dirname $0)/zfs.sh
-source $(dirname $0)/titan.sh
+source $(dirname $0)/datadatdat.sh
 source $(dirname $0)/util.sh
 
 if pool_exists $POOL; then
@@ -28,7 +28,7 @@ if pool_exists $POOL; then
   rm -f $POOL_DIR/cachefile || log_error "Failed to remove pool cache file"
 fi
 
-echo "Removing titan network"
+echo "Removing datadatdat network"
 remove_network $IDENTITY
 echo "Unbinding mounts"
 unbind_mounts $MNT_DIR

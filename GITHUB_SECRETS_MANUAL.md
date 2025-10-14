@@ -66,10 +66,10 @@ gh secret set MAVEN_BUCKET --body "$MAVEN_BUCKET" --repo "datadatdat/delphix-rem
 gh secret set AWS_ACCESS_KEY_ID --body "$AWS_ACCESS_KEY_ID" --repo "datadatdat/delphix-remote"
 gh secret set AWS_SECRET_ACCESS_KEY --body "$AWS_SECRET_ACCESS_KEY" --repo "datadatdat/delphix-remote"
 
-# Add secrets to titan-server
-gh secret set MAVEN_BUCKET --body "$MAVEN_BUCKET" --repo "datadatdat/titan-server"
-gh secret set AWS_ACCESS_KEY_ID --body "$AWS_ACCESS_KEY_ID" --repo "datadatdat/titan-server"
-gh secret set AWS_SECRET_ACCESS_KEY --body "$AWS_SECRET_ACCESS_KEY" --repo "datadatdat/titan-server"
+# Add secrets to datadatdat-server
+gh secret set MAVEN_BUCKET --body "$MAVEN_BUCKET" --repo "datadatdat/datadatdat-server"
+gh secret set AWS_ACCESS_KEY_ID --body "$AWS_ACCESS_KEY_ID" --repo "datadatdat/datadatdat-server"
+gh secret set AWS_SECRET_ACCESS_KEY --body "$AWS_SECRET_ACCESS_KEY" --repo "datadatdat/datadatdat-server"
 ```
 
 ## Step 5: Verify secrets were added

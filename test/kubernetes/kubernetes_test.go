@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors.
+ * Copyright Datadatdat.
  */
 package kubernetes
 
@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
-	titan "github.com/titan-data/titan-client-go"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	datadatdat "github.com/datadatdat/datadatdat-client-go"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	coreV1 "k8s.io/api/core/v1"
 	apiV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,8 +30,8 @@ type KubernetesWorkflowTestSuite struct {
 	uuid         string
 	pod1         string
 	pod2         string
-	remote       titan.Remote
-	remoteParams titan.RemoteParameters
+	remote       datadatdat.Remote
+	remoteParams datadatdat.RemoteParameters
 }
 
 func (s *KubernetesWorkflowTestSuite) SetupSuite() {
@@ -73,12 +73,12 @@ func (s *KubernetesWorkflowTestSuite) SetupSuite() {
 	s.Clientset = cs
 	s.namespace = "default"
 	s.ctx = context.Background()
-	s.remote = titan.Remote{
+	s.remote = datadatdat.Remote{
 		Provider:   "nop",
 		Name:       "origin",
 		Properties: map[string]interface{}{},
 	}
-	s.remoteParams = titan.RemoteParameters{
+	s.remoteParams = datadatdat.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{},
 	}
@@ -164,7 +164,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_002_Kubectl() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_010_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, titan.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	})
@@ -172,7 +172,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_010_CreateRepository(
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_011_CreateVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", titan.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	})
@@ -208,7 +208,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_014_VolumeStatus() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_020_CreateCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id:         "id",
 		Properties: map[string]interface{}{},
 	})

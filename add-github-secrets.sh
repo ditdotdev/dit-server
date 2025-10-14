@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to add GitHub secrets to all Titan repositories
+# Script to add GitHub secrets to all Datadatdat repositories
 # Run this after installing and authenticating with GitHub CLI
 
 set -e
@@ -15,13 +15,13 @@ REPOS=(
     "datadatdat/s3-remote"
     "datadatdat/s3web-remote"
     "datadatdat/ssh-remote"
-    "datadatdat/titan-server"
+    "datadatdat/datadatdat-server"
 )
 
 # Secrets to add
 MAVEN_BUCKET="datadatdat-maven"
 
-echo "🔐 Adding GitHub secrets to all Titan repositories..."
+echo "🔐 Adding GitHub secrets to all Datadatdat repositories..."
 echo ""
 
 # Check if GitHub CLI is available and authenticated

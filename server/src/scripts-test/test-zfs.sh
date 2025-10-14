@@ -1,6 +1,6 @@
-#!/usr/bin/env bats
+#!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 zfs_script=/test/src/scripts/zfs.sh
@@ -582,7 +582,7 @@ util_script=/test/src/scripts/util.sh
   [ $status -eq 0 ]
 }
 
-@test "unload zfs succeeds if modules were not installed by titan" {
+@test "unload zfs succeeds if modules were not installed by datadatdat" {
   source $zfs_script
 
   function lsmod() { /bin/true; }

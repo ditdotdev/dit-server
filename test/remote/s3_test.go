@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors.
+ * Copyright Datadatdat.
  */
 package remote
 
@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/suite"
-	titan "github.com/titan-data/titan-client-go"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	datadatdat "github.com/datadatdat/datadatdat-client-go"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"os"
 	"strings"
 	"testing"
@@ -24,8 +24,8 @@ type S3TestSuite struct {
 
 	s3bucket     string
 	s3path       string
-	remote       titan.Remote
-	remoteParams titan.RemoteParameters
+	remote       datadatdat.Remote
+	remoteParams datadatdat.RemoteParameters
 }
 
 func (s *S3TestSuite) ClearBucket() error {
@@ -76,7 +76,7 @@ func (s *S3TestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	s.remote = titan.Remote{
+	s.remote = datadatdat.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -93,7 +93,7 @@ func (s *S3TestSuite) SetupSuite() {
 
 	s.ctx = context.Background()
 
-	s.remoteParams = titan.RemoteParameters{
+	s.remoteParams = datadatdat.RemoteParameters{
 		Provider:   "s3",
 		Properties: map[string]interface{}{},
 	}
@@ -108,7 +108,7 @@ func TestS3TestSuite(t *testing.T) {
 }
 
 func (s *S3TestSuite) TestS3_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, titan.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	})
@@ -116,7 +116,7 @@ func (s *S3TestSuite) TestS3_001_CreateRepository() {
 }
 
 func (s *S3TestSuite) TestS3_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", titan.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	})
@@ -137,7 +137,7 @@ func (s *S3TestSuite) TestS3_003_CreateFile() {
 }
 
 func (s *S3TestSuite) TestS3_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -190,7 +190,7 @@ func (s *S3TestSuite) TestS3_021_ListRemoteCommit() {
 
 func (s *S3TestSuite) TestS3_022_ListRemoteFilterOut() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&titan.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -198,7 +198,7 @@ func (s *S3TestSuite) TestS3_022_ListRemoteFilterOut() {
 
 func (s *S3TestSuite) TestS3_023_ListRemoteFilterInclude() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&titan.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -211,7 +211,7 @@ func (s *S3TestSuite) TestS3_030_PushDuplicateCommit() {
 }
 
 func (s *S3TestSuite) TestS3_031_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id", titan.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id", datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
@@ -225,7 +225,7 @@ func (s *S3TestSuite) TestS3_031_UpdateCommit() {
 
 func (s *S3TestSuite) TestS3_032_PushMedata() {
 	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&titan.PushOpts{MetadataOnly: optional.NewBool(true)})
+		&datadatdat.PushOpts{MetadataOnly: optional.NewBool(true)})
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -277,7 +277,7 @@ func (s *S3TestSuite) TestS3_044_PullDuplicate() {
 
 func (s *S3TestSuite) TestS3_045_PullMetadata() {
 	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&titan.PullOpts{MetadataOnly: optional.NewBool(true)})
+		&datadatdat.PullOpts{MetadataOnly: optional.NewBool(true)})
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -308,7 +308,7 @@ func (s *S3TestSuite) TestS3_050_RemoveRemote() {
 }
 
 func (s *S3TestSuite) TestS3_051_AddRemoteNoKeys() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", titan.Remote{
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", datadatdat.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -321,7 +321,7 @@ func (s *S3TestSuite) TestS3_051_AddRemoteNoKeys() {
 
 func (s *S3TestSuite) TestS3_052_ListCommitsKeys() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin",
-		titan.RemoteParameters{
+		datadatdat.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": s.remote.Properties["accessKey"],
@@ -342,7 +342,7 @@ func (s *S3TestSuite) TestS3_053_ListCommitsNoKeys() {
 
 func (s *S3TestSuite) TestS3_054_ListCommitsIncorrectKeys() {
 	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin",
-		titan.RemoteParameters{
+		datadatdat.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": "ACCESS",
@@ -357,7 +357,7 @@ func (s *S3TestSuite) TestS3_055_PullKeys() {
 	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
 	if s.e.NoError(err) {
 		res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id",
-			titan.RemoteParameters{
+			datadatdat.RemoteParameters{
 				Provider: "s3",
 				Properties: map[string]interface{}{
 					"accessKey": s.remote.Properties["accessKey"],
