@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 #
-# Entry point for running a kubernetes operation. See KubernetesRunner for how this works. We expect the TITAN_PATH
+# Entry point for running a kubernetes operation. See KubernetesRunner for how this works. We expect the DATADATDAT_PATH
 # environment variable to point to the base path for volumes and configuration, which is then passed to the runner.
 #
 
-exec java -DbasePath=$TITAN_PATH -cp /titan/titan-server.jar io.titandata.context.kubernetes.KubernetesRunnerKt
+exec java -DbasePath=$DATADATDAT_PATH -cp /datadatdat/datadatdat-server.jar com.datadatdat.context.kubernetes.KubernetesRunnerKt
 

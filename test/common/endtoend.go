@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors.
+ * Copyright Datadatdat.
  */
 package common
 
@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/antihax/optional"
 	"github.com/stretchr/testify/suite"
-	titan "github.com/titan-data/titan-client-go"
+	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	"golang.org/x/crypto/ssh"
 	"os"
 	"os/exec"
@@ -21,9 +21,9 @@ import (
 const dockerZfsContext = "docker-zfs"
 
 /*
- * Utility class for managing endtoend tests of titan-server. There are two types of
- * containers we care about: the titan server container and a remote SSH container. The titan
- * server is run on an alternate pool and port so as not to conflict with the running titan-server.
+ * Utility class for managing endtoend tests of datadatdat-server. There are two types of
+ * containers we care about: the datadatdat server container and a remote SSH container. The datadatdat
+ * server is run on an alternate pool and port so as not to conflict with the running datadatdat-server.
  * For the remote SSH server, we use 'rastasheep/ubuntu-sshd', which comes pre-built for remote access
  * over SSH.
  */
@@ -37,13 +37,13 @@ type EndToEndTest struct {
 	SshHost  string
 	HomeDir  string
 
-	Client *titan.APIClient
+	Client *datadatdat.APIClient
 
-	RepoApi       *titan.RepositoriesApiService
-	RemoteApi     *titan.RemotesApiService
-	VolumeApi     *titan.VolumesApiService
-	CommitApi     *titan.CommitsApiService
-	OperationsApi *titan.OperationsApiService
+	RepoApi       *datadatdat.RepositoriesApiService
+	RemoteApi     *datadatdat.RemotesApiService
+	VolumeApi     *datadatdat.VolumesApiService
+	CommitApi     *datadatdat.CommitsApiService
+	OperationsApi *datadatdat.OperationsApiService
 }
 
 const waitTimeout = 1
@@ -57,13 +57,13 @@ func NewEndToEndTest(s *suite.Suite, context string) *EndToEndTest {
 		Context:  context,
 		Identity: "test",
 		Port:     6001,
-		Image:    "titan:latest",
+		Image:    "datadatdat:latest",
 		SshPort:  6003,
 	}
 
-	cfg := titan.NewConfiguration()
+	cfg := datadatdat.NewConfiguration()
 	cfg.Host = fmt.Sprintf("localhost:%d", ret.Port)
-	ret.Client = titan.NewAPIClient(cfg)
+	ret.Client = datadatdat.NewAPIClient(cfg)
 
 	ret.RepoApi = ret.Client.RepositoriesApi
 	ret.VolumeApi = ret.Client.VolumesApi
@@ -84,10 +84,10 @@ func NewEndToEndTest(s *suite.Suite, context string) *EndToEndTest {
 }
 
 /*
- * Run a specific entry point within titan-server. This can either run a full-fledged launch, or can be used to
- * run other entry points (like teardown).
+ * Run a specific entry point within datadatdat-server. This can either run a full-fledged launch, or can be used to
+ * teardown the test environment.
  */
-func (e *EndToEndTest) RunTitanDocker(entryPoint string, daemon bool) error {
+func (e *EndToEndTest) RunDatadatdatDocker(entryPoint string, daemon bool) error {
 	args := []string{"run", "--privileged", "--pid=host", "--network=host",
 		"-v", "/var/lib:/var/lib", "-v", "/run/docker:/run/docker"}
 	if daemon {
@@ -99,43 +99,43 @@ func (e *EndToEndTest) RunTitanDocker(entryPoint string, daemon bool) error {
 	args = append(args,
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s/data", e.Identity, e.Identity),
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
-		"-e", fmt.Sprintf("TITAN_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("TITAN_IMAGE=%s", e.Image),
-		"-e", fmt.Sprintf("TITAN_PORT=%d", e.Port),
-		e.Image, "/bin/bash", fmt.Sprintf("/titan/%s", entryPoint))
+		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DATADATDAT_IMAGE=%s", e.Image),
+		"-e", fmt.Sprintf("DATADATDAT_PORT=%d", e.Port),
+		e.Image, "/bin/bash", fmt.Sprintf("/datadatdat/%s", entryPoint))
 
 	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
 }
 
 /*
- * Run an entry point within kubernetes. This always spawns it as a daemon, and runs titan-server directly without
- * the ZFS-specific launch portion.
+ * Run an entry point within kubernetes. This always spawns it as a daemon, and runs datadatdat-server directly without
+ * going through the launch script.
  */
-func (e *EndToEndTest) RunTitanKubernetes(entryPoint string, parameters ...string) error {
+func (e *EndToEndTest) RunDatadatdatKubernetes(entryPoint string, parameters ...string) error {
 	imageSpecified := false
 	for _, p := range parameters {
-		if strings.Index(p, "titanImage=") == 0 {
+		if strings.Index(p, "datadatdatImage=") == 0 {
 			imageSpecified = true
 			break
 		}
 	}
 	if !imageSpecified {
-		image := os.Getenv("TITAN_IMAGE")
+		image := os.Getenv("DATADATDAT_IMAGE")
 		if image == "" {
-			image = "datadatdat/titan:latest"
+			image = "datadatdat/datadatdat:latest"
 		}
-		parameters = append(parameters, fmt.Sprintf("titanImage=%s", image))
+		parameters = append(parameters, fmt.Sprintf("datadatdatImage=%s", image))
 	}
 
 	args := []string{
 		"run", "-d", "--restart", "always", "--name", e.GetPrimaryContainer(),
 		"-v", fmt.Sprintf("%s/.kube:/root/.kube", e.HomeDir),
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s", e.Identity, e.Identity),
-		"-e", "TITAN_CONTEXT=kubernetes-csi",
-		"-e", fmt.Sprintf("TITAN_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("TITAN_CONFIG=%s", strings.Join(parameters, ",")),
+		"-e", "DATADATDAT_CONTEXT=kubernetes-csi",
+		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DATADATDAT_CONFIG=%s", strings.Join(parameters, ",")),
 		"-p", fmt.Sprintf("%d:5001", e.Port), e.Image, "/bin/bash",
-		fmt.Sprintf("/titan/%s", entryPoint),
+		fmt.Sprintf("/datadatdat/%s", entryPoint),
 	}
 
 	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
@@ -150,9 +150,9 @@ func (e *EndToEndTest) StartServer(parameters ...string) error {
 		return err
 	}
 	if e.Context == dockerZfsContext {
-		return e.RunTitanDocker("launch", true)
+		return e.RunDatadatdatDocker("launch", true)
 	} else {
-		return e.RunTitanKubernetes("run", parameters...)
+		return e.RunDatadatdatKubernetes("run", parameters...)
 	}
 }
 
@@ -224,7 +224,7 @@ func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
 	}
 
 	if e.Context == dockerZfsContext {
-		err = e.RunTitanDocker("teardown", false)
+		err = e.RunDatadatdatDocker("teardown", false)
 		if err != nil && !ignoreErrors {
 			return err
 		}
@@ -419,9 +419,9 @@ func (e *EndToEndTest) TeardownStandardSsh() {
 }
 
 func (e *EndToEndTest) APIError(err error, code string) bool {
-	if openApiError, ok := err.(titan.GenericOpenAPIError); ok {
-		if titanApiError, ok := openApiError.Model().(titan.ApiError); ok {
-			return e.Equal(code, titanApiError.Code, titanApiError.Message)
+	if openApiError, ok := err.(datadatdat.GenericOpenAPIError); ok {
+		if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
+			return e.Equal(code, datadatdatApiError.Code, datadatdatApiError.Message)
 		}
 	}
 	return e.Error(err)
@@ -429,29 +429,29 @@ func (e *EndToEndTest) APIError(err error, code string) bool {
 
 func (e *EndToEndTest) NoError(err error) bool {
 	if err != nil {
-		if openApiError, ok := err.(titan.GenericOpenAPIError); ok {
-			if titanApiError, ok := openApiError.Model().(titan.ApiError); ok {
-				return e.Fail("unexpected error", titanApiError.Message)
+		if openApiError, ok := err.(datadatdat.GenericOpenAPIError); ok {
+			if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
+				return e.Fail("unexpected error", datadatdatApiError.Message)
 			}
 		}
 	}
 	return e.Suite.NoError(err)
 }
 
-func (e *EndToEndTest) GetTag(commit titan.Commit, tag string) string {
+func (e *EndToEndTest) GetTag(commit datadatdat.Commit, tag string) string {
 	if tags, ok := commit.Properties["tags"].(map[string]interface{}); ok {
 		return tags[tag].(string)
 	}
 	return ""
 }
 
-func (e *EndToEndTest) WaitForOperation(id string) ([]titan.ProgressEntry, error) {
+func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, error) {
 	completed := false
 	var lastEntry int32 = 0
-	result := []titan.ProgressEntry{}
+	result := []datadatdat.ProgressEntry{}
 	for ok := true; ok; ok = !completed {
 		progress, _, err := e.Client.OperationsApi.GetOperationProgress(context.Background(), id,
-			&titan.GetOperationProgressOpts{LastId: optional.NewInt32(lastEntry)})
+			&datadatdat.GetOperationProgressOpts{LastId: optional.NewInt32(lastEntry)})
 		if err != nil {
 			return nil, err
 		}

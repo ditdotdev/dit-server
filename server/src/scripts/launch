@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 #
-# Main entry point for launching the titan server. The responsibility of this script is to ensure
+# Main entry point for launching the datadatdat server. The responsibility of this script is to ensure
 # that ZFS is properly installed and configured such that the server can operate on ZFS filesystems
 # without having to worry about how that may have been configured. This is a complex process,
 # because we don't want to put the burden of ZFS installation on the user (the docker VM is
@@ -50,12 +50,12 @@
 #   1. Create miscellaneous directories required by the system
 #   2. Import the ZFS pool if it doesn't exist
 #   3. Create the ZFS pool if import fails
-#   4. Launch titan-server
+#   4. Launch datadatdat-server
 #
 # The launcher will use a set of defaults, but these can be overridden via environment, as is done
 # during end to end testing. These configuration variables are:
 #
-#   IDENTITY - Basic identity from which other variables are derived. Defaults to 'titan'
+#   IDENTITY - Basic identity from which other variables are derived. Defaults to 'datadatdat'
 #   IMAGE - Docker image to launch. Defaults to $IDENTITY:latest
 #   PORT - Host port to forward server traffic to. Defaults to 5001
 #
@@ -72,7 +72,7 @@
 #
 
 source $(dirname $0)/zfs.sh
-source $(dirname $0)/titan.sh
+source $(dirname $0)/datadatdat.sh
 source $(dirname $0)/util.sh
 
 log_begin

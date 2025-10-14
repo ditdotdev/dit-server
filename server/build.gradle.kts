@@ -7,9 +7,9 @@ plugins {
     id("com.github.johnrengelman.shadow") version("7.1.2")
 }
 
-val titanVersion: String by rootProject.extra
-group = "io.titandata"
-version = titanVersion
+val datadatdatVersion: String by rootProject.extra
+group = "com.datadatdat"
+version = datadatdatVersion
 
 repositories {
     mavenLocal()
@@ -41,16 +41,16 @@ dependencies {
     implementation("org.postgresql:postgresql:42.2.10")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("io.kubernetes:client-java:11.0.0")
-    implementation("io.titandata:command-executor:0.1.1")
+    implementation("com.datadatdat:command-executor:1.0.0")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("io.titandata:remote-sdk:0.2.3")
-        implementation("io.titandata:nop-remote-server:0.2.3")
-        implementation("io.titandata:ssh-remote-server:0.2.3")
-        implementation("io.titandata:s3-remote-server:0.2.3")
-        implementation("io.titandata:s3web-remote-server:0.2.3")
+        implementation("com.datadatdat:remote-sdk:1.0.0")
+        implementation("com.datadatdat:nop-remote-server:1.0.0")
+        implementation("com.datadatdat:ssh-remote-server:1.0.0")
+        implementation("com.datadatdat:s3-remote-server:1.0.0")
+        implementation("com.datadatdat:s3web-remote-server:1.0.0")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
@@ -68,11 +68,11 @@ jacoco {
 }
 
 application {
-    mainClass.set("io.titandata.ApplicationKt")
+    mainClass.set("com.datadatdat.ApplicationKt")
 }
 
 tasks.withType<ShadowJar> {
-    archiveFileName.set("titan-server.jar")
+    archiveFileName.set("datadatdat-server.jar")
     mergeServiceFiles()
 }
 

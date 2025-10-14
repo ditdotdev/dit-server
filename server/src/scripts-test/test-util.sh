@@ -1,6 +1,6 @@
-#!/usr/bin/env bats
+#!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 util_script=/test/src/scripts/util.sh
@@ -10,22 +10,22 @@ util_script=/test/src/scripts/util.sh
   function jq() { /bin/true; }
 
    source $util_script
-   [ $IDENTITY = "titan" ]
+   [ $IDENTITY = "datadatdat" ]
    [ $PORT = "5001" ]
-   [ $IMAGE = "titan:latest" ]
+   [ $IMAGE = "datadatdat:latest" ]
 }
 
 @test "user overrides propagated correctly" {
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-   export TITAN_IDENTITY=test
-   export TITAN_PORT=6001
-   export TITAN_IMAGE=datadatdat/titan:test
+   export DATADATDAT_IDENTITY=test
+   export DATADATDAT_PORT=6001
+   export DATADATDAT_IMAGE=datadatdat/datadatdat:test
    source $util_script
    [ $IDENTITY = "test" ]
    [ $PORT = "6001" ]
-   [ $IMAGE = "datadatdat/titan:test" ]
+   [ $IMAGE = "datadatdat/datadatdat:test" ]
 }
 
 @test "derived variables set correctly" {
@@ -33,15 +33,15 @@ util_script=/test/src/scripts/util.sh
   function jq() { echo "/path"; }
 
    source $util_script
-   [ $POOL = "titan" ]
-   [ $VOLUME = "titan-data" ]
-   [ $BASE_DIR = "/var/lib/titan" ]
-   [ $DATA_DIR = "/var/lib/titan/data" ]
-   [ $INSTALL_DIR = "/var/lib/titan/data/install" ]
+   [ $POOL = "datadatdat" ]
+   [ $VOLUME = "datadatdat-data" ]
+   [ $BASE_DIR = "/var/lib/datadatdat" ]
+   [ $DATA_DIR = "/var/lib/datadatdat/data" ]
+   [ $INSTALL_DIR = "/var/lib/datadatdat/data/install" ]
    [ $POOL_DIR = "/path/pool" ]
-   [ $MNT_DIR = "/var/lib/titan/mnt" ]
-   [ $SYSTEM_MODULES = "/var/lib/titan/system" ]
-   [ $COMPILED_MODULES = "/var/lib/titan/data/modules" ]
+   [ $MNT_DIR = "/var/lib/datadatdat/mnt" ]
+   [ $SYSTEM_MODULES = "/var/lib/datadatdat/system" ]
+   [ $COMPILED_MODULES = "/var/lib/datadatdat/data/modules" ]
 }
 
 @test "timestamp returns date output" {
@@ -65,7 +65,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_begin
   [ $status -eq 0 ]
-  [ "$output" = "ts TITAN BEGIN" ]
+  [ "$output" = "ts DATADATDAT BEGIN" ]
 }
 
 @test "log start prints marker" {
@@ -77,7 +77,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_start "this is my message"
   [ $status -eq 0 ]
-  [ "$output" = "ts TITAN START this is my message" ]
+  [ "$output" = "ts DATADATDAT START this is my message" ]
 }
 
 @test "log end prints marker" {
@@ -89,7 +89,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_end
   [ $status -eq 0 ]
-  [ "$output" = "ts TITAN END" ]
+  [ "$output" = "ts DATADATDAT END" ]
 }
 
 @test "log finish prints marker" {
@@ -101,7 +101,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_finished
   [ $status -eq 0 ]
-  [ "$output" = "ts TITAN FINISHED" ]
+  [ "$output" = "ts DATADATDAT FINISHED" ]
 }
 
 @test "log error exits program" {
@@ -113,5 +113,5 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_error "this is my message"
   [ $status -eq 1 ]
-  [ "$output" = "ts TITAN ERROR this is my message" ]
+  [ "$output" = "ts DATADATDAT ERROR this is my message" ]
 }

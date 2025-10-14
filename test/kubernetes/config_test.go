@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors.
+ * Copyright Datadatdat.
  */
 package kubernetes
 
@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/suite"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"os/exec"
 	"strings"
 	"testing"
@@ -68,6 +68,6 @@ func (s *KubernetesConfigTestSuite) TestKubernetesConfig_002_GetConfiguration() 
 		s.Equal(s.KubeContext, res.Properties["context"])
 		s.Equal(s.StorageClass, res.Properties["storageClass"])
 		s.Equal(s.SnapshotClass, res.Properties["snapshotClass"])
-		s.Equal("datadatdat/titan:latest", res.Properties["titanImage"])
+		s.Equal("datadatdat/datadatdat:latest", res.Properties["datadatdatImage"])
 	}
 }

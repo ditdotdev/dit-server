@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 #
 # Primary configuration variables to control how the server is launched. The IDENTITY variable
 # controls the name of the storage pool, data volume, base directory, and other configuration
 # used by the remainder of the scripts. Combined with the PORT variable, it allows for parallel
-# titan instances to run, such as when running end to end tests with an existing titan
+# datadatdat instances to run, such as when running end to end tests with an existing datadatdat
 # installation. The
 #
-IDENTITY=${TITAN_IDENTITY:-titan}
-PORT=${TITAN_PORT:-5001}
-IMAGE=${TITAN_IMAGE:-titan:latest}
+IDENTITY=${DATADATDAT_IDENTITY:-datadatdat}
+PORT=${DATADATDAT_PORT:-5001}
+IMAGE=${DATADATDAT_IMAGE:-datadatdat:latest}
 
 echo "=== User configuration ==="
 echo "IDENTITY = $IDENTITY"
@@ -51,7 +51,7 @@ echo "KERNEL_RELEASE = $KERNEL_RELEASE"
 # Primary delimiter for log messages. Lines that contain this delimiter (after the timestamp)
 # will be processed by the CLI during log scanning.
 #
-log_delimiter=TITAN
+log_delimiter=DATADATDAT
 
 #
 # Return a timestamp to use in log messages and elsewhere.
@@ -72,7 +72,7 @@ function log_begin {
 
 #
 # Log the beginning of a step. This will be picked up by the CLI and displayed while the
-# subsequent code is running, when a titan end message is received, then the cli will display
+# subsequent code is running, when a datadatdat end message is received, then the cli will display
 # the step as completed and move on.
 #
 function log_start {

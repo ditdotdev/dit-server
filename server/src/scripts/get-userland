@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
-#
+# Copyright Datadatdat.
 
 #
 # Utility script used during the docker build process to download and extract ZFS userland, using the same shell

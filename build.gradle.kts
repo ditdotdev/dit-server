@@ -17,8 +17,8 @@ plugins {
     id("com.github.ben-manes.versions") version("0.27.0")
 }
 
-val titanVersion by extra(when(project.hasProperty("titanVersion")) {
-    true -> project.property("titanVersion")
+val datadatdatVersion by extra(when(project.hasProperty("datadatdatVersion")) {
+    true -> project.property("datadatdatVersion")
     false -> "latest"
 })
 

@@ -1,5 +1,5 @@
 /*
- * Copyright The Titan Project Contributors.
+ * Copyright Datadatdat.
  */
 package remote
 
@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/suite"
-	titan "github.com/titan-data/titan-client-go"
-	endtoend "github.com/titan-data/titan-server/test/common"
+	datadatdat "github.com/datadatdat/datadatdat-client-go"
+	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"os"
 	"strings"
 	"testing"
@@ -25,10 +25,10 @@ type S3WebTestSuite struct {
 
 	s3bucket      string
 	s3path        string
-	s3remote      titan.Remote
-	webRemote     titan.Remote
-	s3parameters  titan.RemoteParameters
-	webParameters titan.RemoteParameters
+	s3remote      datadatdat.Remote
+	webRemote     datadatdat.Remote
+	s3parameters  datadatdat.RemoteParameters
+	webParameters datadatdat.RemoteParameters
 }
 
 func (s *S3WebTestSuite) ClearBucket() error {
@@ -79,7 +79,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	s.s3remote = titan.Remote{
+	s.s3remote = datadatdat.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -90,7 +90,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 			"region":    cfg.Region,
 		},
 	}
-	s.webRemote = titan.Remote{
+	s.webRemote = datadatdat.Remote{
 		Provider: "s3web",
 		Name:     "web",
 		Properties: map[string]interface{}{
@@ -103,12 +103,12 @@ func (s *S3WebTestSuite) SetupSuite() {
 
 	s.ctx = context.Background()
 
-	s.s3parameters = titan.RemoteParameters{
+	s.s3parameters = datadatdat.RemoteParameters{
 		Provider:   "s3",
 		Properties: map[string]interface{}{},
 	}
 
-	s.webParameters = titan.RemoteParameters{
+	s.webParameters = datadatdat.RemoteParameters{
 		Provider:   "s3web",
 		Properties: map[string]interface{}{},
 	}
@@ -123,7 +123,7 @@ func TestS3WebTestSuite(t *testing.T) {
 }
 
 func (s *S3WebTestSuite) TestS3Web_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, titan.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	})
@@ -131,7 +131,7 @@ func (s *S3WebTestSuite) TestS3Web_001_CreateRepository() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", titan.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	})
@@ -152,7 +152,7 @@ func (s *S3WebTestSuite) TestS3Web_003_CreateFile() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -206,7 +206,7 @@ func (s *S3WebTestSuite) TestS3Web_021_ListRemoteCommit() {
 
 func (s *S3WebTestSuite) TestS3Web_022_ListRemoteFilterOut() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&titan.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -214,7 +214,7 @@ func (s *S3WebTestSuite) TestS3Web_022_ListRemoteFilterOut() {
 
 func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&titan.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -222,7 +222,7 @@ func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_030_CreateSecondCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", titan.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
 		Id:         "id2",
 		Properties: map[string]interface{}{},
 	})

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright The Titan Project Contributors.
+# Copyright Datadatdat.
 #
 
 #
@@ -73,11 +73,11 @@ function zfs_version_matches() {
 }
 
 #
-# Get the URL for a given asset hosted in the titan community downloads
+# Get the URL for a given asset hosted in the datadatdat community downloads
 #
 function get_asset_url() {
   local asset_name=$1
-  echo "https://download.titan-data.io/zfs-releases/$asset_name"
+  echo "https://download.datadatdat.com/zfs-releases/$asset_name"
 }
 
 #
@@ -235,7 +235,7 @@ function destroy_pool() {
 # If we update to a new ZFS version but don't restart the docker host, we may find that we have
 # an older ZFS version already loaded. We can't simply unload & re-install, as we may have active
 # containers in use. If and when we come to that point, we'll need to coordinate with the CLI
-# to stop all repositories, unload ZFS through titan, and re-install.
+# to stop all repositories, unload ZFS through datadatdat, and re-install.
 #
 function check_running_zfs() {
   log_start "Checking if compatible ZFS is running"

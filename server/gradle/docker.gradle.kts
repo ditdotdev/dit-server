@@ -1,24 +1,24 @@
 val imageName = when(project.hasProperty("serverImageName")) {
     true -> project.property("serverImageName")
-    false -> "datadatdat/titan"
+    false -> "datadatdat/datadatdat"
 }
 
-val titanVersion = when(project.hasProperty("titanVersion")) {
-    true -> project.property("titanVersion")
+val datadatdatVersion = when(project.hasProperty("datadatdatVersion")) {
+    true -> project.property("datadatdatVersion")
     false -> "latest"
 }
 
 var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
-    commandLine("docker", "build", "--no-cache", "-t", "$imageName:$titanVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "build", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     mustRunAfter(tasks.named("shadowJar"))
 }
 
 var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build and publish docker server image"
-    commandLine("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$titanVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     mustRunAfter(tasks.named("shadowJar"))
 }
 
@@ -26,21 +26,21 @@ var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
 var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
-    commandLine("docker", "build", "-t", "$imageName:$titanVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "build", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     mustRunAfter(tasks.named("shadowJar"))
 }
 
 var tagDockerServer = tasks.register<Exec>("tagDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:$titanVersion", "$imageName:${project.version}")
+    commandLine("docker", "tag", "$imageName:$datadatdatVersion", "$imageName:${project.version}")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 
 var tagLocalDockerServer = tasks.register<Exec>("tagLocalDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:$titanVersion", "titan:latest")
+    commandLine("docker", "tag", "$imageName:$datadatdatVersion", "datadatdat:latest")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 

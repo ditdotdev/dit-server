@@ -1,23 +1,23 @@
 # Project Development
 
 For general information about contributing changes, see the
-[Contributor Guidelines](https://github.com/titan-data/.github/blob/master/CONTRIBUTING.md).
+[Contributor Guidelines](https://github.com/datadatdat/.github/blob/master/CONTRIBUTING.md).
 
 ## How it Works
 
 There are a few key components of the overall architecture:
 
-  * `titan-server` - A kotlin web server that provides an API for the titan CLI as well as the 
+  * `datadatdat-server` - A kotlin web server that provides an API for the datadatdat CLI as well as the 
      docker volume API.
-  * `titan` - A Docker image that provides a runtime environment for `titan-server`, as well as
+  * `datadatdat` - A Docker image that provides a runtime environment for `datadatdat-server`, as well as
      the means to execute ZFS commands within that container.
 
 ## Docker Images
 
-The titan system uses multiple Docker images:
+The datadatdat system uses multiple Docker images:
 
-1. **`datadatdat/titan:latest`** - The main server image containing:
-   - Titan server JAR and runtime environment
+1. **`datadatdat/datadatdat:latest`** - The main server image containing:
+   - Datadatdat server JAR and runtime environment
    - ZFS utilities and kernel module support
    - PostgreSQL database for metadata storage
    - Docker-in-Docker capabilities
@@ -31,7 +31,7 @@ The titan system uses multiple Docker images:
 3. **`datadatdat/ssh-test-server:latest`** - Testing infrastructure:
    - SSH server for end-to-end remote testing
    - Only pulled during test execution
-   - Not required for normal titan operation
+   - Not required for normal datadatdat operation
       
 Of these, the docker image is by far the most complicated, as we have to go through several
 different hoops to get ZFS usable within containers on arbitrary host systems.
@@ -40,20 +40,20 @@ Note that the project is in the process of being migrated from Kotlin to golang.
 process, you will see some less than elegant worts, such as some tests in golang but others
 in Kotlin, plugins in golang being loaded from Kotlin, etc.
 
-### Titan server
+### Datadatdat server
 
-The titan server is built from `server/src`. It is a web server wrapped around a storage
+The datadatdat server is built from `server/src`. It is a web server wrapped around a storage
 persistence layer, and remote executor framework. The important parts of the server can be
 found at:
 
-  * `io.titandata.apis.*` - Entry points for the remote APIs. Very thin layer that translates
+  * `com.datadatdat.apis.*` - Entry points for the remote APIs. Very thin layer that translates
     from JSON into native models and then invokes the appropriate backend model.
-  * `io.titandata.models.*` - Object models used within the APIs.
-  * `io.titandata.metadata.*` - Metadata persistence layer. We run a PostgreSQL database within
+  * `com.datadatdat.models.*` - Object models used within the APIs.
+  * `com.datadatdat.metadata.*` - Metadata persistence layer. We run a PostgreSQL database within
     the server container.
-  * `io.titandata.context.*` - Provider for context-specific operations, such as managing storage
+  * `com.datadatdat.context.*` - Provider for context-specific operations, such as managing storage
     and running operations that requires access to storage.
-  * `io.titandata.operation.*` - Handlers for asynchronous push and pull operations. The actual
+  * `com.datadatdat.operation.*` - Handlers for asynchronous push and pull operations. The actual
     operations are run through the remote providers, but the generic operations framework handles
     starting and stopping operations, reporting back to the APIs, etc. For more information,
     see `OperationProvider`
@@ -63,9 +63,9 @@ found at:
 The underlying architecture can be a bit complex due to the intricacies of docker and ZFS. Our goal is
 to be able to spin up a container that acts as docker volume plugin and has ZFS access to the docker host
 VM (typically running inside of Windows or MacOS). Actually instructing users on how to install and
-manage ZFS within this hidden VM is a non-starter, so we use a shell (`titan-launch`) container that
+manage ZFS within this hidden VM is a non-starter, so we use a shell (`datadatdat-launch`) container that
 is responsible for setting up and configuring ZFS, only to then launch the server itself
-(`titan-server`), such that the server can access the pool and ZFS commands without having to worry
+(`datadatdat-server`), such that the server can access the pool and ZFS commands without having to worry
 about how that is made possible.
 
 To do this, we have to accomplish a few key things:
@@ -74,30 +74,30 @@ To do this, we have to accomplish a few key things:
   2. Create a storage pool that we can use for storing data and metadata, one that will survive
      across Docker upgrades that instantiate a new underlying VM. For more information on how repositories are
      organized and metadata is tracked, see the `Zfs*Provider` classes, such as `ZfsOperationProvider.kt`.
-  3. Configure the system such that mounts created within the `titan-server` container will
+  3. Configure the system such that mounts created within the `datadatdat-server` container will
      correctly propagate to the host VM and then to other containers.
     
 The first of these is covered extensively in the the comments to the
 [launch script](server/src/scripts/launch), where we try to either leverage existing ZFS modules,
 install pre-built ones, or build new ones on the fly. We first try to pull precompiled kernel binaries from
-[zfs-releases](https://github.com/titan-data/zfs-releases), and fall back to using the
+[zfs-releases](https://github.com/datadatdat/zfs-releases), and fall back to using the
 `datadatdat/zfs-builder:latest` Docker image to build custom modules if no
 precompiled binaries can be found.
 
-The second piece requires that we leverage an external volume (`titan-data`) to store any ZFS
+The second piece requires that we leverage an external volume (`datadatdat-data`) to store any ZFS
 storage pool or other data that we need to persist beyond the lifetime of the Docker VM. This
-volume is created by the CLI and mounted at `/var/lib/titan/data`. We then create the following
+volume is created by the CLI and mounted at `/var/lib/datadatdat/data`. We then create the following
 directories:
 
-   * `/var/lib/titan/data/pool` - The underlying file backing the storage pool we create
-   * `/var/lib/titan/mnt` - Root mountpoint for all filesystems created in the pool. This must
-     exist on the root VM and not within the `titan-data` volume in order for bind mounts to 
+   * `/var/lib/datadatdat/data/pool` - The underlying file backing the storage pool we create
+   * `/var/lib/datadatdat/mnt` - Root mountpoint for all filesystems created in the pool. This must
+     exist on the root VM and not within the `datadatdat-data` volume in order for bind mounts to 
      work properly.
-   * `/var/lib/titan/data/modules` - Stash of ZFS modules (built or installed) to match the current
+   * `/var/lib/datadatdat/data/modules` - Stash of ZFS modules (built or installed) to match the current
      kernel.
 
 The third piece is a nuance of how Linux filesystems work in container namespaces. For more
-information, see the `bind_mounts()` function in the [titan.sh](server/src/scripts/titan.sh)
+information, see the `bind_mounts()` function in the [datadatdat.sh](server/src/scripts/datadatdat.sh)
 utility file.
 
 To keep the packaging simple, we leverage the same image for both the launcher and the server,
@@ -118,7 +118,7 @@ server.
 ```
 
 This will build the server and client, run style checks, as well as unit tests and integration tests. It will
-then package the server into the titan docker image. If you run into lint or style errors, you can run
+then package the server into the datadatdat docker image. If you run into lint or style errors, you can run
 `./gradlew ktlintFormat` to automatically format the code.
 
 
@@ -129,7 +129,7 @@ There are three types of tests:
   * Unit tests - These tests are designed to test a fragment of code, and can be run entirely within the IDE. These
     tests live under the `src/test` directory and are run through `./gradlew test`. They should be very fast and
     are run as part of each pull request.
-  * Integration tests - These tests validate the whole titan server program, but still runs within the IDE and
+  * Integration tests - These tests validate the whole datadatdat server program, but still runs within the IDE and
     hence mock out operating system dependencies (such as ZFS). These tests live under `src/integrationTest` and
     can be run as part of `./gradlew integrationTest`. They should be fast and are run as part of each pull
     request.
@@ -141,8 +141,8 @@ There are three types of tests:
     
  End to end tests are further divided into a few sub-directories:
  
-  * `docker` - Runs local workflows using docker. Should be runnable on any system that supports titan with ZFS.
-  * `remote` - Runs tests for each of the remotes. In addition to having titan server running locally with docker,
+  * `docker` - Runs local workflows using docker. Should be runnable on any system that supports datadatdat with ZFS.
+  * `remote` - Runs tests for each of the remotes. In addition to having datadatdat server running locally with docker,
     these tests require additional configuration, with `S3_LOCATION` set in the environment to a S3 bucket and path
     that has S3 web server configured. These tests will eventually be moved into the corresponding remote repositories.
   * `kubernetes` - Runs tests dependent on kubernetes. Must have a working, supported kubernetes cluster as the
