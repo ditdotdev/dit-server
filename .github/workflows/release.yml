@@ -30,6 +30,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25.1'
+      - name: Configure Git for private modules
+        run: git config --global url."https://${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
       - name: End to End tests
         run: |
           uname -a
@@ -45,6 +49,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           SKIP_ZFS_E2E_ON_FAILURE: "true"
+          GOPRIVATE: github.com/datadatdat/*
       #
       # GITHUB_TOKEN cannot currently be used for pushing docker images, so we
       # have to use a hard-coded secret instead.
