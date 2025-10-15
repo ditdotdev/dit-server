@@ -12,14 +12,14 @@ var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
     commandLine("docker", "build", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
-    mustRunAfter(tasks.named("shadowJar"))
+    dependsOn(tasks.named("shadowJar"))
 }
 
 var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build and publish docker server image"
     commandLine("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
-    mustRunAfter(tasks.named("shadowJar"))
+    dependsOn(tasks.named("shadowJar"))
 }
 
 // Convenience function that doesn't do --no-cache for quick rebuilds (at risk of potentially stale data
@@ -27,7 +27,7 @@ var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
     commandLine("docker", "build", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
-    mustRunAfter(tasks.named("shadowJar"))
+    dependsOn(tasks.named("shadowJar"))
 }
 
 var tagDockerServer = tasks.register<Exec>("tagDockerServer") {

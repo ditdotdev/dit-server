@@ -47,6 +47,7 @@ RUN chmod 755 /usr/local/bin/kubectl
 
 COPY build/libs/datadatdat-server.jar /datadatdat/
 COPY src/scripts/* /datadatdat/
+COPY assets/* /datadatdat/assets/
 
 RUN /datadatdat/get-userland
 
