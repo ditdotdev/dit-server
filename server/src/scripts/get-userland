@@ -13,9 +13,15 @@ source $(dirname $0)/util.sh
 set -xe
 
 zfs_version=$(get_zfs_build_version)
-download_url=$(get_asset_url zfs-$zfs_version-userland.tar.gz)
-[[ -z $download_url ]] && log_error "failed to find asset zfs-$zfs_version-userland.tar.gz"
 
-curl -fssL $download_url > /var/tmp/userland.tar.gz
+# Use local file from git repository
+local_file="/datadatdat/assets/zfs-$zfs_version-userland.tar.gz"
+if [[ -f "$local_file" ]]; then
+    echo "Using local ZFS userland file: $local_file"
+    cp "$local_file" /var/tmp/userland.tar.gz
+else
+    log_error "Local ZFS userland file not found: $local_file"
+fi
+
 cd / && tar --skip-old-files -xvzf /var/tmp/userland.tar.gz
 rm /var/tmp/userland.tar.gz
