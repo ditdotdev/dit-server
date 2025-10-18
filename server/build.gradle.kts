@@ -47,6 +47,7 @@ dependencies {
     // In CI environment these dependencies are not available, tests will be skipped
     try {
         implementation("com.datadatdat:remote-sdk:1.0.0")
+        implementation("com.datadatdat:datadatdat-remote-client:1.0.0")
         implementation("com.datadatdat:datadatdat-remote-server:1.0.0")
         implementation("com.datadatdat:nop-remote-server:1.0.0")
         implementation("com.datadatdat:ssh-remote-server:1.0.0")
