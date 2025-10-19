@@ -4,4 +4,6 @@
 
 package com.datadatdat.exception
 
-class NoSuchObjectException(message: String) : Exception(message)
+class NoSuchObjectException(
+    message: String,
+) : Exception(message)

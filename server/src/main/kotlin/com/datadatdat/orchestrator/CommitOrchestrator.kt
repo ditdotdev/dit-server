@@ -5,17 +5,22 @@ import com.datadatdat.exception.NoSuchObjectException
 import com.datadatdat.exception.ObjectExistsException
 import com.datadatdat.models.Commit
 import com.datadatdat.models.CommitStatus
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import org.jetbrains.exposed.sql.transactions.transaction
 
-class CommitOrchestrator(val services: ServiceLocator) {
-
+class CommitOrchestrator(
+    val services: ServiceLocator,
+) {
     /*
      * To create a new commit, we fetch the active volume set, and then inform the storage provider to create a commit
      * for all volumes within that volume set.
      */
-    fun createCommit(repo: String, commit: Commit, existingVolumeSet: String? = null): Commit {
+    fun createCommit(
+        repo: String,
+        commit: Commit,
+        existingVolumeSet: String? = null,
+    ): Commit {
         NameUtil.validateCommitId(commit.id)
         services.repositories.getRepository(repo)
 
@@ -26,21 +31,28 @@ class CommitOrchestrator(val services: ServiceLocator) {
         }
         val newCommit = Commit(id = commit.id, properties = props)
 
-        val volumeSet = transaction {
-            try {
-                services.metadata.getCommit(repo, commit.id)
-                throw ObjectExistsException("commit '${commit.id}' already exists in repository '$repo'")
-            } catch (e: NoSuchObjectException) {
-                // Ignore
+        val volumeSet =
+            transaction {
+                try {
+                    services.metadata.getCommit(repo, commit.id)
+                    throw ObjectExistsException("commit '${commit.id}' already exists in repository '$repo'")
+                } catch (e: NoSuchObjectException) {
+                    // Ignore
+                }
+                val vs =
+                    if (existingVolumeSet != null) {
+                        existingVolumeSet
+                    } else {
+                        services.metadata.getActiveVolumeSet(repo)
+                    }
+                services.metadata.createCommit(repo, vs, newCommit)
+                vs
             }
-            val vs = if (existingVolumeSet != null) { existingVolumeSet } else { services.metadata.getActiveVolumeSet(repo) }
-            services.metadata.createCommit(repo, vs, newCommit)
-            vs
-        }
 
-        val volumes = transaction {
-            services.metadata.listVolumes(volumeSet)
-        }
+        val volumes =
+            transaction {
+                services.metadata.listVolumes(volumeSet)
+            }
 
         services.context.commitVolumeSet(volumeSet, newCommit.id)
         for (v in volumes) {
@@ -49,7 +61,10 @@ class CommitOrchestrator(val services: ServiceLocator) {
         return newCommit
     }
 
-    fun getCommit(repo: String, id: String): Commit {
+    fun getCommit(
+        repo: String,
+        id: String,
+    ): Commit {
         NameUtil.validateCommitId(id)
         services.repositories.getRepository(repo)
         return transaction {
@@ -57,24 +72,34 @@ class CommitOrchestrator(val services: ServiceLocator) {
         }
     }
 
-    fun getCommitStatus(repo: String, id: String): CommitStatus {
+    fun getCommitStatus(
+        repo: String,
+        id: String,
+    ): CommitStatus {
         NameUtil.validateCommitId(id)
         services.repositories.getRepository(repo)
-        val (vs, volumes) = transaction {
-            val vs = services.metadata.getCommit(repo, id).first
-            Pair(vs, services.metadata.listVolumes(vs).map { it.name })
-        }
+        val (vs, volumes) =
+            transaction {
+                val vs = services.metadata.getCommit(repo, id).first
+                Pair(vs, services.metadata.listVolumes(vs).map { it.name })
+            }
         return services.context.getCommitStatus(vs, id, volumes)
     }
 
-    fun listCommits(repo: String, tags: List<String>? = null): List<Commit> {
+    fun listCommits(
+        repo: String,
+        tags: List<String>? = null,
+    ): List<Commit> {
         services.repositories.getRepository(repo)
         return transaction {
             services.metadata.listCommits(repo, tags)
         }
     }
 
-    fun deleteCommit(repo: String, commit: String) {
+    fun deleteCommit(
+        repo: String,
+        commit: String,
+    ) {
         NameUtil.validateCommitId(commit)
         services.repositories.getRepository(repo)
 
@@ -84,22 +109,27 @@ class CommitOrchestrator(val services: ServiceLocator) {
         services.reaper.signal()
     }
 
-    fun checkoutCommit(repo: String, commit: String) {
+    fun checkoutCommit(
+        repo: String,
+        commit: String,
+    ) {
         NameUtil.validateCommitId(commit)
         services.repositories.getRepository(repo)
-        val (sourceVolumeSet, newVolumeSet) = transaction {
-            val vs = services.metadata.getCommit(repo, commit).first
-            val newVolumeSet = services.metadata.createVolumeSet(repo, commit)
-            val volumes = services.metadata.listVolumes(vs)
-            for (v in volumes) {
-                services.metadata.createVolume(newVolumeSet, v)
+        val (sourceVolumeSet, newVolumeSet) =
+            transaction {
+                val vs = services.metadata.getCommit(repo, commit).first
+                val newVolumeSet = services.metadata.createVolumeSet(repo, commit)
+                val volumes = services.metadata.listVolumes(vs)
+                for (v in volumes) {
+                    services.metadata.createVolume(newVolumeSet, v)
+                }
+                Pair(vs, newVolumeSet)
             }
-            Pair(vs, newVolumeSet)
-        }
 
-        val volumes = transaction {
-            services.metadata.listVolumes(newVolumeSet)
-        }
+        val volumes =
+            transaction {
+                services.metadata.listVolumes(newVolumeSet)
+            }
 
         services.context.cloneVolumeSet(sourceVolumeSet, commit, newVolumeSet)
         for (v in volumes) {
@@ -115,7 +145,10 @@ class CommitOrchestrator(val services: ServiceLocator) {
         services.reaper.signal()
     }
 
-    fun updateCommit(repo: String, commit: Commit) {
+    fun updateCommit(
+        repo: String,
+        commit: Commit,
+    ) {
         NameUtil.validateCommitId(commit.id)
         services.repositories.getRepository(repo)
 

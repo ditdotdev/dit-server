@@ -1,5 +1,18 @@
 package com.datadatdat.operation
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.metadata.OperationData
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Operation
+import com.datadatdat.models.Remote
+import com.datadatdat.models.RemoteParameters
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
+import com.datadatdat.remote.RemoteOperation
+import com.datadatdat.remote.RemoteOperationType
+import com.datadatdat.remote.RemoteProgress
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -17,19 +30,6 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.metadata.OperationData
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Operation
-import com.datadatdat.models.Remote
-import com.datadatdat.models.RemoteParameters
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
-import com.datadatdat.remote.RemoteOperation
-import com.datadatdat.remote.RemoteOperationType
-import com.datadatdat.remote.RemoteProgress
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class OperationExecutorTest : StringSpec() {
@@ -58,42 +58,55 @@ class OperationExecutorTest : StringSpec() {
         return ret
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
     override fun testCaseOrder() = TestCaseOrder.Random
 
     fun createOperation(type: Operation.Type = Operation.Type.PULL): OperationData {
-        val data = OperationData(operation = Operation(
-                id = vs,
-                type = type,
-                state = Operation.State.RUNNING,
-                remote = "remote",
-                commitId = "id"
-        ), params = RemoteParameters("nop"), metadataOnly = false, repo = "foo")
+        val data =
+            OperationData(
+                operation =
+                    Operation(
+                        id = vs,
+                        type = type,
+                        state = Operation.State.RUNNING,
+                        remote = "remote",
+                        commitId = "id",
+                    ),
+                params = RemoteParameters("nop"),
+                metadataOnly = false,
+                repo = "foo",
+            )
         transaction {
             services.metadata.createOperation("foo", vs, data)
         }
         return data
     }
 
-    fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation {
-        return RemoteOperation(
-                updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
-                operationId = vs,
-                commitId = "commit",
-                commit = null,
-                remote = emptyMap(),
-                parameters = emptyMap(),
-                type = type
+    fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation =
+        RemoteOperation(
+            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
+            operationId = vs,
+            commitId = "commit",
+            commit = null,
+            remote = emptyMap(),
+            parameters = emptyMap(),
+            type = type,
         )
-    }
 
-    fun getExecutor(data: OperationData): OperationExecutor {
-        return services.operations.createExecutor(data.operation, "foo", Remote("nop", "origin"), RemoteParameters("nop"),
-                data.metadataOnly)
-    }
+    fun getExecutor(data: OperationData): OperationExecutor =
+        services.operations.createExecutor(
+            data.operation,
+            "foo",
+            Remote("nop", "origin"),
+            RemoteParameters("nop"),
+            data.metadataOnly,
+        )
 
     init {
 
@@ -137,8 +150,12 @@ class OperationExecutorTest : StringSpec() {
                 context.deactivateVolume(data.operation.id, "volume", mapOf("mountpoint" to "/mountpoint"))
                 context.createVolume(data.operation.id, "x-scratch")
                 context.deleteVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
         }
 
@@ -158,8 +175,12 @@ class OperationExecutorTest : StringSpec() {
                 context.deactivateVolume(data.operation.id, "volume", mapOf("mountpoint" to "/mountpoint"))
                 context.createVolume(data.operation.id, "x-scratch")
                 context.deleteVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
         }
 
@@ -174,8 +195,12 @@ class OperationExecutorTest : StringSpec() {
             services.operations.getOperation(vs).state shouldBe Operation.State.COMPLETE
 
             verify {
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
                 context.commitVolumeSet(data.operation.id, "id")
                 context.commitVolume(data.operation.id, "id", "volume", mapOf("mountpoint" to "/mountpoint"))
             }
@@ -196,8 +221,12 @@ class OperationExecutorTest : StringSpec() {
             services.operations.getOperation(vs).state shouldBe Operation.State.COMPLETE
 
             verify {
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
         }
 
@@ -216,8 +245,12 @@ class OperationExecutorTest : StringSpec() {
                 context.deactivateVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
                 context.deactivateVolume(data.operation.id, "volume", mapOf("mountpoint" to "/mountpoint"))
                 context.deleteVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
 
             shouldThrow<NoSuchObjectException> {
@@ -240,8 +273,12 @@ class OperationExecutorTest : StringSpec() {
                 context.deactivateVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
                 context.deactivateVolume(data.operation.id, "volume", mapOf("mountpoint" to "/mountpoint"))
                 context.deleteVolume(data.operation.id, "x-scratch", mapOf("mountpoint" to "/scratch"))
-                context.syncVolumes(any(), any(), listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    any(),
+                    any(),
+                    listOf(Volume("volume", emptyMap(), mapOf("mountpoint" to "/mountpoint"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
 
             shouldThrow<NoSuchObjectException> {

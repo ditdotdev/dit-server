@@ -4,6 +4,9 @@
 
 package com.datadatdat.apis
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.models.Remote
+import com.datadatdat.models.RemoteParameters
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
@@ -14,9 +17,6 @@ import io.ktor.routing.delete
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
-import com.datadatdat.ServiceLocator
-import com.datadatdat.models.Remote
-import com.datadatdat.models.RemoteParameters
 
 /**
  * The remotes API is slightly more substantial because while we expose a more complete CRUD
@@ -25,19 +25,15 @@ import com.datadatdat.models.RemoteParameters
  * complexity of managing different remotes by name down to the storage provider is not really
  * worth it.
  */
-fun Route.RemotesApi(services: ServiceLocator) {
+fun Route.remotesApi(services: ServiceLocator) {
+    fun getRepoName(call: ApplicationCall): String =
+        call.parameters["repositoryName"] ?: throw IllegalArgumentException("missing repositoryName parameter")
 
-    fun getRepoName(call: ApplicationCall): String {
-        return call.parameters["repositoryName"] ?: throw IllegalArgumentException("missing repositoryName parameter")
-    }
+    fun getRemoteName(call: ApplicationCall): String =
+        call.parameters["remoteName"] ?: throw IllegalArgumentException("missing remoteName parameter")
 
-    fun getRemoteName(call: ApplicationCall): String {
-        return call.parameters["remoteName"] ?: throw IllegalArgumentException("missing remoteName parameter")
-    }
-
-    fun getCommitId(call: ApplicationCall): String {
-        return call.parameters["commitId"] ?: throw IllegalArgumentException("missing commitId parameter")
-    }
+    fun getCommitId(call: ApplicationCall): String =
+        call.parameters["commitId"] ?: throw IllegalArgumentException("missing commitId parameter")
 
     route("/v1/repositories/{repositoryName}/remotes") {
         get {
@@ -79,8 +75,11 @@ fun Route.RemotesApi(services: ServiceLocator) {
         get {
             val repo = getRepoName(call)
             val remoteName = getRemoteName(call)
-            val params = services.gson.fromJson(call.request.headers["datadatdat-remote-parameters"],
-                    RemoteParameters::class.java)
+            val params =
+                services.gson.fromJson(
+                    call.request.headers["datadatdat-remote-parameters"],
+                    RemoteParameters::class.java,
+                )
             val tags = call.request.queryParameters.getAll("tag")
             call.respond(services.remotes.listRemoteCommits(repo, remoteName, params, tags))
         }
@@ -91,8 +90,11 @@ fun Route.RemotesApi(services: ServiceLocator) {
             val repo = getRepoName(call)
             val remoteName = getRemoteName(call)
             val commitId = getCommitId(call)
-            val params = services.gson.fromJson(call.request.headers["datadatdat-remote-parameters"],
-                    RemoteParameters::class.java)
+            val params =
+                services.gson.fromJson(
+                    call.request.headers["datadatdat-remote-parameters"],
+                    RemoteParameters::class.java,
+                )
             call.respond(services.remotes.getRemoteCommit(repo, remoteName, params, commitId))
         }
     }

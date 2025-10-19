@@ -9,18 +9,21 @@ data class Operation(
     var type: Type,
     var state: State = State.RUNNING,
     var remote: String,
-    var commitId: String
+    var commitId: String,
 ) {
-
-    enum class Type(val value: String) {
+    enum class Type(
+        val value: String,
+    ) {
         PUSH("PUSH"),
-        PULL("PULL");
+        PULL("PULL"),
     }
 
-    enum class State(val value: String) {
+    enum class State(
+        val value: String,
+    ) {
         RUNNING("RUNNING"),
         ABORTED("ABORTED"),
         FAILED("FAILED"),
-        COMPLETE("COMPLETE");
+        COMPLETE("COMPLETE"),
     }
 }

@@ -4,6 +4,8 @@
 
 package com.datadatdat
 
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.models.Repository
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -23,13 +25,10 @@ import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.mockk
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @OptIn(KtorExperimentalAPI::class)
 class VolumesApiTest : StringSpec() {
-
     lateinit var vs: String
 
     @MockK
@@ -55,14 +54,18 @@ class VolumesApiTest : StringSpec() {
 
     override fun beforeTest(testCase: TestCase) {
         services.metadata.clear()
-        vs = transaction {
-            services.metadata.createRepository(Repository(name = "foo", properties = emptyMap()))
-            services.metadata.createVolumeSet("foo", null, true)
-        }
+        vs =
+            transaction {
+                services.metadata.createRepository(Repository(name = "foo", properties = emptyMap()))
+                services.metadata.createVolumeSet("foo", null, true)
+            }
         return MockKAnnotations.init(this)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 

@@ -24,8 +24,9 @@ import org.slf4j.LoggerFactory
  * a clone of the source commit. For pulls, we try to find the closest possible commit based
  * on the commit source as recorded in the remote repository.
  */
-class OperationOrchestrator(val services: ServiceLocator) {
-
+class OperationOrchestrator(
+    val services: ServiceLocator,
+) {
     companion object {
         val log = LoggerFactory.getLogger(OperationOrchestrator::class.java)
     }
@@ -42,10 +43,8 @@ class OperationOrchestrator(val services: ServiceLocator) {
         repository: String,
         remote: Remote,
         params: RemoteParameters,
-        metadataOnly: Boolean
-    ): OperationExecutor {
-        return OperationExecutor(services, operation, repository, remote, params, metadataOnly, operationComplete)
-    }
+        metadataOnly: Boolean,
+    ): OperationExecutor = OperationExecutor(services, operation, repository, remote, params, metadataOnly, operationComplete)
 
     internal fun createAndStartOperation(
         type: Operation.Type,
@@ -53,7 +52,7 @@ class OperationOrchestrator(val services: ServiceLocator) {
         remote: Remote,
         commitId: String,
         params: RemoteParameters,
-        metadataOnly: Boolean
+        metadataOnly: Boolean,
     ): Operation {
         var localCommit = findLocalCommit(type, repository, remote, params, commitId)
 
@@ -67,10 +66,11 @@ class OperationOrchestrator(val services: ServiceLocator) {
             // Run executor
             val exec = createExecutor(operation, repository, remote, params, metadataOnly)
             runningOperations.put(exec.operation.id, exec)
-            val message = when (type) {
-                Operation.Type.PULL -> "Pulling $commitId from '${remote.name}'"
-                Operation.Type.PUSH -> "Pushing $commitId to '${remote.name}'"
-            }
+            val message =
+                when (type) {
+                    Operation.Type.PULL -> "Pulling $commitId from '${remote.name}'"
+                    Operation.Type.PUSH -> "Pushing $commitId to '${remote.name}'"
+                }
             transaction {
                 services.metadata.addProgressEntry(operation.id, ProgressEntry(ProgressEntry.Type.MESSAGE, message))
             }
@@ -96,7 +96,13 @@ class OperationOrchestrator(val services: ServiceLocator) {
      * event that the chain is broken on the remote (because a commit has been deleted) or that we don't have any
      * appropriate commits locally, we simply use the latest commit and hope for the best.
      */
-    internal fun findLocalCommit(type: Operation.Type, repo: String, remote: Remote, params: RemoteParameters, commitId: String): String? {
+    internal fun findLocalCommit(
+        type: Operation.Type,
+        repo: String,
+        remote: Remote,
+        params: RemoteParameters,
+        commitId: String,
+    ): String? {
         if (type == Operation.Type.PUSH) {
             return commitId
         } else {
@@ -120,9 +126,10 @@ class OperationOrchestrator(val services: ServiceLocator) {
             }
 
             if (localCommit == null) {
-                localCommit = transaction {
-                    services.metadata.getLastCommit(repo)
-                }
+                localCommit =
+                    transaction {
+                        services.metadata.getLastCommit(repo)
+                    }
             }
             return localCommit
         }
@@ -142,9 +149,9 @@ class OperationOrchestrator(val services: ServiceLocator) {
         commitId: String,
         metadataOnly: Boolean,
         params: RemoteParameters,
-        commit: String?
-    ): Pair<String, Operation> {
-        return transaction {
+        commit: String?,
+    ): Pair<String, Operation> =
+        transaction {
             val vs = services.metadata.createVolumeSet(repo, commit)
             val volumes = services.metadata.listVolumes(services.metadata.getActiveVolumeSet(repo))
             for (v in volumes) {
@@ -152,27 +159,35 @@ class OperationOrchestrator(val services: ServiceLocator) {
                 services.metadata.createVolume(vs, Volume(name = v.name, properties = v.properties))
             }
             val op = Operation(id = vs, type = type, state = Operation.State.RUNNING, remote = remoteName, commitId = commitId)
-            services.metadata.createOperation(repo, vs, OperationData(
+            services.metadata.createOperation(
+                repo,
+                vs,
+                OperationData(
                     metadataOnly = metadataOnly,
                     params = params,
                     repo = repo,
-                    operation = op
-            ))
+                    operation = op,
+                ),
+            )
             Pair(vs, op)
         }
-    }
 
     /**
      * Create the storage associated with this operation. When there is no known common local commit, this is
      * accomplished by creating a new volume set, and volumes for each of the volumes in the current active
      * volumeset. If we do have a common local commit, then we instead clone the volume set.
      */
-    internal fun createStorage(repo: String, volumeSet: String, commit: String?) {
+    internal fun createStorage(
+        repo: String,
+        volumeSet: String,
+        commit: String?,
+    ) {
         if (commit == null) {
-            val volumes = transaction {
-                val vs = services.metadata.getActiveVolumeSet(repo)
-                services.metadata.listVolumes(vs)
-            }
+            val volumes =
+                transaction {
+                    val vs = services.metadata.getActiveVolumeSet(repo)
+                    services.metadata.listVolumes(vs)
+                }
             services.context.createVolumeSet(volumeSet)
             for (v in volumes) {
                 val config = services.context.createVolume(volumeSet, v.name)
@@ -181,10 +196,11 @@ class OperationOrchestrator(val services: ServiceLocator) {
                 }
             }
         } else {
-            val (sourceVolumeSet, volumes) = transaction {
-                val vs = services.metadata.getCommit(repo, commit).first
-                Pair(vs, services.metadata.listVolumes(vs))
-            }
+            val (sourceVolumeSet, volumes) =
+                transaction {
+                    val vs = services.metadata.getCommit(repo, commit).first
+                    Pair(vs, services.metadata.listVolumes(vs))
+                }
             services.context.cloneVolumeSet(sourceVolumeSet, commit, volumeSet)
             for (v in volumes) {
                 val config = services.context.cloneVolume(sourceVolumeSet, commit, volumeSet, v.name, v.config)
@@ -197,18 +213,30 @@ class OperationOrchestrator(val services: ServiceLocator) {
 
     fun loadState() {
         log.debug("loading operation state")
-        val operations = transaction {
-            services.metadata.listOperations()
-        }
+        val operations =
+            transaction {
+                services.metadata.listOperations()
+            }
         for (op in operations) {
-            val exec = createExecutor(op.operation, op.repo,
-                    services.remotes.getRemote(op.repo, op.operation.remote), op.params, op.metadataOnly)
+            val exec =
+                createExecutor(
+                    op.operation,
+                    op.repo,
+                    services.remotes.getRemote(op.repo, op.operation.remote),
+                    op.params,
+                    op.metadataOnly,
+                )
             if (op.operation.state == Operation.State.RUNNING) {
                 runningOperations.put(exec.operation.id, exec)
                 log.info("retrying operation ${op.operation.id} after restart")
                 transaction {
-                    services.metadata.addProgressEntry(op.operation.id, ProgressEntry(ProgressEntry.Type.MESSAGE,
-                            "Retrying operation after restart"))
+                    services.metadata.addProgressEntry(
+                        op.operation.id,
+                        ProgressEntry(
+                            ProgressEntry.Type.MESSAGE,
+                            "Retrying operation after restart",
+                        ),
+                    )
                 }
                 exec.start()
             }
@@ -227,14 +255,16 @@ class OperationOrchestrator(val services: ServiceLocator) {
         runningOperations.clear()
     }
 
-    fun getProgress(operationId: String, lastEntryId: Int = 0): List<ProgressEntry> {
-        return transaction {
+    fun getProgress(
+        operationId: String,
+        lastEntryId: Int = 0,
+    ): List<ProgressEntry> =
+        transaction {
             services.metadata.listProgressEntries(operationId, lastEntryId)
         }
-    }
 
-    fun listOperations(repository: String?): List<Operation> {
-        return transaction {
+    fun listOperations(repository: String?): List<Operation> =
+        transaction {
             if (repository != null) {
                 services.repositories.getRepository(repository)
                 services.metadata.listOperationsByRepository(repository).map { it.operation }
@@ -242,7 +272,6 @@ class OperationOrchestrator(val services: ServiceLocator) {
                 services.metadata.listOperations().map { it.operation }
             }
         }
-    }
 
     fun getOperation(id: String): Operation {
         NameUtil.validateOperationId(id)
@@ -270,23 +299,25 @@ class OperationOrchestrator(val services: ServiceLocator) {
         remote: String,
         commitId: String,
         rawParams: RemoteParameters,
-        metadataOnly: Boolean = false
+        metadataOnly: Boolean = false,
     ): Operation {
-
         log.info("pull $commitId from $remote in $repository")
         NameUtil.validateCommitId(commitId)
         val params = services.remotes.validateParameters(rawParams)
         val r = services.remotes.getRemote(repository, remote)
         if (r.provider != params.provider) {
-            throw IllegalArgumentException("operation parameters type (${params.provider}) doesn't match type of remote '$remote' (${r.provider})")
+            throw IllegalArgumentException(
+                "operation parameters type (${params.provider}) doesn't match type of remote '$remote' (${r.provider})",
+            )
         }
         if (r.provider != "nop") {
             services.remotes.getRemoteCommit(repository, remote, params, commitId)
         }
 
-        val inProgress = transaction {
-            services.metadata.operationInProgress(repository, Operation.Type.PULL, commitId, null)
-        }
+        val inProgress =
+            transaction {
+                services.metadata.operationInProgress(repository, Operation.Type.PULL, commitId, null)
+            }
         if (inProgress != null) {
             throw ObjectExistsException("Pull operation $inProgress already in progress for commit $commitId")
         }
@@ -315,15 +346,16 @@ class OperationOrchestrator(val services: ServiceLocator) {
         remote: String,
         commitId: String,
         rawParams: RemoteParameters,
-        metadataOnly: Boolean = false
+        metadataOnly: Boolean = false,
     ): Operation {
-
         log.info("push $commitId to $remote in $repository")
         NameUtil.validateCommitId(commitId)
         val params = services.remotes.validateParameters(rawParams)
         val r = services.remotes.getRemote(repository, remote)
         if (r.provider != params.provider) {
-            throw IllegalArgumentException("operation parameters type (${params.provider}) doesn't match type of remote '$remote' (${r.provider})")
+            throw IllegalArgumentException(
+                "operation parameters type (${params.provider}) doesn't match type of remote '$remote' (${r.provider})",
+            )
         }
         services.commits.getCommit(repository, commitId) // check commit exists
         val remoteProvider = services.remoteProvider(r.provider)
@@ -332,9 +364,10 @@ class OperationOrchestrator(val services: ServiceLocator) {
             throw NoSuchObjectException("no such commit '$commitId' in remote '$remote")
         }
 
-        val inProgress = transaction {
-            services.metadata.operationInProgress(repository, Operation.Type.PUSH, commitId, remote)
-        }
+        val inProgress =
+            transaction {
+                services.metadata.operationInProgress(repository, Operation.Type.PUSH, commitId, remote)
+            }
         if (inProgress != null) {
             throw ObjectExistsException("Push operation $inProgress to remote $remote already in progress for commit $commitId")
         }

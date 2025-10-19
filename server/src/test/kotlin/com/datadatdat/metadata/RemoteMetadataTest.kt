@@ -1,18 +1,17 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Remote
+import com.datadatdat.models.Repository
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Remote
-import com.datadatdat.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class RemoteMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
 
     override fun beforeSpec(spec: Spec) {
@@ -42,11 +41,12 @@ class RemoteMetadataTest : StringSpec() {
         }
 
         "get remote succeeds" {
-            val remote = transaction {
-                md.createRepository(Repository(name = "foo"))
-                md.addRemote("foo", Remote("nop", "origin"))
-                md.getRemote("foo", "origin")
-            }
+            val remote =
+                transaction {
+                    md.createRepository(Repository(name = "foo"))
+                    md.addRemote("foo", Remote("nop", "origin"))
+                    md.getRemote("foo", "origin")
+                }
             remote.name shouldBe "origin"
             remote.provider shouldBe "nop"
         }
@@ -61,12 +61,13 @@ class RemoteMetadataTest : StringSpec() {
         }
 
         "list remotes succeeds" {
-            val remotes = transaction {
-                md.createRepository(Repository(name = "foo"))
-                md.addRemote("foo", Remote("nop", "foo"))
-                md.addRemote("foo", Remote("s3", "bar", mapOf("bucket" to "bucket")))
-                md.listRemotes("foo")
-            }
+            val remotes =
+                transaction {
+                    md.createRepository(Repository(name = "foo"))
+                    md.addRemote("foo", Remote("nop", "foo"))
+                    md.addRemote("foo", Remote("s3", "bar", mapOf("bucket" to "bucket")))
+                    md.listRemotes("foo")
+                }
 
             remotes.size shouldBe 2
             remotes[0].name shouldBe "foo"
@@ -76,12 +77,13 @@ class RemoteMetadataTest : StringSpec() {
         }
 
         "remove remote succeeds" {
-            val remotes = transaction {
-                md.createRepository(Repository(name = "foo"))
-                md.addRemote("foo", Remote("nop", "foo"))
-                md.removeRemote("foo", "foo")
-                md.listRemotes("foo")
-            }
+            val remotes =
+                transaction {
+                    md.createRepository(Repository(name = "foo"))
+                    md.addRemote("foo", Remote("nop", "foo"))
+                    md.removeRemote("foo", "foo")
+                    md.listRemotes("foo")
+                }
             remotes.size shouldBe 0
         }
 
@@ -95,12 +97,13 @@ class RemoteMetadataTest : StringSpec() {
         }
 
         "update remote succeeds" {
-            val remote = transaction {
-                md.createRepository(Repository(name = "foo"))
-                md.addRemote("foo", Remote("nop", "origin"))
-                md.updateRemote("foo", "origin", Remote("s3", "origin", mapOf("bucket" to "bucket")))
-                md.getRemote("foo", "origin")
-            }
+            val remote =
+                transaction {
+                    md.createRepository(Repository(name = "foo"))
+                    md.addRemote("foo", Remote("nop", "origin"))
+                    md.updateRemote("foo", "origin", Remote("s3", "origin", mapOf("bucket" to "bucket")))
+                    md.getRemote("foo", "origin")
+                }
             remote.provider shouldBe "s3"
             remote.name shouldBe "origin"
             remote.properties["bucket"] shouldBe "bucket"
@@ -118,12 +121,13 @@ class RemoteMetadataTest : StringSpec() {
         }
 
         "rename remote succeeds" {
-            val remote = transaction {
-                md.createRepository(Repository(name = "foo"))
-                md.addRemote("foo", Remote("nop", "origin"))
-                md.updateRemote("foo", "origin", Remote("nop", "upstream"))
-                md.getRemote("foo", "upstream")
-            }
+            val remote =
+                transaction {
+                    md.createRepository(Repository(name = "foo"))
+                    md.addRemote("foo", Remote("nop", "origin"))
+                    md.updateRemote("foo", "origin", Remote("nop", "upstream"))
+                    md.getRemote("foo", "upstream")
+                }
             remote.name shouldBe "upstream"
         }
 

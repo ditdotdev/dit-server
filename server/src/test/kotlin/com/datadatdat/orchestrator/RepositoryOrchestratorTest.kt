@@ -4,6 +4,13 @@
 
 package com.datadatdat.orchestrator
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -22,17 +29,9 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class RepositoryOrchestratorTest : StringSpec() {
-
     @MockK
     lateinit var context: DockerZfsContext
 
@@ -52,7 +51,10 @@ class RepositoryOrchestratorTest : StringSpec() {
         return MockKAnnotations.init(this)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -66,9 +68,10 @@ class RepositoryOrchestratorTest : StringSpec() {
     init {
         "create repository succeeds" {
             createRepository()
-            val vs = transaction {
-                services.metadata.getActiveVolumeSet("foo")
-            }
+            val vs =
+                transaction {
+                    services.metadata.getActiveVolumeSet("foo")
+                }
             verifyAll {
                 context.createVolumeSet(vs)
             }

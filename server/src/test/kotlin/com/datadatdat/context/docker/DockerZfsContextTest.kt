@@ -4,6 +4,13 @@
 
 package com.datadatdat.context.docker
 
+import com.datadatdat.models.Volume
+import com.datadatdat.remote.RemoteOperation
+import com.datadatdat.remote.RemoteOperationType
+import com.datadatdat.remote.RemoteProgress
+import com.datadatdat.remote.nop.server.NopRemoteServer
+import com.datadatdat.shell.CommandException
+import com.datadatdat.shell.CommandExecutor
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
 import io.kotlintest.TestResult
@@ -19,17 +26,9 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.impl.annotations.SpyK
 import io.mockk.verify
 import io.mockk.verifyAll
-import com.datadatdat.models.Volume
-import com.datadatdat.remote.RemoteOperation
-import com.datadatdat.remote.RemoteOperationType
-import com.datadatdat.remote.RemoteProgress
-import com.datadatdat.remote.nop.server.NopRemoteServer
-import com.datadatdat.shell.CommandException
-import com.datadatdat.shell.CommandExecutor
 import java.util.UUID
 
 class DockerZfsContextTest : StringSpec() {
-
     @SpyK
     var nopRemoteServer = NopRemoteServer()
 
@@ -40,27 +39,27 @@ class DockerZfsContextTest : StringSpec() {
     @OverrideMockKs
     private var context = DockerZfsContext(mapOf("pool" to "test"))
 
-    override fun beforeTest(testCase: TestCase) {
-        return MockKAnnotations.init(this)
-    }
+    override fun beforeTest(testCase: TestCase) = MockKAnnotations.init(this)
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
     override fun testCaseOrder() = TestCaseOrder.Random
 
-    fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation {
-        return RemoteOperation(
-                updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
-                operationId = UUID.randomUUID().toString(),
-                commitId = "commit",
-                commit = null,
-                remote = emptyMap(),
-                parameters = emptyMap(),
-                type = type
+    fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation =
+        RemoteOperation(
+            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
+            operationId = UUID.randomUUID().toString(),
+            commitId = "commit",
+            commit = null,
+            remote = emptyMap(),
+            parameters = emptyMap(),
+            type = type,
         )
-    }
 
     init {
         "provider defaults to datadatdat as pool name" {
@@ -155,10 +154,24 @@ class DockerZfsContextTest : StringSpec() {
             status.actualSize shouldBe 4
             status.uniqueSize shouldBe 6
             verifyAll {
-                executor.exec("zfs", "list", "-Hpo", "logicalreferenced,referenced,used", "-t",
-                        "snapshot", "test/data/vs/one@commit")
-                executor.exec("zfs", "list", "-Hpo", "logicalreferenced,referenced,used", "-t",
-                        "snapshot", "test/data/vs/two@commit")
+                executor.exec(
+                    "zfs",
+                    "list",
+                    "-Hpo",
+                    "logicalreferenced,referenced,used",
+                    "-t",
+                    "snapshot",
+                    "test/data/vs/one@commit",
+                )
+                executor.exec(
+                    "zfs",
+                    "list",
+                    "-Hpo",
+                    "logicalreferenced,referenced,used",
+                    "-t",
+                    "snapshot",
+                    "test/data/vs/two@commit",
+                )
             }
         }
 
@@ -246,9 +259,10 @@ class DockerZfsContextTest : StringSpec() {
         "unmount ignores lsof failure" {
             every { executor.exec("umount", *anyVararg()) } throws CommandException("", 1, "target is busy")
             every { executor.exec("lsof") } throws CommandException("", 1, "")
-            val ex = shouldThrow<CommandException> {
-                context.deactivateVolume("vs", "vol", mapOf("mountpoint" to "/var/lib/test/mnt/vs/vol"))
-            }
+            val ex =
+                shouldThrow<CommandException> {
+                    context.deactivateVolume("vs", "vol", mapOf("mountpoint" to "/var/lib/test/mnt/vs/vol"))
+                }
             ex.output shouldBe "target is busy"
             verifyAll {
                 executor.exec("umount", "/var/lib/test/mnt/vs/vol")
@@ -258,9 +272,12 @@ class DockerZfsContextTest : StringSpec() {
 
         "sync volumes invokes provider volume sync" {
             val op = createRemoteOperation()
-            context.syncVolumes(nopRemoteServer, op,
-                    listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
-                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+            context.syncVolumes(
+                nopRemoteServer,
+                op,
+                listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
+                Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+            )
             verify {
                 nopRemoteServer.syncDataStart(op)
                 nopRemoteServer.syncDataEnd(op, any(), true)
@@ -272,9 +289,12 @@ class DockerZfsContextTest : StringSpec() {
             val op = createRemoteOperation()
             every { nopRemoteServer.syncDataVolume(any(), any(), any(), any(), any(), any()) } throws Exception()
             shouldThrow<Exception> {
-                context.syncVolumes(nopRemoteServer, op,
-                        listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
-                        Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")))
+                context.syncVolumes(
+                    nopRemoteServer,
+                    op,
+                    listOf(Volume("vol", mapOf("path" to "/path"), mapOf("mountpoint" to "/vol"))),
+                    Volume("x-scratch", emptyMap(), mapOf("mountpoint" to "/scratch")),
+                )
             }
             verify {
                 nopRemoteServer.syncDataEnd(op, any(), false)

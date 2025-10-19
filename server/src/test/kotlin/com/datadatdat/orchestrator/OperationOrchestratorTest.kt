@@ -4,6 +4,20 @@
 
 package com.datadatdat.orchestrator
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.metadata.OperationData
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Operation
+import com.datadatdat.models.ProgressEntry
+import com.datadatdat.models.Remote
+import com.datadatdat.models.RemoteParameters
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
+import com.datadatdat.remote.nop.server.NopRemoteServer
+import com.datadatdat.remote.s3.server.S3RemoteServer
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -20,25 +34,10 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.impl.annotations.SpyK
 import io.mockk.mockk
 import io.mockk.verify
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.metadata.OperationData
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Operation
-import com.datadatdat.models.ProgressEntry
-import com.datadatdat.models.Remote
-import com.datadatdat.models.RemoteParameters
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
-import com.datadatdat.remote.nop.server.NopRemoteServer
-import com.datadatdat.remote.s3.server.S3RemoteServer
-import java.util.UUID
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 
 class OperationOrchestratorTest : StringSpec() {
-
     @MockK(relaxUnitFun = true)
     lateinit var context: DockerZfsContext
 
@@ -60,18 +59,22 @@ class OperationOrchestratorTest : StringSpec() {
 
     override fun beforeTest(testCase: TestCase) {
         services.metadata.clear()
-        vs = transaction {
-            services.metadata.createRepository(Repository("foo"))
-            val vs = services.metadata.createVolumeSet("foo", null, true)
-            services.metadata.createVolume(vs, Volume("volume", config = mapOf("mountpoint" to "/mountpoint")))
-            vs
-        }
+        vs =
+            transaction {
+                services.metadata.createRepository(Repository("foo"))
+                val vs = services.metadata.createVolumeSet("foo", null, true)
+                services.metadata.createVolume(vs, Volume("volume", config = mapOf("mountpoint" to "/mountpoint")))
+                vs
+            }
         MockKAnnotations.init(this)
         services.setRemoteProvider("nop", nopRemoteServer)
         services.setRemoteProvider("s3", s3RemoteServer)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -79,15 +82,20 @@ class OperationOrchestratorTest : StringSpec() {
 
     val params = RemoteParameters("nop")
 
-    fun buildOperation(type: Operation.Type = Operation.Type.PULL): OperationData {
-        return OperationData(operation = Operation(
-                id = vs,
-                type = type,
-                state = Operation.State.RUNNING,
-                remote = "remote",
-                commitId = "id"
-        ), params = params, metadataOnly = false, repo = "foo")
-    }
+    fun buildOperation(type: Operation.Type = Operation.Type.PULL): OperationData =
+        OperationData(
+            operation =
+                Operation(
+                    id = vs,
+                    type = type,
+                    state = Operation.State.RUNNING,
+                    remote = "remote",
+                    commitId = "id",
+                ),
+            params = params,
+            metadataOnly = false,
+            repo = "foo",
+        )
 
     init {
         "get operation succeeds" {
@@ -193,7 +201,12 @@ class OperationOrchestratorTest : StringSpec() {
             services.remotes.addRemote("foo", Remote("s3", "remote", mapOf("bucket" to "bucket")))
             every { s3RemoteServer.getCommit(any(), any(), any()) } throws NoSuchObjectException("")
             shouldThrow<NoSuchObjectException> {
-                services.operations.startPull("foo", "remote", "id", RemoteParameters("s3", mapOf("accessKey" to "key", "secretKey" to "key")))
+                services.operations.startPull(
+                    "foo",
+                    "remote",
+                    "id",
+                    RemoteParameters("s3", mapOf("accessKey" to "key", "secretKey" to "key")),
+                )
             }
         }
 
@@ -272,7 +285,12 @@ class OperationOrchestratorTest : StringSpec() {
             }
             every { s3RemoteServer.getCommit(any(), any(), any()) } returns emptyMap()
             shouldThrow<ObjectExistsException> {
-                services.operations.startPush("foo", "remote", "id", RemoteParameters("s3", mapOf("accessKey" to "key", "secretKey" to "key")))
+                services.operations.startPush(
+                    "foo",
+                    "remote",
+                    "id",
+                    RemoteParameters("s3", mapOf("accessKey" to "key", "secretKey" to "key")),
+                )
             }
         }
 
@@ -291,17 +309,19 @@ class OperationOrchestratorTest : StringSpec() {
         "create storage with no commit creates new volume set" {
             every { context.createVolume(any(), any()) } returns mapOf("mountpoint" to "/mountpoint2")
 
-            val newVolumeSet = transaction {
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume(name = "volume"))
-                vs
-            }
+            val newVolumeSet =
+                transaction {
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume(name = "volume"))
+                    vs
+                }
 
             services.operations.createStorage("foo", newVolumeSet, null)
 
-            val vol = transaction {
-                services.metadata.getVolume(newVolumeSet, "volume")
-            }
+            val vol =
+                transaction {
+                    services.metadata.getVolume(newVolumeSet, "volume")
+                }
             vol.config["mountpoint"] shouldBe "/mountpoint2"
 
             verify {
@@ -313,24 +333,27 @@ class OperationOrchestratorTest : StringSpec() {
         "create storage with existing commit clones volume set" {
             every { context.cloneVolume(any(), any(), any(), any(), any()) } returns mapOf("mountpoint" to "/mountpoint2")
 
-            val (commitVs, commit) = transaction {
-                val cvs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(cvs, Volume("volume"))
-                services.metadata.createCommit("foo", cvs, Commit("id"))
-                services.metadata.getCommit("foo", "id")
-            }
+            val (commitVs, commit) =
+                transaction {
+                    val cvs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(cvs, Volume("volume"))
+                    services.metadata.createCommit("foo", cvs, Commit("id"))
+                    services.metadata.getCommit("foo", "id")
+                }
 
-            val newVs = transaction {
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume("volume"))
-                vs
-            }
+            val newVs =
+                transaction {
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume("volume"))
+                    vs
+                }
 
             services.operations.createStorage("foo", newVs, commit.id)
 
-            val vol = transaction {
-                services.metadata.getVolume(newVs, "volume")
-            }
+            val vol =
+                transaction {
+                    services.metadata.getVolume(newVs, "volume")
+                }
             vol.config["mountpoint"] shouldBe "/mountpoint2"
 
             verify {
@@ -343,8 +366,16 @@ class OperationOrchestratorTest : StringSpec() {
             transaction {
                 services.metadata.createCommit("foo", vs, Commit("sourceCommit"))
             }
-            val (opVs, op) = services.operations.createMetadata("foo", Operation.Type.PULL,
-                    "origin", "id", true, params, "sourceCommit")
+            val (opVs, op) =
+                services.operations.createMetadata(
+                    "foo",
+                    Operation.Type.PULL,
+                    "origin",
+                    "id",
+                    true,
+                    params,
+                    "sourceCommit",
+                )
 
             transaction {
                 val volumes = services.metadata.listVolumes(opVs)
@@ -360,15 +391,27 @@ class OperationOrchestratorTest : StringSpec() {
         }
 
         "find local commit returns commit id for push" {
-            val commit = services.operations.findLocalCommit(Operation.Type.PUSH, "foo", Remote("nop", "remote"),
-                    params, "id")
+            val commit =
+                services.operations.findLocalCommit(
+                    Operation.Type.PUSH,
+                    "foo",
+                    Remote("nop", "remote"),
+                    params,
+                    "id",
+                )
             commit shouldBe "id"
         }
 
         "find local commit returns null if no remote commits exist" {
             every { nopRemoteServer.getCommit(any(), any(), any()) } returns null
-            val commit = services.operations.findLocalCommit(Operation.Type.PULL, "foo", Remote("nop", "remote"),
-                    params, "id")
+            val commit =
+                services.operations.findLocalCommit(
+                    Operation.Type.PULL,
+                    "foo",
+                    Remote("nop", "remote"),
+                    params,
+                    "id",
+                )
             commit shouldBe null
         }
 
@@ -377,13 +420,25 @@ class OperationOrchestratorTest : StringSpec() {
                 services.metadata.createCommit("foo", vs, Commit(id = "one"))
                 services.metadata.createCommit("foo", vs, Commit(id = "two"))
             }
-            every { nopRemoteServer.getCommit(any(), any(), "three") } returns mapOf("tags" to mapOf(
-                    "source" to "two"))
-            every { nopRemoteServer.getCommit(any(), any(), "two") } returns mapOf("tags" to mapOf(
-                    "source" to "one"))
+            every { nopRemoteServer.getCommit(any(), any(), "three") } returns
+                mapOf(
+                    "tags" to
+                        mapOf("source" to "two"),
+                )
+            every { nopRemoteServer.getCommit(any(), any(), "two") } returns
+                mapOf(
+                    "tags" to
+                        mapOf("source" to "one"),
+                )
             every { nopRemoteServer.getCommit(any(), any(), "one") } returns null
-            val commit = services.operations.findLocalCommit(Operation.Type.PULL, "foo", Remote("nop", "remote"),
-                    params, "three")
+            val commit =
+                services.operations.findLocalCommit(
+                    Operation.Type.PULL,
+                    "foo",
+                    Remote("nop", "remote"),
+                    params,
+                    "three",
+                )
             commit shouldBe "two"
         }
 
@@ -391,20 +446,38 @@ class OperationOrchestratorTest : StringSpec() {
             transaction {
                 services.metadata.createCommit("foo", vs, Commit(id = "one"))
             }
-            every { nopRemoteServer.getCommit(any(), any(), "three") } returns mapOf("tags" to mapOf(
-                    "source" to "two"))
-            every { nopRemoteServer.getCommit(any(), any(), "two") } returns mapOf("tags" to mapOf(
-                    "source" to "one"))
+            every { nopRemoteServer.getCommit(any(), any(), "three") } returns
+                mapOf(
+                    "tags" to
+                        mapOf("source" to "two"),
+                )
+            every { nopRemoteServer.getCommit(any(), any(), "two") } returns
+                mapOf(
+                    "tags" to
+                        mapOf("source" to "one"),
+                )
             every { nopRemoteServer.getCommit(any(), any(), "one") } returns null
-            val commit = services.operations.findLocalCommit(Operation.Type.PULL, "foo", Remote("nop", "remote"),
-                    params, "three")
+            val commit =
+                services.operations.findLocalCommit(
+                    Operation.Type.PULL,
+                    "foo",
+                    Remote("nop", "remote"),
+                    params,
+                    "three",
+                )
             commit shouldBe "one"
         }
 
         "find local commit returns null if remote commit doesn't have source tag" {
             every { nopRemoteServer.getCommit(any(), any(), "three") } returns emptyMap()
-            val commit = services.operations.findLocalCommit(Operation.Type.PULL, "foo", Remote("nop", "remote"),
-                    params, "three")
+            val commit =
+                services.operations.findLocalCommit(
+                    Operation.Type.PULL,
+                    "foo",
+                    Remote("nop", "remote"),
+                    params,
+                    "three",
+                )
             commit shouldBe null
         }
 

@@ -1,9 +1,5 @@
 package com.datadatdat.metadata
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import com.datadatdat.exception.NoSuchObjectException
 import com.datadatdat.exception.ObjectExistsException
 import com.datadatdat.metadata.table.Commits
@@ -21,7 +17,10 @@ import com.datadatdat.models.Remote
 import com.datadatdat.models.RemoteParameters
 import com.datadatdat.models.Repository
 import com.datadatdat.models.Volume
-import java.util.UUID
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Op
@@ -39,17 +38,20 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.joda.time.DateTime
+import java.util.UUID
 
 /*
  * The metadata provider is responsible for persistence of all metadata to the datadatdat database. With the exception of
  * init(), it's up to the caller to manage transactions.
  */
-class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = "datadatdat") {
-
+class MetadataProvider(
+    val inMemory: Boolean = true,
+    val databaseName: String = "datadatdat",
+) {
     enum class VolumeState {
         INACTIVE,
         ACTIVE,
-        DELETING
+        DELETING,
     }
 
     private val gson = GsonBuilder().create()
@@ -86,8 +88,16 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
 
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(Repositories, Remotes, VolumeSets, Volumes, Commits, Tags,
-                    Operations, ProgressEntries)
+            SchemaUtils.createMissingTablesAndColumns(
+                Repositories,
+                Remotes,
+                VolumeSets,
+                Volumes,
+                Commits,
+                Tags,
+                Operations,
+                ProgressEntries,
+            )
         }
     }
 
@@ -105,17 +115,18 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         val name = it[Repositories.name]
         val metadata = it[Repositories.metadata]
         println("DEBUG convertRepository: name=$name, metadata='$metadata'")
-        val properties: Map<String, Any> = if (metadata == null || metadata == "null") {
-            println("DEBUG convertRepository: metadata is null or 'null', using empty map")
-            emptyMap()
-        } else {
-            try {
-                gson.fromJson(metadata, object : TypeToken<Map<String, Any>>() {}.type) as? Map<String, Any> ?: emptyMap()
-            } catch (e: Exception) {
-                println("DEBUG convertRepository: failed to parse metadata '$metadata', using empty map: ${e.message}")
+        val properties: Map<String, Any> =
+            if (metadata == null || metadata == "null") {
+                println("DEBUG convertRepository: metadata is null or 'null', using empty map")
                 emptyMap()
+            } else {
+                try {
+                    gson.fromJson(metadata, object : TypeToken<Map<String, Any>>() {}.type) as? Map<String, Any> ?: emptyMap()
+                } catch (e: Exception) {
+                    println("DEBUG convertRepository: failed to parse metadata '$metadata', using empty map: ${e.message}")
+                    emptyMap()
+                }
             }
-        }
         println("DEBUG convertRepository: parsed_properties=$properties")
         return Repository(name = name, properties = properties)
     }
@@ -123,7 +134,9 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
     fun createRepository(repo: Repository) {
         val safeProperties = repo.properties ?: emptyMap<String, Any>()
         val serialized = gson.toJson(safeProperties)
-        println("DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, safeProperties=$safeProperties, serialized='$serialized'")
+        println(
+            "DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, safeProperties=$safeProperties, serialized='$serialized'",
+        )
         try {
             Repositories.insert {
                 it[name] = repo.name
@@ -134,24 +147,26 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun listRepositories(): List<Repository> {
-        return Repositories.selectAll().map { convertRepository(it) }
-    }
+    fun listRepositories(): List<Repository> = Repositories.selectAll().map { convertRepository(it) }
 
-    fun getRepository(repoName: String): Repository {
-        return Repositories.select {
-            Repositories.name eq repoName
-        }.map { convertRepository(it) }
-                .firstOrNull()
-                ?: throw NoSuchObjectException("no such repository '$repoName'")
-    }
+    fun getRepository(repoName: String): Repository =
+        Repositories
+            .select {
+                Repositories.name eq repoName
+            }.map { convertRepository(it) }
+            .firstOrNull()
+            ?: throw NoSuchObjectException("no such repository '$repoName'")
 
-    fun updateRepository(repoName: String, repo: Repository) {
+    fun updateRepository(
+        repoName: String,
+        repo: Repository,
+    ) {
         try {
-            val count = Repositories.update({ Repositories.name eq repoName }) {
-                it[name] = repo.name
-                it[metadata] = gson.toJson(repo.properties)
-            }
+            val count =
+                Repositories.update({ Repositories.name eq repoName }) {
+                    it[name] = repo.name
+                    it[metadata] = gson.toJson(repo.properties)
+                }
             if (count == 0) {
                 throw NoSuchObjectException("no such repository '$repoName'")
             }
@@ -161,19 +176,21 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
     }
 
     fun deleteRepository(repoName: String) {
-        val count = Repositories.deleteWhere {
-            Repositories.name eq repoName
-        }
+        val count =
+            Repositories.deleteWhere {
+                Repositories.name eq repoName
+            }
         if (count == 0) {
             throw NoSuchObjectException("no such repository '$repoName'")
         }
     }
 
-    private fun convertRemote(it: ResultRow): Remote {
-        return gson.fromJson(it[Remotes.metadata], Remote::class.java)
-    }
+    private fun convertRemote(it: ResultRow): Remote = gson.fromJson(it[Remotes.metadata], Remote::class.java)
 
-    fun addRemote(repoName: String, remote: Remote) {
+    fun addRemote(
+        repoName: String,
+        remote: Remote,
+    ) {
         try {
             Remotes.insert {
                 it[name] = remote.name
@@ -185,37 +202,49 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun getRemote(repoName: String, remoteName: String): Remote {
-        return Remotes.select {
-            (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
-        }.map { convertRemote(it) }
-                .firstOrNull()
-                ?: throw NoSuchObjectException("no such remote '$remoteName' in repository '$repoName'")
-    }
+    fun getRemote(
+        repoName: String,
+        remoteName: String,
+    ): Remote =
+        Remotes
+            .select {
+                (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
+            }.map { convertRemote(it) }
+            .firstOrNull()
+            ?: throw NoSuchObjectException("no such remote '$remoteName' in repository '$repoName'")
 
-    fun listRemotes(repoName: String): List<Remote> {
-        return Remotes.select {
-            Remotes.repo eq repoName
-        }.map { convertRemote(it) }
-    }
+    fun listRemotes(repoName: String): List<Remote> =
+        Remotes
+            .select {
+                Remotes.repo eq repoName
+            }.map { convertRemote(it) }
 
-    fun removeRemote(repoName: String, remoteName: String) {
-        val count = Remotes.deleteWhere {
-            (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
-        }
+    fun removeRemote(
+        repoName: String,
+        remoteName: String,
+    ) {
+        val count =
+            Remotes.deleteWhere {
+                (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
+            }
         if (count == 0) {
             throw NoSuchObjectException("no such remote '$remoteName' in repository '$repoName'")
         }
     }
 
-    fun updateRemote(repoName: String, remoteName: String, remote: Remote) {
+    fun updateRemote(
+        repoName: String,
+        remoteName: String,
+        remote: Remote,
+    ) {
         try {
-            val count = Remotes.update({
-                (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
-            }) {
-                it[name] = remote.name
-                it[metadata] = gson.toJson(remote)
-            }
+            val count =
+                Remotes.update({
+                    (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
+                }) {
+                    it[name] = remote.name
+                    it[metadata] = gson.toJson(remote)
+                }
             if (count == 0) {
                 throw NoSuchObjectException("no such remote '$remoteName' in repository '$repoName'")
             }
@@ -224,52 +253,69 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun createVolumeSet(repoName: String, sourceCommit: String? = null, activate: Boolean = false): String {
-        val sourceId = if (sourceCommit == null) {
-            null
-        } else {
-            Commits.select {
-                (Commits.repo eq repoName) and (Commits.guid eq sourceCommit) and (Commits.state eq VolumeState.ACTIVE)
-            }.map {
-                it[Commits.id].value
-            }.firstOrNull()
-        }
+    fun createVolumeSet(
+        repoName: String,
+        sourceCommit: String? = null,
+        activate: Boolean = false,
+    ): String {
+        val sourceId =
+            if (sourceCommit == null) {
+                null
+            } else {
+                Commits
+                    .select {
+                        (Commits.repo eq repoName) and (Commits.guid eq sourceCommit) and (Commits.state eq VolumeState.ACTIVE)
+                    }.map {
+                        it[Commits.id].value
+                    }.firstOrNull()
+            }
 
-        val id = VolumeSets.insert {
-            it[repo] = repoName
-            it[VolumeSets.sourceCommit] = sourceCommit
-            it[VolumeSets.sourceId] = sourceId
-            it[state] = if (activate) { VolumeState.ACTIVE } else { VolumeState.INACTIVE }
-        } get VolumeSets.id
+        val id =
+            VolumeSets.insert {
+                it[repo] = repoName
+                it[VolumeSets.sourceCommit] = sourceCommit
+                it[VolumeSets.sourceId] = sourceId
+                it[state] =
+                    if (activate) {
+                        VolumeState.ACTIVE
+                    } else {
+                        VolumeState.INACTIVE
+                    }
+            } get VolumeSets.id
         return id.toString()
     }
 
-    fun getActiveVolumeSet(repoName: String): String {
-        return VolumeSets.select {
-            (VolumeSets.repo eq repoName) and (VolumeSets.state eq VolumeState.ACTIVE)
-        }.map { it[VolumeSets.id].toString() }
-                .firstOrNull()!!
-    }
+    fun getActiveVolumeSet(repoName: String): String =
+        VolumeSets
+            .select {
+                (VolumeSets.repo eq repoName) and (VolumeSets.state eq VolumeState.ACTIVE)
+            }.map { it[VolumeSets.id].toString() }
+            .firstOrNull()!!
 
     fun getVolumeSetRepo(volumeSet: String): String? {
         val uuid = UUID.fromString(volumeSet)
-        return VolumeSets.select {
-            VolumeSets.id eq uuid
-        }.map { it[VolumeSets.repo] }
-                .firstOrNull()
+        return VolumeSets
+            .select {
+                VolumeSets.id eq uuid
+            }.map { it[VolumeSets.repo] }
+            .firstOrNull()
     }
 
-    fun activateVolumeSet(repoName: String, volumeSet: String) {
+    fun activateVolumeSet(
+        repoName: String,
+        volumeSet: String,
+    ) {
         VolumeSets.update({
             (VolumeSets.repo eq repoName) and (VolumeSets.state eq VolumeState.ACTIVE)
         }) {
             it[state] = VolumeState.INACTIVE
         }
-        val count = VolumeSets.update({
-            (VolumeSets.repo eq repoName) and (VolumeSets.id eq UUID.fromString(volumeSet))
-        }) {
-            it[state] = VolumeState.ACTIVE
-        }
+        val count =
+            VolumeSets.update({
+                (VolumeSets.repo eq repoName) and (VolumeSets.id eq UUID.fromString(volumeSet))
+            }) {
+                it[state] = VolumeState.ACTIVE
+            }
         if (count == 0) {
             // This should never happen, not a user-visible exception
             throw IllegalArgumentException("no such volume set '$volumeSet' in repository '$repoName'")
@@ -293,21 +339,24 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
 
     fun isVolumeSetEmpty(volumeSet: String): Boolean {
         val uuid = UUID.fromString(volumeSet)
-        return Commits.select {
-            Commits.volumeSet eq uuid
-        }.count() == 0L
+        return Commits
+            .select {
+                Commits.volumeSet eq uuid
+            }.count() == 0L
     }
 
-    fun listInactiveVolumeSets(): List<String> {
-        return VolumeSets.select {
-            VolumeSets.state eq VolumeState.INACTIVE
-        }.map { it[VolumeSets.id].toString() }
-    }
+    fun listInactiveVolumeSets(): List<String> =
+        VolumeSets
+            .select {
+                VolumeSets.state eq VolumeState.INACTIVE
+            }.map { it[VolumeSets.id].toString() }
 
     fun markAllVolumeSetsDeleting(repo: String) {
-        var volumeSets = VolumeSets.select {
-            VolumeSets.repo eq repo
-        }.map { it[VolumeSets.id] }
+        var volumeSets =
+            VolumeSets
+                .select {
+                    VolumeSets.repo eq repo
+                }.map { it[VolumeSets.id] }
         for (vs in volumeSets) {
             markVolumeSetDeleting(vs.toString())
         }
@@ -319,19 +368,23 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun listDeletingVolumeSets(): List<String> {
-        return VolumeSets.select {
-            VolumeSets.state eq VolumeState.DELETING
-        }.map { it[VolumeSets.id].toString() }
-    }
+    fun listDeletingVolumeSets(): List<String> =
+        VolumeSets
+            .select {
+                VolumeSets.state eq VolumeState.DELETING
+            }.map { it[VolumeSets.id].toString() }
 
-    private fun convertVolume(it: ResultRow) = Volume(
+    private fun convertVolume(it: ResultRow) =
+        Volume(
             name = it[Volumes.name],
             properties = gson.fromJson(it[Volumes.metadata], object : TypeToken<Map<String, Any>>() {}.type),
-            config = gson.fromJson(it[Volumes.config], object : TypeToken<Map<String, Any>>() {}.type)
-    )
+            config = gson.fromJson(it[Volumes.config], object : TypeToken<Map<String, Any>>() {}.type),
+        )
 
-    fun createVolume(volumeSet: String, volume: Volume) {
+    fun createVolume(
+        volumeSet: String,
+        volume: Volume,
+    ) {
         try {
             Volumes.insert {
                 it[Volumes.volumeSet] = UUID.fromString(volumeSet)
@@ -345,7 +398,11 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun updateVolumeConfig(volumeSet: String, volumeName: String, config: Map<String, Any>) {
+    fun updateVolumeConfig(
+        volumeSet: String,
+        volumeName: String,
+        config: Map<String, Any>,
+    ) {
         Volumes.update({
             (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName) and (Volumes.state neq VolumeState.DELETING)
         }) {
@@ -353,54 +410,65 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun markVolumeDeleting(volumeSet: String, volumeName: String) {
-        val count = Volumes.update({
-            (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
-        }) {
-            it[state] = VolumeState.DELETING
-        }
+    fun markVolumeDeleting(
+        volumeSet: String,
+        volumeName: String,
+    ) {
+        val count =
+            Volumes.update({
+                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
+            }) {
+                it[state] = VolumeState.DELETING
+            }
         if (count == 0) {
             throw NoSuchObjectException("no such volume '$volumeName'")
         }
     }
 
-    fun deleteVolume(volumeSet: String, volumeName: String) {
-        val count = Volumes.deleteWhere {
-            (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
-        }
+    fun deleteVolume(
+        volumeSet: String,
+        volumeName: String,
+    ) {
+        val count =
+            Volumes.deleteWhere {
+                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
+            }
         if (count == 0) {
             throw NoSuchObjectException("no such volume '$volumeName'")
         }
     }
 
-    fun getVolume(volumeSet: String, volumeName: String): Volume {
-        return Volumes.select {
-            (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName) and (Volumes.state neq VolumeState.DELETING)
-        }.map { convertVolume(it) }
-                .firstOrNull()
-                ?: throw NoSuchObjectException("no such volume '$volumeName'")
-    }
+    fun getVolume(
+        volumeSet: String,
+        volumeName: String,
+    ): Volume =
+        Volumes
+            .select {
+                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName) and
+                    (Volumes.state neq VolumeState.DELETING)
+            }.map { convertVolume(it) }
+            .firstOrNull()
+            ?: throw NoSuchObjectException("no such volume '$volumeName'")
 
-    fun listVolumes(volumeSet: String): List<Volume> {
-        return Volumes.select {
-            Volumes.volumeSet eq UUID.fromString(volumeSet)
-        }.map { convertVolume(it) }
-    }
+    fun listVolumes(volumeSet: String): List<Volume> =
+        Volumes
+            .select {
+                Volumes.volumeSet eq UUID.fromString(volumeSet)
+            }.map { convertVolume(it) }
 
-    fun listAllVolumes(): List<Volume> {
-        return Volumes.selectAll().map { convertVolume(it) }
-    }
+    fun listAllVolumes(): List<Volume> = Volumes.selectAll().map { convertVolume(it) }
 
-    fun listDeletingVolumes(): List<Pair<String, Volume>> {
-        return Volumes.select {
-            Volumes.state eq VolumeState.DELETING
-        }.map { Pair(it[Volumes.volumeSet].toString(), convertVolume(it)) }
-    }
+    fun listDeletingVolumes(): List<Pair<String, Volume>> =
+        Volumes
+            .select {
+                Volumes.state eq VolumeState.DELETING
+            }.map { Pair(it[Volumes.volumeSet].toString(), convertVolume(it)) }
 
-    private fun convertCommit(it: ResultRow) = Commit(
+    private fun convertCommit(it: ResultRow) =
+        Commit(
             id = it[Commits.guid],
-            properties = gson.fromJson(it[Commits.metadata], object : TypeToken<Map<String, Any>>() {}.type)
-    )
+            properties = gson.fromJson(it[Commits.metadata], object : TypeToken<Map<String, Any>>() {}.type),
+        )
 
     private fun getTimestamp(commit: Commit): DateTime {
         val timestampString = commit.properties.get("timestamp")
@@ -411,16 +479,22 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun createCommit(repo: String, volumeSet: String, commit: Commit) {
-        val id = Commits.insert {
-            it[Commits.repo] = repo
-            it[Commits.volumeSet] = UUID.fromString(volumeSet)
-            it[Commits.sourceCommit] = getCommitSource(volumeSet)
-            it[Commits.timestamp] = getTimestamp(commit).toString()
-            it[Commits.guid] = commit.id
-            it[Commits.metadata] = gson.toJson(commit.properties)
-            it[Commits.state] = VolumeState.ACTIVE
-        } get Commits.id
+    fun createCommit(
+        repo: String,
+        volumeSet: String,
+        commit: Commit,
+    ) {
+        val id =
+            Commits.insert {
+                it[Commits.repo] = repo
+                it[Commits.volumeSet] = UUID.fromString(volumeSet)
+                it[Commits.sourceCommit] = getCommitSource(volumeSet)
+                it[Commits.timestamp] = getTimestamp(commit).toString()
+                it[Commits.guid] = commit.id
+                it[Commits.metadata] = gson.toJson(commit.properties)
+                it[Commits.state] = VolumeState.ACTIVE
+            } get Commits.id
+
         @Suppress("UNCHECKED_CAST")
         val tags = commit.properties["tags"] as Map<String, String>?
         if (tags != null) {
@@ -434,30 +508,35 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun getCommit(repo: String, commitId: String): Pair<String, Commit> {
-        return Commits.select {
-            (Commits.repo eq repo) and (Commits.guid eq commitId) and (Commits.state eq VolumeState.ACTIVE)
-        }.map {
-            Pair(it[Commits.volumeSet].toString(), convertCommit(it))
-        }.firstOrNull()
-                ?: throw NoSuchObjectException("no such commit '$commitId' in repository '$repo'")
-    }
+    fun getCommit(
+        repo: String,
+        commitId: String,
+    ): Pair<String, Commit> =
+        Commits
+            .select {
+                (Commits.repo eq repo) and (Commits.guid eq commitId) and (Commits.state eq VolumeState.ACTIVE)
+            }.map {
+                Pair(it[Commits.volumeSet].toString(), convertCommit(it))
+            }.firstOrNull()
+            ?: throw NoSuchObjectException("no such commit '$commitId' in repository '$repo'")
 
-    fun getLastCommit(repo: String): String? {
-        return Commits.select {
-            (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)
-        }.orderBy(Commits.timestamp, SortOrder.DESC)
-                .limit(1)
-                .map { it[Commits.guid] }
-                .firstOrNull()
-    }
+    fun getLastCommit(repo: String): String? =
+        Commits
+            .select {
+                (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)
+            }.orderBy(Commits.timestamp, SortOrder.DESC)
+            .limit(1)
+            .map { it[Commits.guid] }
+            .firstOrNull()
 
     fun getCommitSource(volumeSet: String): String? {
         // First, check to see if there's a latest commit for this volume set
         val volumeSetGuid = UUID.fromString(volumeSet)
-        val prevCommit = Commits.select {
-            Commits.volumeSet eq volumeSetGuid
-        }.orderBy(Commits.timestamp, SortOrder.DESC)
+        val prevCommit =
+            Commits
+                .select {
+                    Commits.volumeSet eq volumeSetGuid
+                }.orderBy(Commits.timestamp, SortOrder.DESC)
                 .limit(1)
                 .firstOrNull()
 
@@ -466,9 +545,11 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
 
         // Otherwise, look at the source of the volumeset
-        val volumeSetSource = VolumeSets.select {
-            VolumeSets.id eq volumeSetGuid
-        }.firstOrNull()
+        val volumeSetSource =
+            VolumeSets
+                .select {
+                    VolumeSets.id eq volumeSetGuid
+                }.firstOrNull()
 
         if (volumeSetSource != null) {
             return volumeSetSource[VolumeSets.sourceCommit]
@@ -477,7 +558,11 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         return null
     }
 
-    fun tagsMatch(commit: Commit, existCheck: List<String>, matchCheck: Map<String, String>): Boolean {
+    fun tagsMatch(
+        commit: Commit,
+        existCheck: List<String>,
+        matchCheck: Map<String, String>,
+    ): Boolean {
         @Suppress("UNCHECKED_CAST")
         val tags = commit.properties["tags"] as Map<String, String>? ?: return false
 
@@ -496,7 +581,10 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         return true
     }
 
-    fun listCommits(repo: String, tags: List<String>? = null): List<Commit> {
+    fun listCommits(
+        repo: String,
+        tags: List<String>? = null,
+    ): List<Commit> {
         // Build the search criteria
         val existCheck = mutableListOf<String>()
         val matchCheck = mutableMapOf<String, String>()
@@ -512,38 +600,47 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
             }
         }
 
-        val query = if (!tags.isNullOrEmpty()) {
-            val q = (Commits innerJoin Tags)
-                    .slice(Commits.guid, Commits.volumeSet, Commits.metadata, Commits.timestamp)
-                    .select { ((Commits.id eq Tags.commit) and (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)) }
+        val query =
+            if (!tags.isNullOrEmpty()) {
+                val q =
+                    (Commits innerJoin Tags)
+                        .slice(Commits.guid, Commits.volumeSet, Commits.metadata, Commits.timestamp)
+                        .select { ((Commits.id eq Tags.commit) and (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)) }
 
             /*
              * For filtering by multiple tags, we want to avoid complex temporary tables, etc. So we instead find tags
              * that match any such filter, and then post-process the list to do the AND query. This will get more
              * complicated if we want to do pagination, etc.
              */
-            val conditions = mutableListOf<Op<Boolean>>()
-            if (existCheck.size != 0) {
-                conditions.add(Op.build {
-                    Tags.key inList existCheck
-                })
+                val conditions = mutableListOf<Op<Boolean>>()
+                if (existCheck.size != 0) {
+                    conditions.add(
+                        Op.build {
+                            Tags.key inList existCheck
+                        },
+                    )
+                }
+
+                for ((key, value) in matchCheck) {
+                    conditions.add(
+                        Op.build {
+                            (Tags.key eq key) and (Tags.value eq value)
+                        },
+                    )
+                }
+
+                q
+                    .andWhere {
+                        conditions.compoundOr()
+                    }.withDistinct(true)
+                q
+            } else {
+                Commits.select { (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE) }
             }
 
-            for ((key, value) in matchCheck) {
-                conditions.add(Op.build {
-                    (Tags.key eq key) and (Tags.value eq value)
-                })
-            }
-
-            q.andWhere {
-                conditions.compoundOr()
-            }.withDistinct(true)
-            q
-        } else {
-            Commits.select { (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE) }
-        }
-
-        val result = query.orderBy(Commits.timestamp, SortOrder.DESC)
+        val result =
+            query
+                .orderBy(Commits.timestamp, SortOrder.DESC)
                 .map { convertCommit(it) }
 
         if (tags.isNullOrEmpty()) {
@@ -556,31 +653,36 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
     data class CommitInfo(
         val id: Int,
         val guid: String,
-        var volumeSet: String
+        var volumeSet: String,
     )
 
-    fun listDeletingCommits(): List<CommitInfo> {
-        return Commits.select {
-            Commits.state eq VolumeState.DELETING
-        }.map {
-            CommitInfo(
+    fun listDeletingCommits(): List<CommitInfo> =
+        Commits
+            .select {
+                Commits.state eq VolumeState.DELETING
+            }.map {
+                CommitInfo(
                     id = it[Commits.id].value,
                     guid = it[Commits.guid],
-                    volumeSet = it[Commits.volumeSet].toString()
-            )
-        }
-    }
+                    volumeSet = it[Commits.volumeSet].toString(),
+                )
+            }
 
-    fun hasClones(commit: CommitInfo): Boolean {
-        return !VolumeSets.select {
-            VolumeSets.sourceId eq commit.id
-        }.empty()
-    }
+    fun hasClones(commit: CommitInfo): Boolean =
+        !VolumeSets
+            .select {
+                VolumeSets.sourceId eq commit.id
+            }.empty()
 
-    fun updateCommit(repo: String, commit: Commit) {
-        val id = Commits.select {
-            (Commits.repo eq repo) and (Commits.guid eq commit.id) and (Commits.state eq VolumeState.ACTIVE)
-        }.map { it[Commits.id].value }
+    fun updateCommit(
+        repo: String,
+        commit: Commit,
+    ) {
+        val id =
+            Commits
+                .select {
+                    (Commits.repo eq repo) and (Commits.guid eq commit.id) and (Commits.state eq VolumeState.ACTIVE)
+                }.map { it[Commits.id].value }
                 .firstOrNull()
                 ?: throw NoSuchObjectException("no such commit '${commit.id}' in repository '$repo'")
         Commits.update({
@@ -605,12 +707,16 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun markCommitDeleting(repo: String, commitId: String) {
-        val count = Commits.update({
-            (Commits.repo eq repo) and (Commits.guid eq commitId) and (Commits.state eq VolumeState.ACTIVE)
-        }) {
-            it[state] = VolumeState.DELETING
-        }
+    fun markCommitDeleting(
+        repo: String,
+        commitId: String,
+    ) {
+        val count =
+            Commits.update({
+                (Commits.repo eq repo) and (Commits.guid eq commitId) and (Commits.state eq VolumeState.ACTIVE)
+            }) {
+                it[state] = VolumeState.DELETING
+            }
         if (count == 0) {
             throw NoSuchObjectException("no such commit '$commitId' in repository '$repo'")
         }
@@ -622,7 +728,11 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun createOperation(repo: String, volumeSet: String, data: OperationData) {
+    fun createOperation(
+        repo: String,
+        volumeSet: String,
+        data: OperationData,
+    ) {
         Operations.insert {
             it[id] = UUID.fromString(volumeSet)
             it[Operations.repo] = repo
@@ -635,48 +745,55 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    private fun convertOperation(it: ResultRow) = OperationData(
+    private fun convertOperation(it: ResultRow) =
+        OperationData(
             metadataOnly = it[Operations.metadataOnly],
             params = gson.fromJson(it[Operations.remoteParameters], RemoteParameters::class.java),
             repo = it[Operations.repo],
-            operation = Operation(
+            operation =
+                Operation(
                     id = it[Operations.id].toString(),
                     remote = it[Operations.remote],
                     commitId = it[Operations.commitId],
                     type = it[Operations.type],
-                    state = it[Operations.state]
-            )
-    )
+                    state = it[Operations.state],
+                ),
+        )
 
-    fun listOperationsByRepository(repo: String): List<OperationData> {
-        return Operations.select {
-            (Operations.repo eq repo) and (Operations.state eq Operation.State.RUNNING)
-        }.map { convertOperation(it) }
-    }
+    fun listOperationsByRepository(repo: String): List<OperationData> =
+        Operations
+            .select {
+                (Operations.repo eq repo) and (Operations.state eq Operation.State.RUNNING)
+            }.map { convertOperation(it) }
 
-    fun listOperations(): List<OperationData> {
-        return Operations.select {
-            Operations.state eq Operation.State.RUNNING
-        }.map { convertOperation(it) }
-    }
+    fun listOperations(): List<OperationData> =
+        Operations
+            .select {
+                Operations.state eq Operation.State.RUNNING
+            }.map { convertOperation(it) }
 
     fun getOperation(id: String): OperationData {
         val uuid = UUID.fromString(id)
-        return Operations.select {
-            Operations.id eq uuid
-        }.map { convertOperation(it) }
-                .firstOrNull()
-                ?: throw NoSuchObjectException("no such operation '$id'")
+        return Operations
+            .select {
+                Operations.id eq uuid
+            }.map { convertOperation(it) }
+            .firstOrNull()
+            ?: throw NoSuchObjectException("no such operation '$id'")
     }
 
     fun operationRunning(id: String): Boolean {
         val uuid = UUID.fromString(id)
-        return Operations.select {
-            (Operations.id eq uuid) and (Operations.state eq Operation.State.RUNNING)
-        }.count() > 0
+        return Operations
+            .select {
+                (Operations.id eq uuid) and (Operations.state eq Operation.State.RUNNING)
+            }.count() > 0
     }
 
-    fun updateOperationState(id: String, state: Operation.State) {
+    fun updateOperationState(
+        id: String,
+        state: Operation.State,
+    ) {
         val uuid = UUID.fromString(id)
         Operations.update({
             Operations.id eq uuid
@@ -685,46 +802,64 @@ class MetadataProvider(val inMemory: Boolean = true, val databaseName: String = 
         }
     }
 
-    fun operationInProgress(repo: String, type: Operation.Type, commitId: String, remote: String?): String? {
-        val query = Operations.select {
-            (Operations.repo eq repo) and (Operations.type eq type) and (Operations.commitId eq commitId) and (Operations.state eq Operation.State.RUNNING)
-        }
+    fun operationInProgress(
+        repo: String,
+        type: Operation.Type,
+        commitId: String,
+        remote: String?,
+    ): String? {
+        val query =
+            Operations.select {
+                (Operations.repo eq repo) and (Operations.type eq type) and (Operations.commitId eq commitId) and
+                    (Operations.state eq Operation.State.RUNNING)
+            }
         remote?.let {
             query.andWhere { Operations.remote eq remote }
         }
-        return query.map { it[Operations.id].toString() }
-                .firstOrNull()
+        return query
+            .map { it[Operations.id].toString() }
+            .firstOrNull()
     }
 
-    private fun convertProgressEntry(it: ResultRow) = ProgressEntry(
+    private fun convertProgressEntry(it: ResultRow) =
+        ProgressEntry(
             id = it[ProgressEntries.id].value,
             message = it[ProgressEntries.message],
             percent = it[ProgressEntries.percent],
-            type = it[ProgressEntries.type]
-    )
+            type = it[ProgressEntries.type],
+        )
 
-    fun addProgressEntry(operation: String, entry: ProgressEntry): Int {
-        val result = ProgressEntries.insert {
-            it[ProgressEntries.operation] = UUID.fromString(operation)
-            it[message] = entry.message
-            it[type] = entry.type
-            it[percent] = entry.percent
-        } get ProgressEntries.id
-        val operationState = when (entry.type) {
-            ProgressEntry.Type.FAILED -> Operation.State.FAILED
-            ProgressEntry.Type.ABORT -> Operation.State.ABORTED
-            ProgressEntry.Type.COMPLETE -> Operation.State.COMPLETE
-            else -> Operation.State.RUNNING
-        }
+    fun addProgressEntry(
+        operation: String,
+        entry: ProgressEntry,
+    ): Int {
+        val result =
+            ProgressEntries.insert {
+                it[ProgressEntries.operation] = UUID.fromString(operation)
+                it[message] = entry.message
+                it[type] = entry.type
+                it[percent] = entry.percent
+            } get ProgressEntries.id
+        val operationState =
+            when (entry.type) {
+                ProgressEntry.Type.FAILED -> Operation.State.FAILED
+                ProgressEntry.Type.ABORT -> Operation.State.ABORTED
+                ProgressEntry.Type.COMPLETE -> Operation.State.COMPLETE
+                else -> Operation.State.RUNNING
+            }
         updateOperationState(operation, operationState)
         return result.value
     }
 
-    fun listProgressEntries(operation: String, lastEntry: Int = 0): List<ProgressEntry> {
+    fun listProgressEntries(
+        operation: String,
+        lastEntry: Int = 0,
+    ): List<ProgressEntry> {
         val uuid = UUID.fromString(operation)
-        return ProgressEntries.select {
-            (ProgressEntries.operation eq uuid) and (ProgressEntries.id greater lastEntry)
-        }.orderBy(ProgressEntries.id)
-                .map { convertProgressEntry(it) }
+        return ProgressEntries
+            .select {
+                (ProgressEntries.operation eq uuid) and (ProgressEntries.id greater lastEntry)
+            }.orderBy(ProgressEntries.id)
+            .map { convertProgressEntry(it) }
     }
 }

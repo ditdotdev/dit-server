@@ -1,18 +1,17 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Repository
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class RepositoryMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
 
     override fun beforeSpec(spec: Spec) {

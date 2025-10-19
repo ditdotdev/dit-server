@@ -4,6 +4,9 @@
 
 package com.datadatdat
 
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.models.Error
+import com.datadatdat.models.Repository
 import com.google.gson.Gson
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
@@ -31,14 +34,10 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.just
 import io.mockk.mockk
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.models.Error
-import com.datadatdat.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @OptIn(KtorExperimentalAPI::class)
 class RepositoriesApiTest : StringSpec() {
-
     @MockK
     var context = DockerZfsContext(mapOf("pool" to "test"))
 
@@ -65,7 +64,10 @@ class RepositoriesApiTest : StringSpec() {
         return MockKAnnotations.init(this)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -88,7 +90,7 @@ class RepositoriesApiTest : StringSpec() {
             with(engine.handleRequest(HttpMethod.Get, "/v1/repositories")) {
                 response.status() shouldBe HttpStatusCode.OK
                 response.content shouldBe "[{\"name\":\"repo1\",\"properties\":{\"a\":\"b\"}}," +
-                "{\"name\":\"repo2\",\"properties\":{}}]"
+                    "{\"name\":\"repo2\",\"properties\":{}}]"
             }
         }
 
@@ -154,10 +156,12 @@ class RepositoriesApiTest : StringSpec() {
 
         "create repository succeeds" {
             every { context.createVolumeSet(any()) } just Runs
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.Created
                 response.contentType().toString() shouldBe "application/json; charset=UTF-8"
                 response.content shouldBe "{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}"
@@ -165,10 +169,12 @@ class RepositoriesApiTest : StringSpec() {
         }
 
         "create repository fails with bad name" {
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("{\"name\":\"bad@name\",\"properties\":{\"a\":\"b\"}}")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"name\":\"bad@name\",\"properties\":{\"a\":\"b\"}}")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.BadRequest
                 val error = Gson().fromJson(response.content, Error::class.java)
                 error.code shouldBe "IllegalArgumentException"
@@ -177,10 +183,12 @@ class RepositoriesApiTest : StringSpec() {
         }
 
         "create repository fails with bad json" {
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("-")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("-")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.BadRequest
                 val error = Gson().fromJson(response.content, Error::class.java)
                 error.code shouldBe "JsonSyntaxException"
@@ -191,10 +199,12 @@ class RepositoriesApiTest : StringSpec() {
             transaction {
                 services.metadata.createRepository(Repository(name = "repo1", properties = mapOf("a" to "b")))
             }
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo1") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("{\"name\":\"repo2\",\"properties\":{\"a\":\"b\"}}")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo1") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"name\":\"repo2\",\"properties\":{\"a\":\"b\"}}")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.OK
                 response.contentType().toString() shouldBe "application/json; charset=UTF-8"
                 response.content shouldBe "{\"name\":\"repo2\",\"properties\":{\"a\":\"b\"}}"
@@ -202,10 +212,12 @@ class RepositoriesApiTest : StringSpec() {
         }
 
         "update repository fails with bad json" {
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("-")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("-")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.BadRequest
                 val error = Gson().fromJson(response.content, Error::class.java)
                 error.code shouldBe "JsonSyntaxException"
@@ -213,10 +225,12 @@ class RepositoriesApiTest : StringSpec() {
         }
 
         "update repository fails with bad name" {
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("{\"name\":\"bad@name\",\"properties\":{\"a\":\"b\"}}")
-            }) {
+            with(
+                engine.handleRequest(HttpMethod.Post, "/v1/repositories/repo") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("{\"name\":\"bad@name\",\"properties\":{\"a\":\"b\"}}")
+                },
+            ) {
                 response.status() shouldBe HttpStatusCode.BadRequest
                 val error = Gson().fromJson(response.content, Error::class.java)
                 error.code shouldBe "IllegalArgumentException"

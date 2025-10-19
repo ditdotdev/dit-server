@@ -1,17 +1,16 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Repository
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Repository
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class CommitMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
     lateinit var vs: String
 
@@ -50,8 +49,18 @@ class CommitMetadataTest : StringSpec() {
 
         "get commit succeeds" {
             transaction {
-                md.createCommit("foo", vs, Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z",
-                        "a" to "b")))
+                md.createCommit(
+                    "foo",
+                    vs,
+                    Commit(
+                        id = "id",
+                        properties =
+                            mapOf(
+                                "timestamp" to "2019-09-20T13:45:38Z",
+                                "a" to "b",
+                            ),
+                    ),
+                )
                 val (volumeSet, commit) = md.getCommit("foo", "id")
                 volumeSet shouldBe vs
                 commit.id shouldBe "id"
@@ -60,29 +69,32 @@ class CommitMetadataTest : StringSpec() {
         }
 
         "list commits returns empty list" {
-            val commits = transaction {
-                md.listCommits("foo")
-            }
+            val commits =
+                transaction {
+                    md.listCommits("foo")
+                }
             commits.size shouldBe 0
         }
 
         "list commits succeeds" {
-            val commits = transaction {
-                md.createCommit("foo", vs, Commit(id = "id"))
-                md.listCommits("foo")
-            }
+            val commits =
+                transaction {
+                    md.createCommit("foo", vs, Commit(id = "id"))
+                    md.listCommits("foo")
+                }
             commits.size shouldBe 1
             commits[0].id shouldBe "id"
         }
 
         "list commits sorts commits in reverse timestamp order" {
-            val commits = transaction {
-                md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
-                md.createCommit("foo", vs, Commit(id = "four", properties = mapOf("timestamp" to "2019-10-20T14:46:38Z")))
-                md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-10-20T13:46:38Z")))
-                md.listCommits("foo")
-            }
+            val commits =
+                transaction {
+                    md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "four", properties = mapOf("timestamp" to "2019-10-20T14:46:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-10-20T13:46:38Z")))
+                    md.listCommits("foo")
+                }
             commits.size shouldBe 4
             commits[0].id shouldBe "four"
             commits[1].id shouldBe "three"
@@ -91,61 +103,104 @@ class CommitMetadataTest : StringSpec() {
         }
 
         "get last commit returns latest commit" {
-            val commit = transaction {
-                val vs2 = md.createVolumeSet("foo")
-                md.createCommit("foo", vs2, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
-                md.createCommit("foo", vs2, Commit(id = "four", properties = mapOf("timestamp" to "2019-10-20T14:46:38Z")))
-                md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-10-20T13:46:38Z")))
-                md.getLastCommit("foo")
-            }
+            val commit =
+                transaction {
+                    val vs2 = md.createVolumeSet("foo")
+                    md.createCommit("foo", vs2, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
+                    md.createCommit("foo", vs2, Commit(id = "four", properties = mapOf("timestamp" to "2019-10-20T14:46:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-10-20T13:46:38Z")))
+                    md.getLastCommit("foo")
+                }
             commit shouldBe "four"
         }
 
         "get commit source returns previous commit in volumeset" {
-            val commit = transaction {
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
-                md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
-                md.getCommitSource(vs)
-            }
+            val commit =
+                transaction {
+                    md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
+                    md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:46:38Z")))
+                    md.getCommitSource(vs)
+                }
             commit shouldBe "two"
         }
 
         "get commit source returns volumeset source" {
-            val commit = transaction {
-                md.createCommit("foo", vs, Commit(id = "id"))
-                val vs2 = md.createVolumeSet("foo", "id")
+            val commit =
+                transaction {
+                    md.createCommit("foo", vs, Commit(id = "id"))
+                    val vs2 = md.createVolumeSet("foo", "id")
 
-                md.getCommitSource(vs2)
-            }
+                    md.getCommitSource(vs2)
+                }
             commit shouldBe "id"
         }
 
         "get commit source returns null if no commits exists" {
-            val commit = transaction {
-                md.getCommitSource(vs)
-            }
+            val commit =
+                transaction {
+                    md.getCommitSource(vs)
+                }
             commit shouldBe null
         }
 
         "update commit succeeds" {
-            val commit = transaction {
-                md.createCommit("foo", vs, Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z",
-                        "a" to "b")))
-                md.updateCommit("foo", Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:39Z",
-                        "a" to "c")))
-                md.getCommit("foo", "id").second
-            }
+            val commit =
+                transaction {
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "id",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:38Z",
+                                    "a" to "b",
+                                ),
+                        ),
+                    )
+                    md.updateCommit(
+                        "foo",
+                        Commit(
+                            id = "id",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:39Z",
+                                    "a" to "c",
+                                ),
+                        ),
+                    )
+                    md.getCommit("foo", "id").second
+                }
             commit.properties["a"] shouldBe "c"
             commit.properties["timestamp"] shouldBe "2019-09-20T13:45:39Z"
         }
 
         "tags filtering works after updating commit" {
             transaction {
-                md.createCommit("foo", vs, Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z",
-                        "tags" to mapOf("a" to "b"))))
-                md.updateCommit("foo", Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:39Z",
-                        "tags" to mapOf("a" to "c"))))
+                md.createCommit(
+                    "foo",
+                    vs,
+                    Commit(
+                        id = "id",
+                        properties =
+                            mapOf(
+                                "timestamp" to "2019-09-20T13:45:38Z",
+                                "tags" to mapOf("a" to "b"),
+                            ),
+                    ),
+                )
+                md.updateCommit(
+                    "foo",
+                    Commit(
+                        id = "id",
+                        properties =
+                            mapOf(
+                                "timestamp" to "2019-09-20T13:45:39Z",
+                                "tags" to mapOf("a" to "c"),
+                            ),
+                    ),
+                )
                 md.listCommits("foo", listOf("a=b")).size shouldBe 0
                 md.listCommits("foo", listOf("a=c")).size shouldBe 1
             }
@@ -161,68 +216,202 @@ class CommitMetadataTest : StringSpec() {
 
         "create commit with tags succeeds" {
             transaction {
-                md.createCommit("foo", vs, Commit(id = "id", properties = mapOf("tags" to mapOf(
-                        "a" to "b",
-                        "c" to ""
-                ))))
+                md.createCommit(
+                    "foo",
+                    vs,
+                    Commit(
+                        id = "id",
+                        properties =
+                            mapOf(
+                                "tags" to
+                                    mapOf(
+                                        "a" to "b",
+                                        "c" to "",
+                                    ),
+                            ),
+                    ),
+                )
             }
         }
 
         "filter by tag existence succeeds" {
-            val commits = transaction {
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z", "tags" to mapOf(
-                        "a" to "b",
-                        "c" to "d"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:45:37Z", "tags" to mapOf(
-                        "a" to "e"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-09-20T13:45:36Z", "tags" to mapOf(
-                        "c" to "d"
-                ))))
-                md.listCommits("foo", listOf("a"))
-            }
+            val commits =
+                transaction {
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "one",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:38Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "b",
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "two",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:37Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "e",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "three",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:36Z",
+                                    "tags" to
+                                        mapOf(
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.listCommits("foo", listOf("a"))
+                }
             commits.size shouldBe 2
             commits[0].id shouldBe "one"
             commits[1].id shouldBe "two"
         }
 
         "filter by exact tag succeeds" {
-            val commits = transaction {
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z", "tags" to mapOf(
-                        "a" to "b",
-                        "c" to "d"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:45:37Z", "tags" to mapOf(
-                        "a" to "e"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-09-20T13:45:36Z", "tags" to mapOf(
-                        "c" to "d"
-                ))))
-                md.listCommits("foo", listOf("a=b"))
-            }
+            val commits =
+                transaction {
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "one",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:38Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "b",
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "two",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:37Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "e",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "three",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:36Z",
+                                    "tags" to
+                                        mapOf(
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.listCommits("foo", listOf("a=b"))
+                }
             commits.size shouldBe 1
             commits[0].id shouldBe "one"
         }
 
         "filter by multiple tag succeeds" {
-            val commits = transaction {
-                md.createCommit("foo", vs, Commit(id = "one", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z", "tags" to mapOf(
-                        "a" to "b",
-                        "c" to "d"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "two", properties = mapOf("timestamp" to "2019-09-20T13:45:37Z", "tags" to mapOf(
-                        "a" to "e",
-                        "c" to "d"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "three", properties = mapOf("timestamp" to "2019-09-20T13:45:36Z", "tags" to mapOf(
-                        "c" to "e"
-                ))))
-                md.createCommit("foo", vs, Commit(id = "four", properties = mapOf("timestamp" to "2019-09-20T13:45:35Z", "tags" to mapOf(
-                        "a" to "b"
-                ))))
-                md.listCommits("foo", listOf("c", "a=b"))
-            }
+            val commits =
+                transaction {
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "one",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:38Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "b",
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "two",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:37Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "e",
+                                            "c" to "d",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "three",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:36Z",
+                                    "tags" to
+                                        mapOf(
+                                            "c" to "e",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.createCommit(
+                        "foo",
+                        vs,
+                        Commit(
+                            id = "four",
+                            properties =
+                                mapOf(
+                                    "timestamp" to "2019-09-20T13:45:35Z",
+                                    "tags" to
+                                        mapOf(
+                                            "a" to "b",
+                                        ),
+                                ),
+                        ),
+                    )
+                    md.listCommits("foo", listOf("c", "a=b"))
+                }
             commits.size shouldBe 1
             commits[0].id shouldBe "one"
         }

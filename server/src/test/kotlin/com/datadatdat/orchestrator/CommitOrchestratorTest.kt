@@ -4,6 +4,13 @@
 
 package com.datadatdat.orchestrator
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -23,17 +30,9 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class CommitOrchestratorTest : StringSpec() {
-
     @MockK
     lateinit var context: DockerZfsContext
 
@@ -64,7 +63,10 @@ class CommitOrchestratorTest : StringSpec() {
         return ret
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -98,9 +100,10 @@ class CommitOrchestratorTest : StringSpec() {
 
         "create commit uses current active volume set" {
             services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("a" to "b")))
-            val (volumeSet, commit) = transaction {
-                services.metadata.getCommit("foo", "id")
-            }
+            val (volumeSet, commit) =
+                transaction {
+                    services.metadata.getCommit("foo", "id")
+                }
             volumeSet shouldBe vs
             commit.id shouldBe "id"
             verify {
@@ -111,9 +114,10 @@ class CommitOrchestratorTest : StringSpec() {
         }
 
         "create commit on explicit volume set succeeds" {
-            val vs2 = transaction {
-                services.metadata.createVolumeSet("foo")
-            }
+            val vs2 =
+                transaction {
+                    services.metadata.createVolumeSet("foo")
+                }
             services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("a" to "b")), vs2)
             verify {
                 context.commitVolumeSet(vs2, "id")
@@ -122,17 +126,19 @@ class CommitOrchestratorTest : StringSpec() {
 
         "create commit adds timestamp if not set" {
             services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("a" to "b")))
-            val commit = transaction {
-                services.metadata.getCommit("foo", "id").second
-            }
+            val commit =
+                transaction {
+                    services.metadata.getCommit("foo", "id").second
+                }
             commit.properties shouldContainKey "timestamp"
         }
 
         "create commit leaves timestamp intact if specified" {
             services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("timestamp" to "2019-09-20T13:45:38Z")))
-            val commit = transaction {
-                services.metadata.getCommit("foo", "id").second
-            }
+            val commit =
+                transaction {
+                    services.metadata.getCommit("foo", "id").second
+                }
             commit.properties["timestamp"] shouldBe "2019-09-20T13:45:38Z"
         }
 
@@ -172,17 +178,47 @@ class CommitOrchestratorTest : StringSpec() {
         }
 
         "list commits filters via tags" {
-            services.commits.createCommit("foo", Commit(id = "one", properties = mapOf("tags" to mapOf(
-                    "a" to "b"
-            ))))
-            services.commits.createCommit("foo", Commit(id = "two", properties = mapOf("tags" to mapOf(
-                    "a" to "b",
-                    "c" to "d"
-            ))))
-            services.commits.createCommit("foo", Commit(id = "three", properties = mapOf("tags" to mapOf(
-                    "a" to "c",
-                    "c" to ""
-            ))))
+            services.commits.createCommit(
+                "foo",
+                Commit(
+                    id = "one",
+                    properties =
+                        mapOf(
+                            "tags" to
+                                mapOf(
+                                    "a" to "b",
+                                ),
+                        ),
+                ),
+            )
+            services.commits.createCommit(
+                "foo",
+                Commit(
+                    id = "two",
+                    properties =
+                        mapOf(
+                            "tags" to
+                                mapOf(
+                                    "a" to "b",
+                                    "c" to "d",
+                                ),
+                        ),
+                ),
+            )
+            services.commits.createCommit(
+                "foo",
+                Commit(
+                    id = "three",
+                    properties =
+                        mapOf(
+                            "tags" to
+                                mapOf(
+                                    "a" to "c",
+                                    "c" to "",
+                                ),
+                        ),
+                ),
+            )
             val commits = services.commits.listCommits("foo", listOf("a=b", "c"))
             commits.size shouldBe 1
             commits[0].id shouldBe "two"
@@ -246,14 +282,16 @@ class CommitOrchestratorTest : StringSpec() {
             services.commits.createCommit("foo", Commit("id"))
             services.commits.checkoutCommit("foo", "id")
 
-            val vs2 = transaction {
-                services.metadata.getActiveVolumeSet("foo")
-            }
+            val vs2 =
+                transaction {
+                    services.metadata.getActiveVolumeSet("foo")
+                }
             vs2 shouldNotBe vs
 
-            val volumes = transaction {
-                services.metadata.listVolumes(vs2)
-            }
+            val volumes =
+                transaction {
+                    services.metadata.listVolumes(vs2)
+                }
             volumes.size shouldBe 2
 
             verify {
@@ -290,8 +328,17 @@ class CommitOrchestratorTest : StringSpec() {
 
         "update commit succeeds" {
             val orig = services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("a" to "b")))
-            services.commits.updateCommit("foo", Commit(id = "id", properties = mapOf("timestamp" to orig.properties["timestamp"] as String,
-                    "a" to "c")))
+            services.commits.updateCommit(
+                "foo",
+                Commit(
+                    id = "id",
+                    properties =
+                        mapOf(
+                            "timestamp" to orig.properties["timestamp"] as String,
+                            "a" to "c",
+                        ),
+                ),
+            )
             val commit = services.commits.getCommit("foo", "id")
             commit.properties["a"] shouldBe "c"
         }

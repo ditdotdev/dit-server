@@ -4,6 +4,8 @@
 
 package com.datadatdat.apis
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.models.RemoteParameters
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
@@ -13,11 +15,8 @@ import io.ktor.routing.delete
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
-import com.datadatdat.ServiceLocator
-import com.datadatdat.models.RemoteParameters
 
-fun Route.OperationsApi(services: ServiceLocator) {
-
+fun Route.operationsApi(services: ServiceLocator) {
     route("/v1/operations") {
         get {
             val repo = call.request.queryParameters["repository"]
@@ -41,7 +40,10 @@ fun Route.OperationsApi(services: ServiceLocator) {
     route("/v1/operations/{operationId}/progress") {
         get {
             val operation = call.parameters["operationId"] ?: throw IllegalArgumentException("missing operation id parameter")
-            val lastId = call.request.queryParameters.get("lastId")?.toInt() ?: 0
+            val lastId =
+                call.request.queryParameters
+                    .get("lastId")
+                    ?.toInt() ?: 0
             call.respond(services.operations.getProgress(operation, lastId))
         }
     }
@@ -52,11 +54,14 @@ fun Route.OperationsApi(services: ServiceLocator) {
             val remote = call.parameters["remoteName"] ?: throw IllegalArgumentException("missing remote name parameter")
             val commitId = call.parameters["commitId"] ?: throw IllegalArgumentException("missing commit id parameter")
             val params = call.receive(RemoteParameters::class)
-            val metadataOnly = if (call.request.queryParameters.contains("metadataOnly")) {
-                call.request.queryParameters.get("metadataOnly")!!.toBoolean()
-            } else {
-                false
-            }
+            val metadataOnly =
+                if (call.request.queryParameters.contains("metadataOnly")) {
+                    call.request.queryParameters
+                        .get("metadataOnly")!!
+                        .toBoolean()
+                } else {
+                    false
+                }
             call.respond(HttpStatusCode.Created, services.operations.startPull(repo, remote, commitId, params, metadataOnly))
         }
     }
@@ -67,11 +72,14 @@ fun Route.OperationsApi(services: ServiceLocator) {
             val remote = call.parameters["remoteName"] ?: throw IllegalArgumentException("missing remote name parameter")
             val commitId = call.parameters["commitId"] ?: throw IllegalArgumentException("missing commit id parameter")
             val params = call.receive(RemoteParameters::class)
-            val metadataOnly = if (call.request.queryParameters.contains("metadataOnly")) {
-                call.request.queryParameters.get("metadataOnly")!!.toBoolean()
-            } else {
-                false
-            }
+            val metadataOnly =
+                if (call.request.queryParameters.contains("metadataOnly")) {
+                    call.request.queryParameters
+                        .get("metadataOnly")!!
+                        .toBoolean()
+                } else {
+                    false
+                }
             call.respond(HttpStatusCode.Created, services.operations.startPush(repo, remote, commitId, params, metadataOnly))
         }
     }

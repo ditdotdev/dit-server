@@ -4,6 +4,8 @@
 
 package com.datadatdat.apis
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.models.Volume
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
@@ -14,18 +16,13 @@ import io.ktor.routing.delete
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
-import com.datadatdat.ServiceLocator
-import com.datadatdat.models.Volume
 
-fun Route.VolumesApi(services: ServiceLocator) {
+fun Route.volumesApi(services: ServiceLocator) {
+    fun getRepoName(call: ApplicationCall): String =
+        call.parameters["repositoryName"] ?: throw IllegalArgumentException("missing repositoryName parameter")
 
-    fun getRepoName(call: ApplicationCall): String {
-        return call.parameters["repositoryName"] ?: throw IllegalArgumentException("missing repositoryName parameter")
-    }
-
-    fun getVolumeName(call: ApplicationCall): String {
-        return call.parameters["volumeName"] ?: throw IllegalArgumentException("missing volumeName parameter")
-    }
+    fun getVolumeName(call: ApplicationCall): String =
+        call.parameters["volumeName"] ?: throw IllegalArgumentException("missing volumeName parameter")
 
     route("/v1/repositories/{repositoryName}/volumes") {
         get {

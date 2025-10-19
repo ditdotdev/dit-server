@@ -1,11 +1,11 @@
 package com.datadatdat.context.kubernetes
 
-import com.google.gson.GsonBuilder
 import com.datadatdat.models.ProgressEntry
 import com.datadatdat.remote.RemoteOperation
 import com.datadatdat.remote.RemoteOperationType
 import com.datadatdat.remote.RemoteProgress
 import com.datadatdat.remote.RemoteServer
+import com.google.gson.GsonBuilder
 import java.io.FileReader
 import java.util.ServiceLoader
 
@@ -39,10 +39,10 @@ data class KubernetesOperation(
     val type: RemoteOperationType,
     val scratchVolume: String,
     val volumes: List<String>,
-    val volumeDescriptions: List<String>
+    val volumeDescriptions: List<String>,
 )
 
-class KubernetesRunner() {
+class KubernetesRunner {
     private val loader = ServiceLoader.load(RemoteServer::class.java)
     private val remoteProviders: MutableMap<String, RemoteServer>
     private val gson = GsonBuilder().create()
@@ -58,27 +58,36 @@ class KubernetesRunner() {
         remoteProviders = providers
     }
 
-    val updateProgress = fun(type: RemoteProgress, message: String?, percent: Int?) {
-        val progressType = when (type) {
-            RemoteProgress.START -> ProgressEntry.Type.START
-            RemoteProgress.END -> ProgressEntry.Type.END
-            RemoteProgress.PROGRESS -> ProgressEntry.Type.PROGRESS
-            RemoteProgress.MESSAGE -> ProgressEntry.Type.MESSAGE
-        }
+    val updateProgress = fun(
+        type: RemoteProgress,
+        message: String?,
+        percent: Int?,
+    ) {
+        val progressType =
+            when (type) {
+                RemoteProgress.START -> ProgressEntry.Type.START
+                RemoteProgress.END -> ProgressEntry.Type.END
+                RemoteProgress.PROGRESS -> ProgressEntry.Type.PROGRESS
+                RemoteProgress.MESSAGE -> ProgressEntry.Type.MESSAGE
+            }
         val progress = ProgressEntry(id = progressId++, type = progressType, message = message, percent = percent)
         println(gson.toJson(progress))
     }
 
-    fun runOperation(basePath: String, params: KubernetesOperation) {
-        val operation = RemoteOperation(
+    fun runOperation(
+        basePath: String,
+        params: KubernetesOperation,
+    ) {
+        val operation =
+            RemoteOperation(
                 updateProgress = updateProgress,
                 type = params.type,
                 commit = params.commit,
                 commitId = params.commitId,
                 operationId = params.operationId,
                 remote = params.remote,
-                parameters = params.parameters
-        )
+                parameters = params.parameters,
+            )
 
         val remote = remoteProviders[params.remoteType] ?: error("unknown remote type '${params.remoteType}'")
         val scratchPath = params.scratchVolume
@@ -86,8 +95,14 @@ class KubernetesRunner() {
         var success = false
         try {
             for ((idx, volume) in params.volumes.withIndex()) {
-                remote.syncDataVolume(operation, data, volume, params.volumeDescriptions[idx], "$basePath/$volume",
-                        "$basePath/$scratchPath")
+                remote.syncDataVolume(
+                    operation,
+                    data,
+                    volume,
+                    params.volumeDescriptions[idx],
+                    "$basePath/$volume",
+                    "$basePath/$scratchPath",
+                )
             }
             success = true
         } finally {
@@ -96,7 +111,9 @@ class KubernetesRunner() {
     }
 }
 
-fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
+fun main(
+    @Suppress("UNUSED_PARAMETER") args: Array<String>,
+) {
     val gson = GsonBuilder().create()
 
     val basePath = System.getProperty("basePath") ?: error("missing basePath property")

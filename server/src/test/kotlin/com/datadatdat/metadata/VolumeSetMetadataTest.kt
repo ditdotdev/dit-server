@@ -1,19 +1,18 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
-import java.util.UUID
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 
 class VolumeSetMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
 
     override fun beforeSpec(spec: Spec) {
