@@ -4,6 +4,17 @@
 
 package com.datadatdat
 
+import com.datadatdat.apis.commitsApi
+import com.datadatdat.apis.contextApi
+import com.datadatdat.apis.operationsApi
+import com.datadatdat.apis.remotesApi
+import com.datadatdat.apis.repositoriesApi
+import com.datadatdat.apis.volumesApi
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.context.kubernetes.KubernetesCsiContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Error
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
 import io.ktor.application.Application
@@ -27,34 +38,23 @@ import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
 import io.ktor.util.KtorExperimentalAPI
 import io.kubernetes.client.openapi.ApiException
-import com.datadatdat.apis.CommitsApi
-import com.datadatdat.apis.ContextApi
-import com.datadatdat.apis.OperationsApi
-import com.datadatdat.apis.RemotesApi
-import com.datadatdat.apis.RepositoriesApi
-import com.datadatdat.apis.VolumesApi
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.context.kubernetes.KubernetesCsiContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Error
-import java.io.PrintWriter
-import java.io.StringWriter
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import java.io.PrintWriter
+import java.io.StringWriter
 
 fun exceptionToError(t: Throwable): Any {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     return Error(
-            code = t.javaClass.simpleName,
-            message = t.message ?: "unknown error",
-            details = sw.toString()
+        code = t.javaClass.simpleName,
+        message = t.message ?: "unknown error",
+        details = sw.toString(),
     )
 }
 
-internal fun ApplicationCompressionConfiguration(): Compression.Configuration.() -> Unit {
-    return {
+internal fun applicationCompressionConfiguration(): Compression.Configuration.() -> Unit =
+    {
         gzip {
             priority = 1.0
         }
@@ -63,38 +63,40 @@ internal fun ApplicationCompressionConfiguration(): Compression.Configuration.()
             minimumSize(1024) // condition
         }
     }
-}
 
 @KtorExperimentalAPI
 fun Application.main() {
-    val context = System.getProperty("datadatdat.context")
+    val context =
+        System.getProperty("datadatdat.context")
             ?: throw IllegalArgumentException("datadatdat.context property must be set")
     log.info("Running with context $context")
 
     val configProperty = System.getProperty("datadatdat.contextConfig")
-    val contextConfig = if (!configProperty.isNullOrEmpty()) {
-        val map = mutableMapOf<String, String>()
-        for (propval in configProperty.split(",")) {
-            val components = propval.split("=")
-            if (components.size != 2) {
-                throw IllegalArgumentException("invalid configuration property '$propval'")
+    val contextConfig =
+        if (!configProperty.isNullOrEmpty()) {
+            val map = mutableMapOf<String, String>()
+            for (propval in configProperty.split(",")) {
+                val components = propval.split("=")
+                if (components.size != 2) {
+                    throw IllegalArgumentException("invalid configuration property '$propval'")
+                }
+                map[components[0]] = components[1]
             }
-            map[components[0]] = components[1]
+            map
+        } else {
+            emptyMap<String, String>()
         }
-        map
-    } else {
-        emptyMap<String, String>()
-    }
 
-    val runtimeContext = when (context) {
-        "docker-zfs" -> {
-            DockerZfsContext(contextConfig)
+    val runtimeContext =
+        when (context) {
+            "docker-zfs" -> {
+                DockerZfsContext(contextConfig)
+            }
+            "kubernetes-csi" -> {
+                KubernetesCsiContext(contextConfig)
+            }
+            else -> throw IllegalArgumentException("unknown context '$context', must be one of ('docker-zfs', 'kubernetes-csi')")
         }
-        "kubernetes-csi" -> {
-            KubernetesCsiContext(contextConfig)
-        }
-        else -> throw IllegalArgumentException("unknown context '$context', must be one of ('docker-zfs', 'kubernetes-csi')")
-    }
 
     val services = ServiceLocator(runtimeContext, false)
     services.metadata.init()
@@ -117,14 +119,14 @@ fun Application.mainProvider(services: ServiceLocator) {
     install(CallLogging) {
         level = Level.INFO
     }
-    install(Compression, ApplicationCompressionConfiguration())
+    install(Compression, applicationCompressionConfiguration())
     install(Routing) {
-        CommitsApi(services)
-        ContextApi(services)
-        OperationsApi(services)
-        RemotesApi(services)
-        RepositoriesApi(services)
-        VolumesApi(services)
+        commitsApi(services)
+        contextApi(services)
+        operationsApi(services)
+        remotesApi(services)
+        repositoriesApi(services)
+        volumesApi(services)
     }
     install(StatusPages) {
         exception<NoSuchObjectException> { cause ->
@@ -157,8 +159,14 @@ fun Application.mainProvider(services: ServiceLocator) {
 }
 
 @KtorExperimentalAPI
-fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
-    val server = embeddedServer(CIO, (System.getProperty("datadatdat.port") ?: "5001").toInt(),
-            module = Application::main)
+fun main(
+    @Suppress("UNUSED_PARAMETER") args: Array<String>,
+) {
+    val server =
+        embeddedServer(
+            CIO,
+            (System.getProperty("datadatdat.port") ?: "5001").toInt(),
+            module = Application::main,
+        )
     server.start(wait = true)
 }

@@ -1,17 +1,16 @@
 package com.datadatdat.metadata
 
-import io.kotlintest.Spec
-import io.kotlintest.TestCase
-import io.kotlintest.shouldBe
-import io.kotlintest.specs.StringSpec
 import com.datadatdat.models.Operation
 import com.datadatdat.models.ProgressEntry
 import com.datadatdat.models.RemoteParameters
 import com.datadatdat.models.Repository
+import io.kotlintest.Spec
+import io.kotlintest.TestCase
+import io.kotlintest.shouldBe
+import io.kotlintest.specs.StringSpec
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ProgressEntryMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
     lateinit var vs: String
 
@@ -24,16 +23,22 @@ class ProgressEntryMetadataTest : StringSpec() {
         transaction {
             md.createRepository(Repository(name = "foo", properties = emptyMap()))
             vs = md.createVolumeSet("foo", null, true)
-            md.createOperation("foo", vs, OperationData(
+            md.createOperation(
+                "foo",
+                vs,
+                OperationData(
                     metadataOnly = false,
                     params = RemoteParameters("nop"),
                     repo = "foo",
-                    operation = Operation(
+                    operation =
+                        Operation(
                             id = vs,
                             type = Operation.Type.PULL,
                             state = Operation.State.RUNNING,
                             remote = "origin",
-                            commitId = "id"))
+                            commitId = "id",
+                        ),
+                ),
             )
         }
     }
@@ -85,26 +90,29 @@ class ProgressEntryMetadataTest : StringSpec() {
         }
 
         "add failed progress entry updates operation state" {
-            val op = transaction {
-                md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.FAILED, message = "message"))
-                md.getOperation(vs)
-            }
+            val op =
+                transaction {
+                    md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.FAILED, message = "message"))
+                    md.getOperation(vs)
+                }
             op.operation.state shouldBe Operation.State.FAILED
         }
 
         "add aborted progress entry updates operation state" {
-            val op = transaction {
-                md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.ABORT, message = "message"))
-                md.getOperation(vs)
-            }
+            val op =
+                transaction {
+                    md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.ABORT, message = "message"))
+                    md.getOperation(vs)
+                }
             op.operation.state shouldBe Operation.State.ABORTED
         }
 
         "add completed progress entry updates operation state" {
-            val op = transaction {
-                md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.COMPLETE, message = "message"))
-                md.getOperation(vs)
-            }
+            val op =
+                transaction {
+                    md.addProgressEntry(vs, ProgressEntry(type = ProgressEntry.Type.COMPLETE, message = "message"))
+                    md.getOperation(vs)
+                }
             op.operation.state shouldBe Operation.State.COMPLETE
         }
     }

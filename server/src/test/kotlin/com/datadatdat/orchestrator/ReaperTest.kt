@@ -4,6 +4,15 @@
 
 package com.datadatdat.orchestrator
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.metadata.OperationData
+import com.datadatdat.models.Commit
+import com.datadatdat.models.Operation
+import com.datadatdat.models.RemoteParameters
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -23,19 +32,9 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.metadata.OperationData
-import com.datadatdat.models.Commit
-import com.datadatdat.models.Operation
-import com.datadatdat.models.RemoteParameters
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ReaperTest : StringSpec() {
-
     @MockK
     lateinit var context: DockerZfsContext
 
@@ -52,7 +51,10 @@ class ReaperTest : StringSpec() {
         return MockKAnnotations.init(this)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -64,12 +66,13 @@ class ReaperTest : StringSpec() {
         }
 
         "delete volumes does nothing with no deleting volumes" {
-            val vs = transaction {
-                services.metadata.createRepository(Repository("foo"))
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume("volume"))
-                vs
-            }
+            val vs =
+                transaction {
+                    services.metadata.createRepository(Repository("foo"))
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume("volume"))
+                    vs
+                }
             services.reaper.reapVolumes() shouldBe false
             transaction {
                 services.metadata.getVolume(vs, "volume")
@@ -77,13 +80,14 @@ class ReaperTest : StringSpec() {
         }
 
         "delete volumes deletes marked volumes" {
-            val vs = transaction {
-                services.metadata.createRepository(Repository("foo"))
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume("volume"))
-                services.metadata.markVolumeDeleting(vs, "volume")
-                vs
-            }
+            val vs =
+                transaction {
+                    services.metadata.createRepository(Repository("foo"))
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume("volume"))
+                    services.metadata.markVolumeDeleting(vs, "volume")
+                    vs
+                }
             every { context.deleteVolume(any(), any(), any()) } just Runs
             services.reaper.reapVolumes() shouldBe true
             verify {
@@ -119,13 +123,14 @@ class ReaperTest : StringSpec() {
         }
 
         "delete empty volume succeeds with no commits" {
-            val vs = transaction {
-                services.metadata.createRepository(Repository("foo"))
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume("volume"))
-                services.metadata.markVolumeSetDeleting(vs)
-                vs
-            }
+            val vs =
+                transaction {
+                    services.metadata.createRepository(Repository("foo"))
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume("volume"))
+                    services.metadata.markVolumeSetDeleting(vs)
+                    vs
+                }
             every { context.deleteVolume(any(), any(), any()) } just Runs
             every { context.deleteVolumeSet(any()) } just Runs
 
@@ -158,18 +163,23 @@ class ReaperTest : StringSpec() {
             transaction {
                 services.metadata.createRepository(Repository("foo"))
                 val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createOperation("foo", vs, OperationData(
-                        operation = Operation(
+                services.metadata.createOperation(
+                    "foo",
+                    vs,
+                    OperationData(
+                        operation =
+                            Operation(
                                 id = vs,
                                 type = Operation.Type.PUSH,
                                 state = Operation.State.RUNNING,
                                 remote = "origin",
-                                commitId = "commit"
-                        ),
+                                commitId = "commit",
+                            ),
                         params = RemoteParameters("nop"),
                         metadataOnly = false,
-                        repo = "foo"
-                ))
+                        repo = "foo",
+                    ),
+                )
             }
             services.reaper.markEmptyVolumeSets()
             transaction {
@@ -189,10 +199,11 @@ class ReaperTest : StringSpec() {
         }
 
         "mark empty volume sets succeeds" {
-            val vs = transaction {
-                services.metadata.createRepository(Repository("foo"))
-                services.metadata.createVolumeSet("foo")
-            }
+            val vs =
+                transaction {
+                    services.metadata.createRepository(Repository("foo"))
+                    services.metadata.createVolumeSet("foo")
+                }
             services.reaper.markEmptyVolumeSets()
             transaction {
                 val volumeSets = services.metadata.listDeletingVolumeSets()
@@ -229,14 +240,15 @@ class ReaperTest : StringSpec() {
         }
 
         "reap commits succeeds" {
-            val vs = transaction {
-                services.metadata.createRepository(Repository("foo"))
-                val vs = services.metadata.createVolumeSet("foo")
-                services.metadata.createVolume(vs, Volume("volume"))
-                services.metadata.createCommit("foo", vs, Commit("id"))
-                services.metadata.markCommitDeleting("foo", "id")
-                vs
-            }
+            val vs =
+                transaction {
+                    services.metadata.createRepository(Repository("foo"))
+                    val vs = services.metadata.createVolumeSet("foo")
+                    services.metadata.createVolume(vs, Volume("volume"))
+                    services.metadata.createCommit("foo", vs, Commit("id"))
+                    services.metadata.markCommitDeleting("foo", "id")
+                    vs
+                }
             every { context.deleteVolumeSetCommit(any(), any()) } just Runs
             every { context.deleteVolumeCommit(any(), any(), any()) } just Runs
             services.reaper.reapCommits() shouldBe true

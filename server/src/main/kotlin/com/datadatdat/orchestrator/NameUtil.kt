@@ -24,15 +24,19 @@ import java.util.UUID
  * reserve the "x-" namespace and don't allow
  */
 class NameUtil {
-
     companion object {
         private val nameRegex = "^[a-zA-Z0-9\\-.]+$".toRegex()
         private val nameLimit = 63
 
-        internal fun validateCommon(name: String, type: String) {
+        internal fun validateCommon(
+            name: String,
+            type: String,
+        ) {
             if (!nameRegex.matches(name)) {
-                throw IllegalArgumentException("invalid $type name, can only contain " +
-                        "alphanumeric characters, '-', or '.'")
+                throw IllegalArgumentException(
+                    "invalid $type name, can only contain " +
+                        "alphanumeric characters, '-', or '.'",
+                )
             }
             if (name.length > nameLimit) {
                 throw IllegalArgumentException("invalid $type name, must be $nameLimit characters or less")

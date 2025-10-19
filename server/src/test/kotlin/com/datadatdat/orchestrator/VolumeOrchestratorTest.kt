@@ -4,6 +4,12 @@
 
 package com.datadatdat.orchestrator
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.context.docker.DockerZfsContext
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
+import com.datadatdat.models.VolumeStatus
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
@@ -22,16 +28,9 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
-import com.datadatdat.ServiceLocator
-import com.datadatdat.context.docker.DockerZfsContext
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
-import com.datadatdat.models.VolumeStatus
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class VolumeOrchestratorTest : StringSpec() {
-
     @MockK
     lateinit var context: DockerZfsContext
 
@@ -57,7 +56,10 @@ class VolumeOrchestratorTest : StringSpec() {
         return MockKAnnotations.init(this)
     }
 
-    override fun afterTest(testCase: TestCase, result: TestResult) {
+    override fun afterTest(
+        testCase: TestCase,
+        result: TestResult,
+    ) {
         clearAllMocks()
     }
 
@@ -246,8 +248,14 @@ class VolumeOrchestratorTest : StringSpec() {
         "get volume status succeeds" {
             createVolume()
 
-            every { services.context.getVolumeStatus(any(), any(), any()) } returns VolumeStatus(name = "vol",
-                    actualSize = 10L, logicalSize = 20L, ready = true, error = null)
+            every { services.context.getVolumeStatus(any(), any(), any()) } returns
+                VolumeStatus(
+                    name = "vol",
+                    actualSize = 10L,
+                    logicalSize = 20L,
+                    ready = true,
+                    error = null,
+                )
 
             val status = services.volumes.getVolumeStatus("foo", "vol")
 

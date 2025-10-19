@@ -1,6 +1,5 @@
 package com.datadatdat
 
-import com.google.gson.GsonBuilder
 import com.datadatdat.context.RuntimeContext
 import com.datadatdat.metadata.MetadataProvider
 import com.datadatdat.orchestrator.CommitOrchestrator
@@ -10,9 +9,13 @@ import com.datadatdat.orchestrator.RemoteOrchestrator
 import com.datadatdat.orchestrator.RepositoryOrchestrator
 import com.datadatdat.orchestrator.VolumeOrchestrator
 import com.datadatdat.remote.RemoteServer
+import com.google.gson.GsonBuilder
 import java.util.ServiceLoader
 
-class ServiceLocator(val context: RuntimeContext, inMemory: Boolean = true) {
+class ServiceLocator(
+    val context: RuntimeContext,
+    inMemory: Boolean = true,
+) {
     private val loader = ServiceLoader.load(RemoteServer::class.java)
     private val remoteProviders: MutableMap<String, RemoteServer>
 
@@ -37,13 +40,15 @@ class ServiceLocator(val context: RuntimeContext, inMemory: Boolean = true) {
     val gson = GsonBuilder().create()
 
     // Get a remote provider by name
-    fun remoteProvider(type: String): RemoteServer {
-        return remoteProviders[type]
-                ?: throw IllegalArgumentException("unknown remote provider '$type'")
-    }
+    fun remoteProvider(type: String): RemoteServer =
+        remoteProviders[type]
+            ?: throw IllegalArgumentException("unknown remote provider '$type'")
 
     // For testing purposes
-    fun setRemoteProvider(type: String, server: RemoteServer) {
+    fun setRemoteProvider(
+        type: String,
+        server: RemoteServer,
+    ) {
         remoteProviders[type] = server
     }
 }

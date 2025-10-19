@@ -1,19 +1,18 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.models.Operation
+import com.datadatdat.models.RemoteParameters
+import com.datadatdat.models.Repository
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.models.Operation
-import com.datadatdat.models.RemoteParameters
-import com.datadatdat.models.Repository
-import java.util.UUID
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 
 class OperationMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
     lateinit var vs: String
 
@@ -29,19 +28,20 @@ class OperationMetadataTest : StringSpec() {
         }
     }
 
-    fun buildOperationData(id: String): OperationData {
-        return OperationData(
-                metadataOnly = false,
-                params = RemoteParameters("nop"),
-                repo = "foo",
-                operation = Operation(
-                        id = id,
-                        type = Operation.Type.PULL,
-                        state = Operation.State.RUNNING,
-                        remote = "origin",
-                        commitId = "id")
+    fun buildOperationData(id: String): OperationData =
+        OperationData(
+            metadataOnly = false,
+            params = RemoteParameters("nop"),
+            repo = "foo",
+            operation =
+                Operation(
+                    id = id,
+                    type = Operation.Type.PULL,
+                    state = Operation.State.RUNNING,
+                    remote = "origin",
+                    commitId = "id",
+                ),
         )
-    }
 
     init {
         "create operation succeeds" {

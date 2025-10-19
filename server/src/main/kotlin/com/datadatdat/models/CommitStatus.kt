@@ -9,5 +9,5 @@ data class CommitStatus(
     var actualSize: Long,
     var uniqueSize: Long,
     var ready: Boolean,
-    var error: String?
+    var error: String?,
 )

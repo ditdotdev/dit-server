@@ -1,18 +1,17 @@
 package com.datadatdat.metadata
 
+import com.datadatdat.exception.NoSuchObjectException
+import com.datadatdat.exception.ObjectExistsException
+import com.datadatdat.models.Repository
+import com.datadatdat.models.Volume
 import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
-import com.datadatdat.exception.NoSuchObjectException
-import com.datadatdat.exception.ObjectExistsException
-import com.datadatdat.models.Repository
-import com.datadatdat.models.Volume
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class VolumeMetadataTest : StringSpec() {
-
     val md = MetadataProvider()
 
     override fun beforeSpec(spec: Spec) {
@@ -23,12 +22,11 @@ class VolumeMetadataTest : StringSpec() {
         md.clear()
     }
 
-    fun createVolumeSet(): String {
-        return transaction {
+    fun createVolumeSet(): String =
+        transaction {
             md.createRepository(Repository(name = "foo"))
             md.createVolumeSet("foo", null, true)
         }
-    }
 
     init {
         "create volume succeeds" {
@@ -128,11 +126,12 @@ class VolumeMetadataTest : StringSpec() {
 
         "list deleting volumes succeeds" {
             val vs = createVolumeSet()
-            val volumes = transaction {
-                md.createVolume(vs, Volume("vol"))
-                md.markVolumeDeleting(vs, "vol")
-                md.listDeletingVolumes()
-            }
+            val volumes =
+                transaction {
+                    md.createVolume(vs, Volume("vol"))
+                    md.markVolumeDeleting(vs, "vol")
+                    md.listDeletingVolumes()
+                }
             volumes.size shouldBe 1
             volumes[0].first shouldBe vs
             volumes[0].second.name shouldBe "vol"

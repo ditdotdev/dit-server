@@ -4,8 +4,6 @@
 
 package com.datadatdat.operation
 
-import com.google.gson.JsonParser
-import io.kubernetes.client.openapi.ApiException
 import com.datadatdat.ServiceLocator
 import com.datadatdat.metadata.table.Tags.commit
 import com.datadatdat.models.Commit
@@ -18,6 +16,8 @@ import com.datadatdat.remote.RemoteOperation
 import com.datadatdat.remote.RemoteOperationType
 import com.datadatdat.remote.RemoteProgress
 import com.datadatdat.remote.RemoteServer
+import com.google.gson.JsonParser
+import io.kubernetes.client.openapi.ApiException
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 
@@ -43,23 +43,27 @@ class OperationExecutor(
     val remote: Remote,
     val params: RemoteParameters,
     val metadataOnly: Boolean = false,
-    val completionCallback: ((operationId: String) -> Unit)? = null
+    val completionCallback: ((operationId: String) -> Unit)? = null,
 ) : Runnable {
-
     companion object {
         val log = LoggerFactory.getLogger(OperationExecutor::class.java)
     }
 
     internal var thread: Thread? = null
 
-    val updateProgress = fun(type: RemoteProgress, message: String?, percent: Int?) {
+    val updateProgress = fun(
+        type: RemoteProgress,
+        message: String?,
+        percent: Int?,
+    ) {
         transaction {
-            val progressType = when (type) {
-                RemoteProgress.START -> ProgressEntry.Type.START
-                RemoteProgress.END -> ProgressEntry.Type.END
-                RemoteProgress.PROGRESS -> ProgressEntry.Type.PROGRESS
-                RemoteProgress.MESSAGE -> ProgressEntry.Type.MESSAGE
-            }
+            val progressType =
+                when (type) {
+                    RemoteProgress.START -> ProgressEntry.Type.START
+                    RemoteProgress.END -> ProgressEntry.Type.END
+                    RemoteProgress.PROGRESS -> ProgressEntry.Type.PROGRESS
+                    RemoteProgress.MESSAGE -> ProgressEntry.Type.MESSAGE
+                }
             services.metadata.addProgressEntry(operation.id, ProgressEntry(progressType, message, percent))
         }
     }
@@ -67,32 +71,42 @@ class OperationExecutor(
     internal fun setup(): RemoteOperation {
         log.info("starting ${operation.type} operation ${operation.id}")
 
-        val commit = if (operation.type == Operation.Type.PUSH) {
-            services.commits.getCommit(repo, operation.commitId)
-        } else {
-            services.remotes.getRemoteCommit(repo, remote.name, params, operation.commitId)
-        }
+        val commit =
+            if (operation.type == Operation.Type.PUSH) {
+                services.commits.getCommit(repo, operation.commitId)
+            } else {
+                services.remotes.getRemoteCommit(repo, remote.name, params, operation.commitId)
+            }
 
         return RemoteOperation(
-                updateProgress = updateProgress,
-                remote = remote.properties,
-                parameters = params.properties,
-                operationId = operation.id,
-                commitId = operation.commitId,
-                commit = commit.properties,
-                type = if (operation.type == Operation.Type.PUSH) { RemoteOperationType.PUSH } else { RemoteOperationType.PULL }
+            updateProgress = updateProgress,
+            remote = remote.properties,
+            parameters = params.properties,
+            operationId = operation.id,
+            commitId = operation.commitId,
+            commit = commit.properties,
+            type =
+                if (operation.type == Operation.Type.PUSH) {
+                    RemoteOperationType.PUSH
+                } else {
+                    RemoteOperationType.PULL
+                },
         )
     }
 
-    internal fun syncData(provider: RemoteServer, operation: RemoteOperation) {
+    internal fun syncData(
+        provider: RemoteServer,
+        operation: RemoteOperation,
+    ) {
         val operationId = operation.operationId
 
         // Get list of current volumes
-        val volumes = transaction {
-            val vols = services.metadata.listVolumes(operationId)
-            services.metadata.createVolume(operationId, Volume("x-scratch"))
-            vols
-        }
+        val volumes =
+            transaction {
+                val vols = services.metadata.listVolumes(operationId)
+                services.metadata.createVolume(operationId, Volume("x-scratch"))
+                vols
+            }
 
         // Create scratch volume
         val scratchConfig = services.context.createVolume(operationId, "x-scratch")
@@ -125,7 +139,10 @@ class OperationExecutor(
         }
     }
 
-    internal fun syncMetadata(provider: RemoteServer, operation: RemoteOperation) {
+    internal fun syncMetadata(
+        provider: RemoteServer,
+        operation: RemoteOperation,
+    ) {
         if (operation.type == RemoteOperationType.PUSH) {
             provider.pushMetadata(operation, operation.commit!!, metadataOnly)
         } else {
@@ -155,20 +172,22 @@ class OperationExecutor(
             }
             log.info("${operation.type} operation ${operation.id} interrupted", t)
         } catch (t: Throwable) {
-            val message = if (t is ApiException) {
-                val kubeError = try {
-                    val json = JsonParser.parseString(t.responseBody)
-                    // Try to parse API exception message
-                    json.asJsonObject?.get("message")?.asString
-                } catch (e: Throwable) {
-                    // Otherwise just return whole response body
-                    t.responseBody
+            val message =
+                if (t is ApiException) {
+                    val kubeError =
+                        try {
+                            val json = JsonParser.parseString(t.responseBody)
+                            // Try to parse API exception message
+                            json.asJsonObject?.get("message")?.asString
+                        } catch (e: Throwable) {
+                            // Otherwise just return whole response body
+                            t.responseBody
+                        }
+                    log.error(kubeError)
+                    kubeError
+                } else {
+                    t.message
                 }
-                log.error(kubeError)
-                kubeError
-            } else {
-                t.message
-            }
             transaction {
                 services.metadata.addProgressEntry(operation.id, ProgressEntry(ProgressEntry.Type.FAILED, message))
             }

@@ -4,6 +4,8 @@
 
 package com.datadatdat.apis
 
+import com.datadatdat.ServiceLocator
+import com.datadatdat.models.Commit
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
@@ -13,14 +15,12 @@ import io.ktor.routing.delete
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
-import com.datadatdat.ServiceLocator
-import com.datadatdat.models.Commit
 
 /**
  * Handler for all commit related APIs. These are simplistic wrappers around the underlying storage
  * provider.
  */
-fun Route.CommitsApi(services: ServiceLocator) {
+fun Route.commitsApi(services: ServiceLocator) {
     route("/v1/repositories/{repositoryName}/commits") {
         post {
             val repo = call.parameters["repositoryName"] ?: throw IllegalArgumentException("missing repository name parameter")

@@ -4,4 +4,6 @@
 
 package com.datadatdat.exception
 
-class ObjectExistsException(message: String) : Exception(message)
+class ObjectExistsException(
+    message: String,
+) : Exception(message)

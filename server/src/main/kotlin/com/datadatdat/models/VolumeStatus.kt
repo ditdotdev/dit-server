@@ -10,5 +10,5 @@ data class VolumeStatus(
     var actualSize: Long,
     var properties: Map<String, Any> = emptyMap(),
     var ready: Boolean,
-    var error: String?
+    var error: String?,
 )

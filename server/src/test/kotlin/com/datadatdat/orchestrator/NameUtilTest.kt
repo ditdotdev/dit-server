@@ -5,7 +5,6 @@ import io.kotlintest.specs.StringSpec
 import java.util.UUID
 
 class NameUtilTest : StringSpec() {
-
     init {
         "names cannot be zero length" {
             shouldThrow<IllegalArgumentException> {

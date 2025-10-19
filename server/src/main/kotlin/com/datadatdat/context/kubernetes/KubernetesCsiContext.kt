@@ -1,5 +1,15 @@
 package com.datadatdat.context.kubernetes
 
+import com.datadatdat.context.RuntimeContext
+import com.datadatdat.models.CommitStatus
+import com.datadatdat.models.ProgressEntry
+import com.datadatdat.models.Volume
+import com.datadatdat.models.VolumeStatus
+import com.datadatdat.remote.RemoteOperation
+import com.datadatdat.remote.RemoteProgress
+import com.datadatdat.remote.RemoteServer
+import com.datadatdat.shell.CommandException
+import com.datadatdat.shell.CommandExecutor
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
@@ -28,20 +38,10 @@ import io.kubernetes.client.openapi.models.V1VolumeBuilder
 import io.kubernetes.client.openapi.models.V1VolumeMountBuilder
 import io.kubernetes.client.util.Config
 import io.kubernetes.client.util.KubeConfig
-import com.datadatdat.context.RuntimeContext
-import com.datadatdat.models.CommitStatus
-import com.datadatdat.models.ProgressEntry
-import com.datadatdat.models.Volume
-import com.datadatdat.models.VolumeStatus
-import com.datadatdat.remote.RemoteOperation
-import com.datadatdat.remote.RemoteProgress
-import com.datadatdat.remote.RemoteServer
-import com.datadatdat.shell.CommandException
-import com.datadatdat.shell.CommandExecutor
+import org.slf4j.LoggerFactory
 import java.io.FileReader
 import kotlin.io.path.createTempFile
 import kotlin.io.path.writeText
-import org.slf4j.LoggerFactory
 
 /**
  * Kubernetes runtime context. In a k8s environment, we leverage CSI (Container Storage Interface) drivers to do
@@ -67,7 +67,9 @@ import org.slf4j.LoggerFactory
  *                      datadatdat server, and defaults to "datadatdat:latest". It must be accessible from within the
  *                      kubernetes cluster.
  */
-class KubernetesCsiContext(private val properties: Map<String, String> = emptyMap()) : RuntimeContext {
+class KubernetesCsiContext(
+    private val properties: Map<String, String> = emptyMap(),
+) : RuntimeContext {
     private val coreApi: CoreV1Api
     private val storageApi: StorageV1Api
     private val batchApi: BatchV1Api
@@ -81,11 +83,12 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
 
     init {
         val home = System.getProperty("user.home")
-        val config = if (properties.containsKey("config")) {
-            KubeConfig.loadKubeConfig(FileReader("$home/.kube/${properties["config"]}"))
-        } else {
-            KubeConfig.loadKubeConfig(FileReader("$home/.kube/config"))
-        }
+        val config =
+            if (properties.containsKey("config")) {
+                KubeConfig.loadKubeConfig(FileReader("$home/.kube/${properties["config"]}"))
+            } else {
+                KubeConfig.loadKubeConfig(FileReader("$home/.kube/config"))
+            }
         if (properties.containsKey("context")) {
             config.setContext(properties["context"])
         }
@@ -97,7 +100,10 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         namespace = properties.get("namespace") ?: "default"
     }
 
-    private fun deleteObject(type: String, name: String) {
+    private fun deleteObject(
+        type: String,
+        name: String,
+    ) {
         // Java client has issues with deletion (https://github.com/kubernetes-client/java/issues/86) so use kubectl
         try {
             executor.exec("kubectl", "delete", "--wait=false", type, name)
@@ -108,19 +114,19 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         }
     }
 
-    override fun getProvider(): String {
-        return "kubernetes-csi"
-    }
+    override fun getProvider(): String = "kubernetes-csi"
 
-    override fun getProperties(): Map<String, String> {
-        return properties
-    }
+    override fun getProperties(): Map<String, String> = properties
 
     override fun createVolumeSet(volumeSet: String) {
         // Nothing to do
     }
 
-    override fun cloneVolumeSet(sourceVolumeSet: String, sourceCommit: String, newVolumeSet: String) {
+    override fun cloneVolumeSet(
+        sourceVolumeSet: String,
+        sourceCommit: String,
+        newVolumeSet: String,
+    ) {
         // Nothing to do
     }
 
@@ -128,47 +134,60 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         // Nothing to do
     }
 
-    override fun commitVolumeSet(volumeSet: String, commitId: String) {
+    override fun commitVolumeSet(
+        volumeSet: String,
+        commitId: String,
+    ) {
         // Nothing to do
     }
 
-    override fun deleteVolumeSetCommit(volumeSet: String, commitId: String) {
+    override fun deleteVolumeSetCommit(
+        volumeSet: String,
+        commitId: String,
+    ) {
         // Nothing to do
     }
 
-    override fun createVolume(volumeSet: String, volumeName: String): Map<String, Any> {
+    override fun createVolume(
+        volumeSet: String,
+        volumeName: String,
+    ): Map<String, Any> {
         val name = "$volumeSet-$volumeName"
         val size = "1Gi"
 
-        val request = V1PersistentVolumeClaimBuilder()
+        val request =
+            V1PersistentVolumeClaimBuilder()
                 .withMetadata(
-                        V1ObjectMetaBuilder()
-                                .withName(name)
-                                .withLabels(mapOf("datadatdatVolume" to volumeName))
-                                .build()
-                )
-                .withSpec(
-                        V1PersistentVolumeClaimSpecBuilder()
-                                .withAccessModes("ReadWriteOnce")
-                                .withResources(
-                                        V1ResourceRequirementsBuilder()
-                                                .withRequests(mapOf("storage" to Quantity.fromString(size)))
-                                                .build()
-                                )
-                                .build())
-                .build()
+                    V1ObjectMetaBuilder()
+                        .withName(name)
+                        .withLabels(mapOf("datadatdatVolume" to volumeName))
+                        .build(),
+                ).withSpec(
+                    V1PersistentVolumeClaimSpecBuilder()
+                        .withAccessModes("ReadWriteOnce")
+                        .withResources(
+                            V1ResourceRequirementsBuilder()
+                                .withRequests(mapOf("storage" to Quantity.fromString(size)))
+                                .build(),
+                        ).build(),
+                ).build()
         if (properties["storageClass"] != null) {
             request.spec!!.storageClassName = properties["storageClass"]
         }
         val claim = coreApi.createNamespacedPersistentVolumeClaim(namespace, request, null, null, null)
         log.info("Created PersistentVolumeClaim '$name', status = ${claim.status?.phase}")
         return mapOf(
-                "pvc" to name,
-                "namespace" to namespace,
-                "size" to size)
+            "pvc" to name,
+            "namespace" to namespace,
+            "size" to size,
+        )
     }
 
-    override fun deleteVolume(volumeSet: String, volumeName: String, config: Map<String, Any>) {
+    override fun deleteVolume(
+        volumeSet: String,
+        volumeName: String,
+        config: Map<String, Any>,
+    ) {
         val pvc = config["pvc"] as? String ?: throw IllegalStateException("missing or invalid pvc name in volume config")
         deleteObject("pvc", pvc)
         log.info("Deleted PersistentVolumeClaim '$pvc'")
@@ -179,14 +198,20 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
      * StorageV1alpha1), so we have to invoke kubectl in order to manage them. This should be updated to use the native
      * API when it is available.
      */
-    override fun commitVolume(volumeSet: String, commitId: String, volumeName: String, config: Map<String, Any>) {
+    override fun commitVolume(
+        volumeSet: String,
+        commitId: String,
+        volumeName: String,
+        config: Map<String, Any>,
+    ) {
         val pvc = config["pvc"] as? String ?: throw IllegalStateException("missing or invalid pvc name in volume config")
         val size = config["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$pvc-$commitId"
 
         val file = createTempFile().toFile()
         try {
-            file.writeText("apiVersion: snapshot.storage.k8s.io/v1alpha1\n" +
+            file.writeText(
+                "apiVersion: snapshot.storage.k8s.io/v1alpha1\n" +
                     "kind: VolumeSnapshot\n" +
                     "metadata:\n" +
                     "  name: $name\n" +
@@ -198,7 +223,11 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                     "  source:\n" +
                     "    kind: PersistentVolumeClaim\n" +
                     "    name: $pvc\n" +
-                    if (properties["snapshotClass"] != null) { "  snapshotClassName: ${properties["snapshotClass"]}\n" } else { "" }
+                    if (properties["snapshotClass"] != null) {
+                        "  snapshotClassName: ${properties["snapshotClass"]}\n"
+                    } else {
+                        ""
+                    },
             )
 
             executor.exec("kubectl", "apply", "-f", file.path)
@@ -207,7 +236,11 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         }
     }
 
-    override fun deleteVolumeCommit(volumeSet: String, commitId: String, volumeName: String) {
+    override fun deleteVolumeCommit(
+        volumeSet: String,
+        commitId: String,
+        volumeName: String,
+    ) {
         deleteObject("volumesnapshot", "$volumeSet-$volumeName-$commitId")
     }
 
@@ -216,7 +249,7 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         sourceCommit: String,
         newVolumeSet: String,
         volumeName: String,
-        sourceConfig: Map<String, Any>
+        sourceConfig: Map<String, Any>,
     ): Map<String, Any> {
         val size = sourceConfig["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$newVolumeSet-$volumeName"
@@ -224,7 +257,8 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
 
         val file = createTempFile().toFile()
         try {
-            file.writeText("apiVersion: v1\n" +
+            file.writeText(
+                "apiVersion: v1\n" +
                     "kind: PersistentVolumeClaim\n" +
                     "metadata:\n" +
                     "  name: $name\n" +
@@ -239,7 +273,7 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                     "    - ReadWriteOnce\n" +
                     "  resources:\n" +
                     "    requests:\n" +
-                    "      storage: $size\n"
+                    "      storage: $size\n",
             )
 
             executor.exec("kubectl", "apply", "-f", file.path)
@@ -248,9 +282,10 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         }
 
         return mapOf(
-                "pvc" to name,
-                "namespace" to namespace,
-                "size" to size)
+            "pvc" to name,
+            "namespace" to namespace,
+            "size" to size,
+        )
     }
 
     fun getPvcStatus(pvc: String): Pair<Boolean, String?> {
@@ -266,27 +301,32 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         }
 
         val ready = claim.status?.phase in readyPhases
-        val error = if (claim.status?.phase in okPhases) {
-            null
-        } else {
-            "volume '$pvc' is in unknown state ${claim.status?.phase}"
-        }
+        val error =
+            if (claim.status?.phase in okPhases) {
+                null
+            } else {
+                "volume '$pvc' is in unknown state ${claim.status?.phase}"
+            }
 
         return ready to error
     }
 
-    override fun getVolumeStatus(volumeSet: String, volume: String, config: Map<String, Any>): VolumeStatus {
+    override fun getVolumeStatus(
+        volumeSet: String,
+        volume: String,
+        config: Map<String, Any>,
+    ): VolumeStatus {
         val pvc = config["pvc"] as? String ?: error("missing or invalid pvc name in volume config")
         val (ready, error) = getPvcStatus(pvc)
 
         // Volumes can change size, this is just the original size
         val size = Quantity(config["size"] as String).number.toLong()
         return VolumeStatus(
-                name = volume,
-                logicalSize = size,
-                actualSize = size,
-                ready = ready,
-                error = error
+            name = volume,
+            logicalSize = size,
+            actualSize = size,
+            ready = ready,
+            error = error,
         )
     }
 
@@ -296,7 +336,11 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         return json.asJsonObject
     }
 
-    override fun getCommitStatus(volumeSet: String, commitId: String, volumeNames: List<String>): CommitStatus {
+    override fun getCommitStatus(
+        volumeSet: String,
+        commitId: String,
+        volumeNames: List<String>,
+    ): CommitStatus {
         var size = 0L
         var ready = true
         var error: String? = null
@@ -316,33 +360,49 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                 }
             }
 
-            val sizeLabel = snapshot?.getAsJsonObject("metadata")?.getAsJsonObject("labels")?.getAsJsonPrimitive("size")?.asString
+            val sizeLabel =
+                snapshot
+                    ?.getAsJsonObject("metadata")
+                    ?.getAsJsonObject("labels")
+                    ?.getAsJsonPrimitive("size")
+                    ?.asString
             if (sizeLabel != null) {
                 size += Quantity.fromString(sizeLabel).number.toLong()
             }
         }
 
         return CommitStatus(
-                logicalSize = size,
-                actualSize = size,
-                uniqueSize = size,
-                ready = ready,
-                error = error
+            logicalSize = size,
+            actualSize = size,
+            uniqueSize = size,
+            ready = ready,
+            error = error,
         )
     }
 
-    override fun activateVolume(volumeSet: String, volumeName: String, config: Map<String, Any>) {
+    override fun activateVolume(
+        volumeSet: String,
+        volumeName: String,
+        config: Map<String, Any>,
+    ) {
         // Nothing to do
     }
 
-    override fun deactivateVolume(volumeSet: String, volumeName: String, config: Map<String, Any>) {
+    override fun deactivateVolume(
+        volumeSet: String,
+        volumeName: String,
+        config: Map<String, Any>,
+    ) {
         // Nothing to do
     }
 
     /**
      * Wait for all the volumes associated with this operation to become ready.
      */
-    private fun waitForVolumesReady(volumes: List<Volume>, scratchVolume: Volume) {
+    private fun waitForVolumesReady(
+        volumes: List<Volume>,
+        scratchVolume: Volume,
+    ) {
         while (true) {
             val allVolumes = volumes + scratchVolume
             var ready = true
@@ -368,10 +428,11 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
         operation: RemoteOperation,
         volumes: List<Volume>,
         scratchVolume: Volume,
-        metadata: V1ObjectMeta
+        metadata: V1ObjectMeta,
     ) {
         // Create the KubernetesObperation object that will be passed as a secret
-        val kubeOperation = KubernetesOperation(
+        val kubeOperation =
+            KubernetesOperation(
                 commit = operation.commit,
                 commitId = operation.commitId,
                 operationId = operation.operationId,
@@ -381,15 +442,21 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                 type = operation.type,
                 scratchVolume = scratchVolume.name,
                 volumes = volumes.map { it.name },
-                volumeDescriptions = volumes.map { it.properties["path"] as? String ?: it.name }
-        )
+                volumeDescriptions = volumes.map { it.properties["path"] as? String ?: it.name },
+            )
         val configJson = gson.toJson(kubeOperation)
         log.info("creating secret ${metadata.name}")
-        coreApi.createNamespacedSecret(namespace, V1SecretBuilder()
+        coreApi.createNamespacedSecret(
+            namespace,
+            V1SecretBuilder()
                 .withMetadata(metadata)
                 .withType("Opaque")
                 .withStringData(mapOf("config" to configJson))
-                .build(), null, null, null)
+                .build(),
+            null,
+            null,
+            null,
+        )
     }
 
     /**
@@ -398,70 +465,87 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
     private fun createJob(
         volumes: List<Volume>,
         scratchVolume: Volume,
-        metadata: V1ObjectMeta
+        metadata: V1ObjectMeta,
     ) {
         val image = properties["datadatdatImage"] ?: error("missing datadatdatImage property")
         val basePath = "/var/datadatdat"
 
         log.info("creating job ${metadata.name}")
         // Now create the job that will run the operation
-        batchApi.createNamespacedJob(namespace, V1JobBuilder()
+        batchApi.createNamespacedJob(
+            namespace,
+            V1JobBuilder()
                 .withMetadata(metadata)
-                .withSpec(V1JobSpecBuilder()
-                        .withTemplate(V1PodTemplateSpecBuilder()
+                .withSpec(
+                    V1JobSpecBuilder()
+                        .withTemplate(
+                            V1PodTemplateSpecBuilder()
                                 .withMetadata(metadata)
-                                .withSpec(V1PodSpecBuilder()
+                                .withSpec(
+                                    V1PodSpecBuilder()
                                         .withRestartPolicy("OnFailure")
-                                        .withContainers(V1ContainerBuilder()
+                                        .withContainers(
+                                            V1ContainerBuilder()
                                                 .withName("operation")
                                                 .withImage(image)
                                                 .withCommand("/datadatdat/kubernetesOperation")
-                                                .withVolumeMounts(V1VolumeMountBuilder()
+                                                .withVolumeMounts(
+                                                    V1VolumeMountBuilder()
                                                         .withName("x-secret")
                                                         .withReadOnly(true)
                                                         .withMountPath("$basePath/x-secret")
                                                         .build(),
-                                                        V1VolumeMountBuilder()
-                                                                .withName(scratchVolume.name)
-                                                                .withMountPath("$basePath/${scratchVolume.name}")
-                                                                .build(),
-                                                        *volumes.map {
+                                                    V1VolumeMountBuilder()
+                                                        .withName(scratchVolume.name)
+                                                        .withMountPath("$basePath/${scratchVolume.name}")
+                                                        .build(),
+                                                    *volumes
+                                                        .map {
                                                             V1VolumeMountBuilder()
-                                                                    .withName(it.name)
-                                                                    .withMountPath("$basePath/${it.name}")
-                                                                    .build()
-                                                        }.toTypedArray())
-                                                .withEnv(V1EnvVarBuilder()
+                                                                .withName(it.name)
+                                                                .withMountPath("$basePath/${it.name}")
+                                                                .build()
+                                                        }.toTypedArray(),
+                                                ).withEnv(
+                                                    V1EnvVarBuilder()
                                                         .withName("DATADATDAT_PATH")
                                                         .withValue(basePath)
-                                                        .build())
-                                                .build())
-                                        .withVolumes(V1VolumeBuilder()
-                                                .withName("x-secret")
-                                                .withSecret(V1SecretVolumeSourceBuilder()
-                                                        .withSecretName(metadata.name)
-                                                        .build())
-                                                .build(),
-                                                V1VolumeBuilder()
-                                                        .withName(scratchVolume.name)
-                                                        .withPersistentVolumeClaim(V1PersistentVolumeClaimVolumeSourceBuilder()
-                                                                .withClaimName(scratchVolume.config["pvc"] as String)
-                                                                .build())
                                                         .build(),
-                                                *volumes.map {
+                                                ).build(),
+                                        ).withVolumes(
+                                            V1VolumeBuilder()
+                                                .withName("x-secret")
+                                                .withSecret(
+                                                    V1SecretVolumeSourceBuilder()
+                                                        .withSecretName(metadata.name)
+                                                        .build(),
+                                                ).build(),
+                                            V1VolumeBuilder()
+                                                .withName(scratchVolume.name)
+                                                .withPersistentVolumeClaim(
+                                                    V1PersistentVolumeClaimVolumeSourceBuilder()
+                                                        .withClaimName(scratchVolume.config["pvc"] as String)
+                                                        .build(),
+                                                ).build(),
+                                            *volumes
+                                                .map {
                                                     V1VolumeBuilder()
-                                                            .withName(it.name)
-                                                            .withPersistentVolumeClaim(V1PersistentVolumeClaimVolumeSourceBuilder()
-                                                                    .withClaimName(it.config["pvc"] as String)
-                                                                    .build())
-                                                            .build()
-                                                }.toTypedArray()
-                                        )
-                                        .build())
-                                .build())
-                        .withBackoffLimit(1)
-                        .build())
-                .build(), null, null, null)
+                                                        .withName(it.name)
+                                                        .withPersistentVolumeClaim(
+                                                            V1PersistentVolumeClaimVolumeSourceBuilder()
+                                                                .withClaimName(it.config["pvc"] as String)
+                                                                .build(),
+                                                        ).build()
+                                                }.toTypedArray(),
+                                        ).build(),
+                                ).build(),
+                        ).withBackoffLimit(1)
+                        .build(),
+                ).build(),
+            null,
+            null,
+            null,
+        )
     }
 
     private fun getPodFromJob(name: String): String {
@@ -490,8 +574,9 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
     private fun waitForPod(jobName: String) {
         val podName = getPodFromJob(jobName)
         while (true) {
-            if (isPodReady(podName))
+            if (isPodReady(podName)) {
                 break
+            }
             Thread.sleep(1000)
         }
     }
@@ -500,12 +585,16 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
      * Get progress entries from the output of the given pod. This will always fetch just the last three seconds of
      * logs (since we expect to call it once a second), and ignore entries that have been seen before.
      */
-    private fun getProgressFromPod(name: String, lastIdSeen: Int): List<ProgressEntry> {
+    private fun getProgressFromPod(
+        name: String,
+        lastIdSeen: Int,
+    ): List<ProgressEntry> {
         if (!isPodReady(name)) {
             return emptyList()
         }
 
-        val output = coreApi.readNamespacedPodLog(name, namespace, null, false, null, null, null, false, null, null, null)
+        val output =
+            coreApi.readNamespacedPodLog(name, namespace, null, false, null, null, null, false, null, null, null)
                 ?: return emptyList()
 
         val ret = mutableListOf<ProgressEntry>()
@@ -529,9 +618,15 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
      * Within kubernetes, we need to run the operations in a separate pod in order be able to access the data
      * volumes. We run this as a Kubernetes Job
      */
-    override fun syncVolumes(provider: RemoteServer, operation: RemoteOperation, volumes: List<Volume>, scratchVolume: Volume) {
+    override fun syncVolumes(
+        provider: RemoteServer,
+        operation: RemoteOperation,
+        volumes: List<Volume>,
+        scratchVolume: Volume,
+    ) {
         val name = "datadatdat-operation-${operation.operationId}"
-        val metadata = V1ObjectMetaBuilder()
+        val metadata =
+            V1ObjectMetaBuilder()
                 .withName(name)
                 .build()
 
@@ -560,7 +655,20 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                     if (job.status?.failed == 1) {
                         try {
                             // Try to log what we can
-                            val output = coreApi.readNamespacedPodLog(podName, namespace, null, null, null, null, null, null, null, null, null)
+                            val output =
+                                coreApi.readNamespacedPodLog(
+                                    podName,
+                                    namespace,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                )
                             if (output != null) {
                                 log.error(output)
                             }
@@ -579,13 +687,14 @@ class KubernetesCsiContext(private val properties: Map<String, String> = emptyMa
                         } else if (progress.type == ProgressEntry.Type.ERROR) {
                             throw Exception(progress.message)
                         } else {
-                            val progressType = when (progress.type) {
-                                ProgressEntry.Type.START -> RemoteProgress.START
-                                ProgressEntry.Type.END -> RemoteProgress.END
-                                ProgressEntry.Type.PROGRESS -> RemoteProgress.PROGRESS
-                                ProgressEntry.Type.MESSAGE -> RemoteProgress.MESSAGE
-                                else -> error("invalid progress type ${progress.type}")
-                            }
+                            val progressType =
+                                when (progress.type) {
+                                    ProgressEntry.Type.START -> RemoteProgress.START
+                                    ProgressEntry.Type.END -> RemoteProgress.END
+                                    ProgressEntry.Type.PROGRESS -> RemoteProgress.PROGRESS
+                                    ProgressEntry.Type.MESSAGE -> RemoteProgress.MESSAGE
+                                    else -> error("invalid progress type ${progress.type}")
+                                }
                             operation.updateProgress(progressType, progress.message, progress.percent)
                         }
                     }

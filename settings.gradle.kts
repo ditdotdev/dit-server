@@ -42,3 +42,10 @@ include("server")
 //         substitute(module("com.datadatdat:s3web-remote-server")).using(project(":server"))
 //     }
 // }
+
+includeBuild("../datadatdat-remote") {
+    dependencySubstitution {
+        substitute(module("com.datadatdat:datadatdat-remote-server")).using(project(":server"))
+        substitute(module("com.datadatdat:datadatdat-remote-client")).using(project(":client"))
+    }
+}

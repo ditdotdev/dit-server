@@ -14,5 +14,5 @@ data class OperationData(
     val operation: Operation,
     val params: RemoteParameters,
     val repo: String,
-    var metadataOnly: Boolean = false
+    var metadataOnly: Boolean = false,
 )
