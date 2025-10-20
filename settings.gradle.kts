@@ -43,9 +43,9 @@ include("server")
 //     }
 // }
 
-includeBuild("../datadatdat-remote") {
-    dependencySubstitution {
-        substitute(module("com.datadatdat:datadatdat-remote-server")).using(project(":server"))
-        substitute(module("com.datadatdat:datadatdat-remote-client")).using(project(":client"))
-    }
-}
+// includeBuild("../datadatdat-remote") {
+//     dependencySubstitution {
+//         substitute(module("com.datadatdat:datadatdat-remote-server")).using(project(":server"))
+//         substitute(module("com.datadatdat:datadatdat-remote-client")).using(project(":client"))
+//     }
+// }
