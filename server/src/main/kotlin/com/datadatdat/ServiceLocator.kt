@@ -21,11 +21,20 @@ class ServiceLocator(
 
     init {
         val providers = mutableMapOf<String, RemoteServer>()
+        println("ServiceLocator: Starting ServiceLoader discovery for RemoteServer")
+        var count = 0
         loader.forEach {
+            count++
             if (it != null) {
-                providers[it.getProvider()] = it
+                val providerName = it.getProvider()
+                println("ServiceLocator: Discovered provider '$providerName' from class ${it.javaClass.name}")
+                providers[providerName] = it
+            } else {
+                println("ServiceLocator: Warning - null provider encountered at index $count")
             }
         }
+        println("ServiceLocator: Total providers discovered: ${providers.size}")
+        println("ServiceLocator: Available providers: ${providers.keys.joinToString(", ")}")
         remoteProviders = providers
     }
 
@@ -40,9 +49,12 @@ class ServiceLocator(
     val gson = GsonBuilder().create()
 
     // Get a remote provider by name
-    fun remoteProvider(type: String): RemoteServer =
-        remoteProviders[type]
-            ?: throw IllegalArgumentException("unknown remote provider '$type'")
+    fun remoteProvider(type: String): RemoteServer {
+        println("ServiceLocator: Looking up provider '$type'")
+        println("ServiceLocator: Available providers: ${remoteProviders.keys.joinToString(", ")}")
+        return remoteProviders[type]
+            ?: throw IllegalArgumentException("unknown remote provider '$type' (available: ${remoteProviders.keys.joinToString(", ")})")
+    }
 
     // For testing purposes
     fun setRemoteProvider(
