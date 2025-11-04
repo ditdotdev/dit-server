@@ -6,9 +6,9 @@ package docker
 import (
 	"context"
 	"github.com/antihax/optional"
-	"github.com/stretchr/testify/suite"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"
 	"time"

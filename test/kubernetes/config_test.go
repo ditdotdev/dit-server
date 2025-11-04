@@ -6,8 +6,8 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/suite"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	"github.com/stretchr/testify/suite"
 	"os/exec"
 	"strings"
 	"testing"
