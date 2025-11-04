@@ -6,10 +6,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/suite"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/suite"
 	coreV1 "k8s.io/api/core/v1"
 	apiV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
