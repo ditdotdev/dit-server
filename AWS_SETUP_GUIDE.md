@@ -10,9 +10,9 @@
    - Format: Long string (about 40 characters)
    - ⚠️ Only shown once when created - save it securely!
 
-3. **Default region name**: us-east-1
-   - This is recommended for Maven repositories
-   - Other good options: us-west-2, eu-west-1
+3. **Default region name**: us-west-2
+   - This is the region where our S3 buckets are located
+   - Other good options: us-east-1, eu-west-1
 
 4. **Default output format**: json
    - Makes responses easier to read and parse
@@ -22,7 +22,7 @@
 $ aws configure
 AWS Access Key ID [None]: AKIAIOSFODNN7EXAMPLE
 AWS Secret Access Key [None]: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-Default region name [None]: us-east-1
+Default region name [None]: us-west-2
 Default output format [None]: json
 ```
 
