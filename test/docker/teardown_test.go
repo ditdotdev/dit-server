@@ -2,9 +2,9 @@ package docker
 
 import (
 	"context"
-	"github.com/stretchr/testify/suite"
 	datadatdatclient "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	"github.com/stretchr/testify/suite"
 	"testing"
 )
 
