@@ -6,16 +6,17 @@ package remote
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/antihax/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/stretchr/testify/suite"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
-	"os"
-	"strings"
-	"testing"
+	"github.com/stretchr/testify/suite"
 )
 
 type S3WebTestSuite struct {
