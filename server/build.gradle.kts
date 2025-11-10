@@ -40,7 +40,7 @@ dependencies {
     implementation("org.postgresql:postgresql:42.2.10")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("io.kubernetes:client-java:11.0.0")
-    implementation("com.datadatdat:command-executor:1.0.0")
+    implementation("com.datadatdat:command-executor:1.3.0")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
