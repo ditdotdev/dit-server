@@ -37,8 +37,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.38.6/go.mod h1:WtKK+ppze5yKPkZ0XwqIV
 github.com/aws/smithy-go v1.23.0 h1:8n6I3gXzWJB2DxBDnfxgBaSX6oe0d/t10qGz7OKqMCE=
 github.com/aws/smithy-go v1.23.0/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/datadatdat/datadatdat-client-go v1.4.0 h1:I6VqH3dkxQSb0waMhWMKlvO3MtjYpQCov4G3Y95paBc=
-github.com/datadatdat/datadatdat-client-go v1.4.0/go.mod h1:FqmOA9CRJCS1/raia/x15N8v9X2LoBZdcj5wvi7IfX8=
+github.com/datadatdat/datadatdat-client-go v1.5.0 h1:NCsa6N4A56qyBRmN6ku4f3VNaLw1fB0dO4Bpv9E9XJo=
+github.com/datadatdat/datadatdat-client-go v1.5.0/go.mod h1:FqmOA9CRJCS1/raia/x15N8v9X2LoBZdcj5wvi7IfX8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
