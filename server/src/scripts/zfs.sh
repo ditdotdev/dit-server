@@ -77,7 +77,7 @@ function zfs_version_matches() {
 #
 function get_asset_url() {
   local asset_name=$1
-  echo "https://download.datadatdat.com/zfs-releases/$asset_name"
+  echo "http://datadatdat-zfs-builds.s3-website-us-west-2.amazonaws.com/$asset_name"
 }
 
 #
