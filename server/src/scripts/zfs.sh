@@ -125,8 +125,20 @@ function load_zfs_module() {
   fi
   
   # Try loading as a module
-  depmod -b $directory >/dev/null 2>&1
-  modprobe -d $directory zfs >/dev/null 2>&1
+  echo "Running depmod to update module dependencies..."
+  depmod -b $directory 2>&1 | head -5
+  
+  echo "Attempting to load ZFS module from $directory..."
+  echo "Module directory contents:"
+  find $directory/lib/modules/$(uname -r) -name "*.ko" 2>/dev/null | head -10
+  
+  if ! modprobe -v -d $directory zfs 2>&1; then
+    echo "modprobe failed - returning error"
+    return 1
+  fi
+  
+  echo "modprobe succeeded"
+  return 0
 }
 
 #
