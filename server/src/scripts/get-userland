@@ -14,13 +14,29 @@ set -xe
 
 zfs_version=$(get_zfs_build_version)
 
+# Detect architecture
+arch=$(uname -m)
+case "$arch" in
+    x86_64)
+        arch_suffix="amd64"
+        ;;
+    aarch64|arm64)
+        arch_suffix="arm64"
+        ;;
+    *)
+        log_error "Unsupported architecture: $arch"
+        exit 1
+        ;;
+esac
+
 # Use local file from git repository
-local_file="/datadatdat/assets/zfs-$zfs_version-userland.tar.gz"
+local_file="/datadatdat/assets/zfs-$zfs_version-userland-$arch_suffix.tar.gz"
 if [[ -f "$local_file" ]]; then
-    echo "Using local ZFS userland file: $local_file"
+    echo "Using local ZFS userland file for $arch ($arch_suffix): $local_file"
     cp "$local_file" /var/tmp/userland.tar.gz
 else
     log_error "Local ZFS userland file not found: $local_file"
+    exit 1
 fi
 
 cd / && tar --skip-old-files -xvzf /var/tmp/userland.tar.gz
