@@ -29,9 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    outputs:
-      gradle-cache-key: ${{ steps.gradle-cache.outputs.cache-hit }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,19 +41,8 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-      - name: Cache Gradle dependencies
-        id: gradle-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
