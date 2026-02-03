@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm")
     jacoco
     application
-    id("com.github.johnrengelman.shadow") version("7.1.2")
+    id("com.gradleup.shadow") version("9.3.1")
 }
 
 val datadatdatVersion: String by rootProject.extra
@@ -60,12 +60,24 @@ dependencies {
     testImplementation("com.h2database:h2:1.4.200")
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
-    testImplementation("io.mockk:mockk:1.9.3")
+    testImplementation("io.mockk:mockk:1.13.14")
     testImplementation("org.apache.commons:commons-text:1.8")
 }
 
 jacoco {
     toolVersion = "0.8.7"
+}
+
+tasks.test {
+    jvmArgs(
+        "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+        "--add-opens", "java.base/java.util=ALL-UNNAMED",
+        "--add-opens", "java.base/java.io=ALL-UNNAMED",
+        "--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED",
+        "--add-opens", "java.base/java.nio.file=ALL-UNNAMED",
+        "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+        "--add-opens", "java.base/java.net=ALL-UNNAMED"
+    )
 }
 
 application {
