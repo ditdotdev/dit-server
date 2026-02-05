@@ -146,7 +146,23 @@ function load_zfs_module() {
 # there is no known asset for the current version.
 #
 function get_precompiled_module_url() {
-  get_asset_url zfs-$(get_zfs_build_version)-$(uname -r).tar.gz
+  # Detect architecture
+  local arch=$(uname -m)
+  local arch_suffix=""
+  case "$arch" in
+    x86_64)
+      arch_suffix="-amd64"
+      ;;
+    aarch64|arm64)
+      arch_suffix="-arm64"
+      ;;
+    *)
+      echo "Unsupported architecture: $arch" >&2
+      return 1
+      ;;
+  esac
+  
+  get_asset_url zfs-$(get_zfs_build_version)-$(uname -r)${arch_suffix}.tar.gz
 }
 
 #
