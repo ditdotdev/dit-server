@@ -86,6 +86,12 @@ application {
 
 tasks.withType<ShadowJar> {
     archiveFileName.set("datadatdat-server.jar")
+    // Must set duplicatesStrategy for service files BEFORE mergeServiceFiles()
+    // or the default EXCLUDE strategy will discard all but the first service file
+    // See: https://gradleup.com/shadow/configuration/merging/#handling-duplicates-strategy
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
     mergeServiceFiles()
 }
 
