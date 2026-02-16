@@ -21,7 +21,7 @@ jobs:
           distribution: 'temurin'
       - name: Build and test
         run: ./gradlew build
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.25.1'
       - name: Configure Git for private Go modules
