@@ -165,7 +165,7 @@ jobs:
           GIT_TERMINAL_PROMPT: 0
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           working-directory: .
