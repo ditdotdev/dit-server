@@ -61,7 +61,7 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
     testImplementation("io.mockk:mockk:1.13.14")
-    testImplementation("org.apache.commons:commons-text:1.8")
+    testImplementation("org.apache.commons:commons-text:1.15.0")
 }
 
 jacoco {
