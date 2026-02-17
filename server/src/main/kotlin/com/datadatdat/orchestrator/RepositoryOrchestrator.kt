@@ -3,7 +3,7 @@ package com.datadatdat.orchestrator
 import com.datadatdat.ServiceLocator
 import com.datadatdat.models.Repository
 import com.datadatdat.models.RepositoryStatus
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class RepositoryOrchestrator(
     val services: ServiceLocator,

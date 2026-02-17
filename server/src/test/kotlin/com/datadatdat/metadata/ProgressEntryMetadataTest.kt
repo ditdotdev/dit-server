@@ -8,7 +8,7 @@ import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ProgressEntryMetadataTest : StringSpec() {
     val md = MetadataProvider()

@@ -59,7 +59,7 @@ dependencies {
         println("Remote dependencies not available, will skip related tests")
     }
 
-    testImplementation("com.h2database:h2:1.4.200")
+    testImplementation("com.h2database:h2:2.3.232")
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
     testImplementation("io.mockk:mockk:1.14.9")

@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata
 
 import com.datadatdat.exception.NoSuchObjectException
@@ -21,24 +23,20 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.jetbrains.exposed.exceptions.ExposedSQLException
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.andWhere
-import org.jetbrains.exposed.sql.compoundOr
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.deleteAll
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.joda.time.DateTime
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /*
  * The metadata provider is responsible for persistence of all metadata to the datadatdat database. With the exception of
@@ -151,7 +149,8 @@ class MetadataProvider(
 
     fun getRepository(repoName: String): Repository =
         Repositories
-            .select {
+            .selectAll()
+            .where {
                 Repositories.name eq repoName
             }.map { convertRepository(it) }
             .firstOrNull()
@@ -207,7 +206,8 @@ class MetadataProvider(
         remoteName: String,
     ): Remote =
         Remotes
-            .select {
+            .selectAll()
+            .where {
                 (Remotes.name eq remoteName) and (Remotes.repo eq repoName)
             }.map { convertRemote(it) }
             .firstOrNull()
@@ -215,7 +215,8 @@ class MetadataProvider(
 
     fun listRemotes(repoName: String): List<Remote> =
         Remotes
-            .select {
+            .selectAll()
+            .where {
                 Remotes.repo eq repoName
             }.map { convertRemote(it) }
 
@@ -263,7 +264,8 @@ class MetadataProvider(
                 null
             } else {
                 Commits
-                    .select {
+                    .selectAll()
+                    .where {
                         (Commits.repo eq repoName) and (Commits.guid eq sourceCommit) and (Commits.state eq VolumeState.ACTIVE)
                     }.map {
                         it[Commits.id].value
@@ -287,15 +289,17 @@ class MetadataProvider(
 
     fun getActiveVolumeSet(repoName: String): String =
         VolumeSets
-            .select {
+            .selectAll()
+            .where {
                 (VolumeSets.repo eq repoName) and (VolumeSets.state eq VolumeState.ACTIVE)
             }.map { it[VolumeSets.id].toString() }
             .firstOrNull()!!
 
     fun getVolumeSetRepo(volumeSet: String): String? {
-        val uuid = UUID.fromString(volumeSet)
+        val uuid = Uuid.parse(volumeSet)
         return VolumeSets
-            .select {
+            .selectAll()
+            .where {
                 VolumeSets.id eq uuid
             }.map { it[VolumeSets.repo] }
             .firstOrNull()
@@ -312,7 +316,7 @@ class MetadataProvider(
         }
         val count =
             VolumeSets.update({
-                (VolumeSets.repo eq repoName) and (VolumeSets.id eq UUID.fromString(volumeSet))
+                (VolumeSets.repo eq repoName) and (VolumeSets.id eq Uuid.parse(volumeSet))
             }) {
                 it[state] = VolumeState.ACTIVE
             }
@@ -323,7 +327,7 @@ class MetadataProvider(
     }
 
     fun markVolumeSetDeleting(volumeSet: String) {
-        val uuid = UUID.fromString(volumeSet)
+        val uuid = Uuid.parse(volumeSet)
         VolumeSets.update({
             VolumeSets.id eq uuid
         }) {
@@ -338,23 +342,26 @@ class MetadataProvider(
     }
 
     fun isVolumeSetEmpty(volumeSet: String): Boolean {
-        val uuid = UUID.fromString(volumeSet)
+        val uuid = Uuid.parse(volumeSet)
         return Commits
-            .select {
+            .selectAll()
+            .where {
                 Commits.volumeSet eq uuid
             }.count() == 0L
     }
 
     fun listInactiveVolumeSets(): List<String> =
         VolumeSets
-            .select {
+            .selectAll()
+            .where {
                 VolumeSets.state eq VolumeState.INACTIVE
             }.map { it[VolumeSets.id].toString() }
 
     fun markAllVolumeSetsDeleting(repo: String) {
         var volumeSets =
             VolumeSets
-                .select {
+                .selectAll()
+                .where {
                     VolumeSets.repo eq repo
                 }.map { it[VolumeSets.id] }
         for (vs in volumeSets) {
@@ -364,13 +371,14 @@ class MetadataProvider(
 
     fun deleteVolumeSet(volumeSet: String) {
         VolumeSets.deleteWhere {
-            VolumeSets.id eq UUID.fromString(volumeSet)
+            VolumeSets.id eq Uuid.parse(volumeSet)
         }
     }
 
     fun listDeletingVolumeSets(): List<String> =
         VolumeSets
-            .select {
+            .selectAll()
+            .where {
                 VolumeSets.state eq VolumeState.DELETING
             }.map { it[VolumeSets.id].toString() }
 
@@ -387,7 +395,7 @@ class MetadataProvider(
     ) {
         try {
             Volumes.insert {
-                it[Volumes.volumeSet] = UUID.fromString(volumeSet)
+                it[Volumes.volumeSet] = Uuid.parse(volumeSet)
                 it[name] = volume.name
                 it[metadata] = gson.toJson(volume.properties)
                 it[config] = gson.toJson(volume.config)
@@ -404,7 +412,7 @@ class MetadataProvider(
         config: Map<String, Any>,
     ) {
         Volumes.update({
-            (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName) and (Volumes.state neq VolumeState.DELETING)
+            (Volumes.volumeSet eq Uuid.parse(volumeSet)) and (Volumes.name eq volumeName) and (Volumes.state neq VolumeState.DELETING)
         }) {
             it[Volumes.config] = gson.toJson(config)
         }
@@ -416,7 +424,7 @@ class MetadataProvider(
     ) {
         val count =
             Volumes.update({
-                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
+                (Volumes.volumeSet eq Uuid.parse(volumeSet)) and (Volumes.name eq volumeName)
             }) {
                 it[state] = VolumeState.DELETING
             }
@@ -431,7 +439,7 @@ class MetadataProvider(
     ) {
         val count =
             Volumes.deleteWhere {
-                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName)
+                (Volumes.volumeSet eq Uuid.parse(volumeSet)) and (Volumes.name eq volumeName)
             }
         if (count == 0) {
             throw NoSuchObjectException("no such volume '$volumeName'")
@@ -443,8 +451,9 @@ class MetadataProvider(
         volumeName: String,
     ): Volume =
         Volumes
-            .select {
-                (Volumes.volumeSet eq UUID.fromString(volumeSet)) and (Volumes.name eq volumeName) and
+            .selectAll()
+            .where {
+                (Volumes.volumeSet eq Uuid.parse(volumeSet)) and (Volumes.name eq volumeName) and
                     (Volumes.state neq VolumeState.DELETING)
             }.map { convertVolume(it) }
             .firstOrNull()
@@ -452,15 +461,17 @@ class MetadataProvider(
 
     fun listVolumes(volumeSet: String): List<Volume> =
         Volumes
-            .select {
-                Volumes.volumeSet eq UUID.fromString(volumeSet)
+            .selectAll()
+            .where {
+                Volumes.volumeSet eq Uuid.parse(volumeSet)
             }.map { convertVolume(it) }
 
     fun listAllVolumes(): List<Volume> = Volumes.selectAll().map { convertVolume(it) }
 
     fun listDeletingVolumes(): List<Pair<String, Volume>> =
         Volumes
-            .select {
+            .selectAll()
+            .where {
                 Volumes.state eq VolumeState.DELETING
             }.map { Pair(it[Volumes.volumeSet].toString(), convertVolume(it)) }
 
@@ -487,7 +498,7 @@ class MetadataProvider(
         val id =
             Commits.insert {
                 it[Commits.repo] = repo
-                it[Commits.volumeSet] = UUID.fromString(volumeSet)
+                it[Commits.volumeSet] = Uuid.parse(volumeSet)
                 it[Commits.sourceCommit] = getCommitSource(volumeSet)
                 it[Commits.timestamp] = getTimestamp(commit).toString()
                 it[Commits.guid] = commit.id
@@ -513,7 +524,8 @@ class MetadataProvider(
         commitId: String,
     ): Pair<String, Commit> =
         Commits
-            .select {
+            .selectAll()
+            .where {
                 (Commits.repo eq repo) and (Commits.guid eq commitId) and (Commits.state eq VolumeState.ACTIVE)
             }.map {
                 Pair(it[Commits.volumeSet].toString(), convertCommit(it))
@@ -522,7 +534,8 @@ class MetadataProvider(
 
     fun getLastCommit(repo: String): String? =
         Commits
-            .select {
+            .selectAll()
+            .where {
                 (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)
             }.orderBy(Commits.timestamp, SortOrder.DESC)
             .limit(1)
@@ -531,10 +544,11 @@ class MetadataProvider(
 
     fun getCommitSource(volumeSet: String): String? {
         // First, check to see if there's a latest commit for this volume set
-        val volumeSetGuid = UUID.fromString(volumeSet)
+        val volumeSetGuid = Uuid.parse(volumeSet)
         val prevCommit =
             Commits
-                .select {
+                .selectAll()
+                .where {
                     Commits.volumeSet eq volumeSetGuid
                 }.orderBy(Commits.timestamp, SortOrder.DESC)
                 .limit(1)
@@ -547,7 +561,8 @@ class MetadataProvider(
         // Otherwise, look at the source of the volumeset
         val volumeSetSource =
             VolumeSets
-                .select {
+                .selectAll()
+                .where {
                     VolumeSets.id eq volumeSetGuid
                 }.firstOrNull()
 
@@ -604,8 +619,8 @@ class MetadataProvider(
             if (!tags.isNullOrEmpty()) {
                 val q =
                     (Commits innerJoin Tags)
-                        .slice(Commits.guid, Commits.volumeSet, Commits.metadata, Commits.timestamp)
-                        .select { ((Commits.id eq Tags.commit) and (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)) }
+                        .select(Commits.guid, Commits.volumeSet, Commits.metadata, Commits.timestamp)
+                        .where { ((Commits.id eq Tags.commit) and (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)) }
 
             /*
              * For filtering by multiple tags, we want to avoid complex temporary tables, etc. So we instead find tags
@@ -614,19 +629,11 @@ class MetadataProvider(
              */
                 val conditions = mutableListOf<Op<Boolean>>()
                 if (existCheck.size != 0) {
-                    conditions.add(
-                        Op.build {
-                            Tags.key inList existCheck
-                        },
-                    )
+                    conditions.add(Tags.key inList existCheck)
                 }
 
                 for ((key, value) in matchCheck) {
-                    conditions.add(
-                        Op.build {
-                            (Tags.key eq key) and (Tags.value eq value)
-                        },
-                    )
+                    conditions.add((Tags.key eq key) and (Tags.value eq value))
                 }
 
                 q
@@ -635,7 +642,7 @@ class MetadataProvider(
                     }.withDistinct(true)
                 q
             } else {
-                Commits.select { (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE) }
+                Commits.selectAll().where { (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE) }
             }
 
         val result =
@@ -658,7 +665,8 @@ class MetadataProvider(
 
     fun listDeletingCommits(): List<CommitInfo> =
         Commits
-            .select {
+            .selectAll()
+            .where {
                 Commits.state eq VolumeState.DELETING
             }.map {
                 CommitInfo(
@@ -669,10 +677,11 @@ class MetadataProvider(
             }
 
     fun hasClones(commit: CommitInfo): Boolean =
-        !VolumeSets
-            .select {
+        VolumeSets
+            .selectAll()
+            .where {
                 VolumeSets.sourceId eq commit.id
-            }.empty()
+            }.count() > 0L
 
     fun updateCommit(
         repo: String,
@@ -680,7 +689,8 @@ class MetadataProvider(
     ) {
         val id =
             Commits
-                .select {
+                .selectAll()
+                .where {
                     (Commits.repo eq repo) and (Commits.guid eq commit.id) and (Commits.state eq VolumeState.ACTIVE)
                 }.map { it[Commits.id].value }
                 .firstOrNull()
@@ -734,7 +744,7 @@ class MetadataProvider(
         data: OperationData,
     ) {
         Operations.insert {
-            it[id] = UUID.fromString(volumeSet)
+            it[id] = Uuid.parse(volumeSet)
             it[Operations.repo] = repo
             it[metadataOnly] = data.metadataOnly
             it[remoteParameters] = gson.toJson(data.params)
@@ -762,20 +772,23 @@ class MetadataProvider(
 
     fun listOperationsByRepository(repo: String): List<OperationData> =
         Operations
-            .select {
+            .selectAll()
+            .where {
                 (Operations.repo eq repo) and (Operations.state eq Operation.State.RUNNING)
             }.map { convertOperation(it) }
 
     fun listOperations(): List<OperationData> =
         Operations
-            .select {
+            .selectAll()
+            .where {
                 Operations.state eq Operation.State.RUNNING
             }.map { convertOperation(it) }
 
     fun getOperation(id: String): OperationData {
-        val uuid = UUID.fromString(id)
+        val uuid = Uuid.parse(id)
         return Operations
-            .select {
+            .selectAll()
+            .where {
                 Operations.id eq uuid
             }.map { convertOperation(it) }
             .firstOrNull()
@@ -783,9 +796,10 @@ class MetadataProvider(
     }
 
     fun operationRunning(id: String): Boolean {
-        val uuid = UUID.fromString(id)
+        val uuid = Uuid.parse(id)
         return Operations
-            .select {
+            .selectAll()
+            .where {
                 (Operations.id eq uuid) and (Operations.state eq Operation.State.RUNNING)
             }.count() > 0
     }
@@ -794,7 +808,7 @@ class MetadataProvider(
         id: String,
         state: Operation.State,
     ) {
-        val uuid = UUID.fromString(id)
+        val uuid = Uuid.parse(id)
         Operations.update({
             Operations.id eq uuid
         }) {
@@ -809,7 +823,7 @@ class MetadataProvider(
         remote: String?,
     ): String? {
         val query =
-            Operations.select {
+            Operations.selectAll().where {
                 (Operations.repo eq repo) and (Operations.type eq type) and (Operations.commitId eq commitId) and
                     (Operations.state eq Operation.State.RUNNING)
             }
@@ -835,7 +849,7 @@ class MetadataProvider(
     ): Int {
         val result =
             ProgressEntries.insert {
-                it[ProgressEntries.operation] = UUID.fromString(operation)
+                it[ProgressEntries.operation] = Uuid.parse(operation)
                 it[message] = entry.message
                 it[type] = entry.type
                 it[percent] = entry.percent
@@ -855,9 +869,10 @@ class MetadataProvider(
         operation: String,
         lastEntry: Int = 0,
     ): List<ProgressEntry> {
-        val uuid = UUID.fromString(operation)
+        val uuid = Uuid.parse(operation)
         return ProgressEntries
-            .select {
+            .selectAll()
+            .where {
                 (ProgressEntries.operation eq uuid) and (ProgressEntries.id greater lastEntry)
             }.orderBy(ProgressEntries.id)
             .map { convertProgressEntry(it) }
