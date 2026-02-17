@@ -1,7 +1,7 @@
 package com.datadatdat.metadata.table
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 object Remotes : Table() {
     val name = varchar("name", 64)

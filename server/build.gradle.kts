@@ -33,10 +33,10 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.32")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("org.jetbrains.exposed:exposed-core:0.32.1")
-    implementation("org.jetbrains.exposed:exposed-dao:0.32.1")
-    implementation("org.jetbrains.exposed:exposed-jdbc:0.32.1")
-    implementation("org.jetbrains.exposed:exposed-java-time:0.32.1")
+    implementation("org.jetbrains.exposed:exposed-core:1.0.0")
+    implementation("org.jetbrains.exposed:exposed-dao:1.0.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:1.0.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:1.0.0")
     implementation("org.postgresql:postgresql:42.2.10")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("joda-time:joda-time:2.12.7")
@@ -59,7 +59,7 @@ dependencies {
         println("Remote dependencies not available, will skip related tests")
     }
 
-    testImplementation("com.h2database:h2:1.4.200")
+    testImplementation("com.h2database:h2:2.3.232")
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
     testImplementation("io.mockk:mockk:1.14.9")

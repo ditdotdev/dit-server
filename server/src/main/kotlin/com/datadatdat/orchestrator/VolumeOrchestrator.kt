@@ -3,7 +3,7 @@ package com.datadatdat.orchestrator
 import com.datadatdat.ServiceLocator
 import com.datadatdat.models.Volume
 import com.datadatdat.models.VolumeStatus
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class VolumeOrchestrator(
     val services: ServiceLocator,

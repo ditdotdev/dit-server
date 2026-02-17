@@ -18,7 +18,7 @@ import com.datadatdat.remote.RemoteProgress
 import com.datadatdat.remote.RemoteServer
 import com.google.gson.JsonParser
 import io.kubernetes.client.openapi.ApiException
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 /*

@@ -25,7 +25,7 @@ import io.ktor.util.KtorExperimentalAPI
 import io.mockk.MockKAnnotations
 import io.mockk.clearAllMocks
 import io.mockk.mockk
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 @OptIn(KtorExperimentalAPI::class)
 class RemotesApiTest : StringSpec() {

@@ -14,7 +14,7 @@ import com.datadatdat.models.Remote
 import com.datadatdat.models.RemoteParameters
 import com.datadatdat.models.Volume
 import com.datadatdat.operation.OperationExecutor
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 /**
