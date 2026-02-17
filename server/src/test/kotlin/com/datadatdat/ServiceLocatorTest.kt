@@ -17,9 +17,10 @@ class ServiceLocatorTest : StringSpec() {
             val context = mockk<com.datadatdat.context.RuntimeContext>(relaxed = true)
             val services = ServiceLocator(context)
 
-            val ex = shouldThrow<IllegalArgumentException> {
-                services.remoteProvider("nonexistent")
-            }
+            val ex =
+                shouldThrow<IllegalArgumentException> {
+                    services.remoteProvider("nonexistent")
+                }
             ex.message!!.contains("nonexistent") shouldBe true
         }
 
@@ -81,9 +82,10 @@ class ServiceLocatorTest : StringSpec() {
             val mockServer = mockk<RemoteServer>()
             services.setRemoteProvider("test-type", mockServer)
 
-            val ex = shouldThrow<IllegalArgumentException> {
-                services.remoteProvider("definitely-not-a-real-provider-xyz")
-            }
+            val ex =
+                shouldThrow<IllegalArgumentException> {
+                    services.remoteProvider("definitely-not-a-real-provider-xyz")
+                }
             ex.message!!.contains("test-type") shouldBe true
         }
     }
