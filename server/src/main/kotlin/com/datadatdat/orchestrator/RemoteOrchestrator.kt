@@ -5,7 +5,7 @@ import com.datadatdat.exception.NoSuchObjectException
 import com.datadatdat.models.Commit
 import com.datadatdat.models.Remote
 import com.datadatdat.models.RemoteParameters
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class RemoteOrchestrator(
     val services: ServiceLocator,

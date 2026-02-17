@@ -34,7 +34,7 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.impl.annotations.SpyK
 import io.mockk.mockk
 import io.mockk.verify
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.util.UUID
 
 class OperationOrchestratorTest : StringSpec() {

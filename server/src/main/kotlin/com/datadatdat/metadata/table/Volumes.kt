@@ -1,7 +1,9 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata.table
 
 import com.datadatdat.metadata.MetadataProvider
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /*
  * Volumes represent a single mount within a repository. They are grouped into VolumeSets, so that they are snapshotted

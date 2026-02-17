@@ -1,9 +1,11 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata.table
 
 import com.datadatdat.metadata.MetadataProvider
 import com.datadatdat.metadata.table.Remotes.references
-import org.jetbrains.exposed.dao.id.IntIdTable
-// import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+// import org.jetbrains.exposed.v1.core.javatime.datetime
 
 /*
  * Commits represent a snapshot of a volumeset. Each commit is given a GUID, but a commit can be in one

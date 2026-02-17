@@ -1,9 +1,11 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata.table
 
 import com.datadatdat.metadata.table.Remotes.references
 import com.datadatdat.models.ProgressEntry
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 
 /**
  * Progress entries record information from ongoing operations. Each entry has a monotonically increasing ID number,

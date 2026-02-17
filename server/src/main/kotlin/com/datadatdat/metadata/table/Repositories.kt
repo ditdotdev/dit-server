@@ -1,6 +1,6 @@
 package com.datadatdat.metadata.table
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /*
  * Repositories are the top level abstraction within the datadatdat metadata. Everything is connected in some shape or form
