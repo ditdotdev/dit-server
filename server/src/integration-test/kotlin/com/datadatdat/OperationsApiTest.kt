@@ -43,7 +43,7 @@ import io.mockk.impl.annotations.SpyK
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.time.delay
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Duration
 import java.util.UUID
 

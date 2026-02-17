@@ -1,7 +1,9 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata.table
 
 import com.datadatdat.models.Operation
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
 
 /*
  * Operations are additional metadata that can be associated with a volume set while an operation (push or pull)

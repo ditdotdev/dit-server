@@ -1,7 +1,7 @@
 package com.datadatdat.orchestrator
 
 import com.datadatdat.ServiceLocator
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.util.concurrent.locks.ReentrantLock
 

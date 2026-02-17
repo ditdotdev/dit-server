@@ -1,7 +1,7 @@
 package com.datadatdat.metadata.table
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
 
 /*
  * Tags are name/value pairs that are associated with commits. The key name must be unique, and hence forms

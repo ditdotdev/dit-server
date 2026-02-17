@@ -1,7 +1,9 @@
+@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+
 package com.datadatdat.metadata.table
 
 import com.datadatdat.metadata.MetadataProvider
-import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 
 /*
  * Volume sets represent one or more volumes that are part of a repository. They always have unique UUIDs, and form
@@ -14,7 +16,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
  * We do not maintain a foreign key relationship with the repository because they can be deleted asynchronously
  * after the repository has been deleted.
  */
-object VolumeSets : UUIDTable("volume_sets") {
+object VolumeSets : UuidTable("volume_sets") {
     val repo = varchar("repositories", 64)
     val sourceCommit = varchar("source_commit", 64).nullable()
     val sourceId = integer("source_id").nullable()

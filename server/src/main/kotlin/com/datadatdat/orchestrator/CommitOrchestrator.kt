@@ -5,7 +5,7 @@ import com.datadatdat.exception.NoSuchObjectException
 import com.datadatdat.exception.ObjectExistsException
 import com.datadatdat.models.Commit
 import com.datadatdat.models.CommitStatus
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 
