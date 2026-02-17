@@ -42,18 +42,18 @@ dependencies {
     implementation("joda-time:joda-time:2.12.7")
     implementation("io.kubernetes:client-java:25.0.0")
     implementation("io.kubernetes:client-java-api-fluent:25.0.0")
-    implementation("com.datadatdat:command-executor:1.6.0")
+    implementation("com.datadatdat:command-executor:1.6.1")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("com.datadatdat:remote-sdk:1.6.0")
-        implementation("com.datadatdat:datadatdat-remote-client:1.6.0")
-        implementation("com.datadatdat:datadatdat-remote-server:1.6.0")
-        implementation("com.datadatdat:nop-remote-server:1.6.0")
-        implementation("com.datadatdat:ssh-remote-server:1.6.0")
-        implementation("com.datadatdat:s3-remote-server:1.6.0")
-        implementation("com.datadatdat:s3web-remote-server:1.6.0")
+        implementation("com.datadatdat:remote-sdk:1.6.1")
+        implementation("com.datadatdat:datadatdat-remote-client:1.6.1")
+        implementation("com.datadatdat:datadatdat-remote-server:1.6.1")
+        implementation("com.datadatdat:nop-remote-server:1.6.1")
+        implementation("com.datadatdat:ssh-remote-server:1.6.1")
+        implementation("com.datadatdat:s3-remote-server:1.6.1")
+        implementation("com.datadatdat:s3web-remote-server:1.6.1")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
