@@ -62,7 +62,7 @@ dependencies {
     testImplementation("com.h2database:h2:1.4.200")
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.kotlintest:kotlintest-runner-junit5:3.4.2")
-    testImplementation("io.mockk:mockk:1.13.14")
+    testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("org.apache.commons:commons-text:1.15.0")
 }
 
