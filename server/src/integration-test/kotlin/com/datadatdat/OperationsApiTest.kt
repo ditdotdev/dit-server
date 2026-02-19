@@ -23,16 +23,15 @@ import io.kotlintest.TestCaseOrder
 import io.kotlintest.TestResult
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.testing.TestApplicationEngine
-import io.ktor.server.testing.contentType
-import io.ktor.server.testing.createTestEnvironment
-import io.ktor.server.testing.handleRequest
-import io.ktor.server.testing.setBody
-import io.ktor.util.KtorExperimentalAPI
+import io.ktor.http.contentType
+import io.ktor.server.testing.testApplication
 import io.mockk.MockKAnnotations
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -47,7 +46,6 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Duration
 import java.util.UUID
 
-@OptIn(KtorExperimentalAPI::class)
 class OperationsApiTest : StringSpec() {
     @SpyK
     var context = DockerZfsContext(mapOf("pool" to "test"))
@@ -59,20 +57,10 @@ class OperationsApiTest : StringSpec() {
     @OverrideMockKs
     var services = ServiceLocator(mockk())
 
-    var engine = TestApplicationEngine(createTestEnvironment())
-
     val gson = GsonBuilder().create()
 
     override fun beforeSpec(spec: Spec) {
-        with(engine) {
-            start()
-            services.metadata.init()
-            application.mainProvider(services)
-        }
-    }
-
-    override fun afterSpec(spec: Spec) {
-        engine.stop(0L, 0L)
+        services.metadata.init()
     }
 
     override fun beforeTest(testCase: TestCase) {
@@ -142,34 +130,43 @@ class OperationsApiTest : StringSpec() {
 
     init {
         "list empty operations succeeds" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[]"
+                }
             }
         }
 
         "list operations succeeds" {
             loadTestOperations()
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
-                    "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
-                    "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
-                    "\"remote\":\"remote\",\"commitId\":\"commit2\"}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
+                        "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
+                        "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
+                        "\"remote\":\"remote\",\"commitId\":\"commit2\"}]"
+                }
             }
         }
 
         "list operations by repo succeeds" {
             loadTestOperations()
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations?repository=foo")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
-                    "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
-                    "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
-                    "\"remote\":\"remote\",\"commitId\":\"commit2\"}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations?repository=foo").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
+                        "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
+                        "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
+                        "\"remote\":\"remote\",\"commitId\":\"commit2\"}]"
+                }
             }
         }
 
@@ -178,30 +175,39 @@ class OperationsApiTest : StringSpec() {
             transaction {
                 services.metadata.createRepository(Repository(name = "bar", properties = mapOf()))
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations?repository=bar")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations?repository=bar").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[]"
+                }
             }
         }
 
         "get operation fails for non-existent operation" {
             val id = UUID.randomUUID().toString()
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/$id")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such operation '$id'"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations/$id").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such operation '$id'"
+                }
             }
         }
 
         "get operation succeeds" {
             loadTestOperations()
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/$vs1")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
-                    "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations/$vs1").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
+                        "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}"
+                }
             }
         }
 
@@ -223,16 +229,19 @@ class OperationsApiTest : StringSpec() {
                 ),
             )
             services.operations.loadState()
-            with(engine.handleRequest(HttpMethod.Delete, "/v1/operations/$vs2")) {
-                response.status() shouldBe HttpStatusCode.NoContent
-            }
+            testApplication {
+                application { mainProvider(services) }
+                client.delete("/v1/operations/$vs2").apply {
+                    status shouldBe HttpStatusCode.NoContent
+                }
 
-            delay(Duration.ofMillis(500))
+                delay(Duration.ofMillis(500))
 
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/$vs2")) {
-                response.status() shouldBe HttpStatusCode.OK
-                val op = gson.fromJson(response.content, Operation::class.java)
-                op.state shouldBe Operation.State.ABORTED
+                client.get("/v1/operations/$vs2").apply {
+                    status shouldBe HttpStatusCode.OK
+                    val op = gson.fromJson(bodyAsText(), Operation::class.java)
+                    op.state shouldBe Operation.State.ABORTED
+                }
             }
         }
 
@@ -254,14 +263,17 @@ class OperationsApiTest : StringSpec() {
                 ),
             )
             services.operations.loadState()
-            with(engine.handleRequest(HttpMethod.Delete, "/v1/operations/$vs1")) {
-                response.status() shouldBe HttpStatusCode.NoContent
-            }
+            testApplication {
+                application { mainProvider(services) }
+                client.delete("/v1/operations/$vs1").apply {
+                    status shouldBe HttpStatusCode.NoContent
+                }
 
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/$vs1")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
-                    "\"state\":\"COMPLETE\",\"remote\":\"remote\",\"commitId\":\"commit\"}"
+                client.get("/v1/operations/$vs1").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
+                        "\"state\":\"COMPLETE\",\"remote\":\"remote\",\"commitId\":\"commit\"}"
+                }
             }
         }
 
@@ -285,12 +297,15 @@ class OperationsApiTest : StringSpec() {
             )
             services.operations.loadState()
             delay(Duration.ofMillis(500))
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/$vs2/progress")) {
-                response.status() shouldBe HttpStatusCode.OK
-                val entries: List<ProgressEntry> = gson.fromJson(response.content, object : TypeToken<List<ProgressEntry>>() { }.type)
-                entries.size shouldBe 1
-                entries[0].type shouldBe ProgressEntry.Type.MESSAGE
-                entries[0].message shouldBe "Retrying operation after restart"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/operations/$vs2/progress").apply {
+                    status shouldBe HttpStatusCode.OK
+                    val entries: List<ProgressEntry> = gson.fromJson(bodyAsText(), object : TypeToken<List<ProgressEntry>>() { }.type)
+                    entries.size shouldBe 1
+                    entries[0].type shouldBe ProgressEntry.Type.MESSAGE
+                    entries[0].message shouldBe "Retrying operation after restart"
+                }
             }
         }
 
@@ -299,37 +314,43 @@ class OperationsApiTest : StringSpec() {
                 services.metadata.createCommit("foo", vs1, Commit("commit"))
             }
 
-            val result =
-                engine.handleRequest(HttpMethod.Post, "/v1/repositories/foo/remotes/remote/commits/commit/push") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("{\"provider\":\"nop\",\"properties\":{}}")
-                }
-            result.response.status() shouldBe HttpStatusCode.Created
-            val operation = gson.fromJson(result.response.content, Operation::class.java)
+            testApplication {
+                application { mainProvider(services) }
+                val response =
+                    client.post("/v1/repositories/foo/remotes/remote/commits/commit/push") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"provider\":\"nop\",\"properties\":{}}")
+                    }
+                response.status shouldBe HttpStatusCode.Created
+                val operation = gson.fromJson(response.bodyAsText(), Operation::class.java)
 
-            operation.commitId shouldBe "commit"
-            operation.remote shouldBe "remote"
-            operation.type shouldBe Operation.Type.PUSH
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/${operation.id}")) {
-                response.status() shouldBe HttpStatusCode.OK
+                operation.commitId shouldBe "commit"
+                operation.remote shouldBe "remote"
+                operation.type shouldBe Operation.Type.PUSH
+                client.get("/v1/operations/${operation.id}").apply {
+                    status shouldBe HttpStatusCode.OK
+                }
             }
         }
 
         "pull starts operation" {
-            val result =
-                engine.handleRequest(HttpMethod.Post, "/v1/repositories/foo/remotes/remote/commits/commit/pull") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("{\"provider\":\"nop\",\"properties\":{}}")
+            testApplication {
+                application { mainProvider(services) }
+                val response =
+                    client.post("/v1/repositories/foo/remotes/remote/commits/commit/pull") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"provider\":\"nop\",\"properties\":{}}")
+                    }
+                response.status shouldBe HttpStatusCode.Created
+                val operation = gson.fromJson(response.bodyAsText(), Operation::class.java)
+
+                operation.commitId shouldBe "commit"
+                operation.remote shouldBe "remote"
+                operation.type shouldBe Operation.Type.PULL
+
+                client.get("/v1/operations/${operation.id}").apply {
+                    status shouldBe HttpStatusCode.OK
                 }
-            result.response.status() shouldBe HttpStatusCode.Created
-            val operation = gson.fromJson(result.response.content, Operation::class.java)
-
-            operation.commitId shouldBe "commit"
-            operation.remote shouldBe "remote"
-            operation.type shouldBe Operation.Type.PULL
-
-            with(engine.handleRequest(HttpMethod.Get, "/v1/operations/${operation.id}")) {
-                response.status() shouldBe HttpStatusCode.OK
             }
         }
     }

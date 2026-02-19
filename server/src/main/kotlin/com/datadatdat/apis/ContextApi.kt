@@ -6,11 +6,10 @@ package com.datadatdat.apis
 
 import com.datadatdat.ServiceLocator
 import com.datadatdat.models.Context
-import io.ktor.application.call
-import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.get
-import io.ktor.routing.route
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.route
 
 /**
  * This is a single global context API to be able to get the current context configuration for the given server.
