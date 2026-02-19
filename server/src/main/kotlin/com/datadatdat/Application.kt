@@ -17,26 +17,26 @@ import com.datadatdat.exception.ObjectExistsException
 import com.datadatdat.models.Error
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
-import io.ktor.application.Application
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.application.log
-import io.ktor.features.CallLogging
-import io.ktor.features.Compression
-import io.ktor.features.ContentNegotiation
-import io.ktor.features.DefaultHeaders
-import io.ktor.features.StatusPages
-import io.ktor.features.deflate
-import io.ktor.features.gzip
-import io.ktor.features.minimumSize
-import io.ktor.gson.GsonConverter
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.response.respond
-import io.ktor.routing.Routing
+import io.ktor.serialization.gson.GsonConverter
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.application.log
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
-import io.ktor.util.KtorExperimentalAPI
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.compression.Compression
+import io.ktor.server.plugins.compression.CompressionConfig
+import io.ktor.server.plugins.compression.deflate
+import io.ktor.server.plugins.compression.gzip
+import io.ktor.server.plugins.compression.minimumSize
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.response.respond
+import io.ktor.server.routing.routing
 import io.kubernetes.client.openapi.ApiException
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -53,7 +53,7 @@ fun exceptionToError(t: Throwable): Any {
     )
 }
 
-internal fun applicationCompressionConfiguration(): Compression.Configuration.() -> Unit =
+internal fun applicationCompressionConfiguration(): CompressionConfig.() -> Unit =
     {
         gzip {
             priority = 1.0
@@ -64,7 +64,6 @@ internal fun applicationCompressionConfiguration(): Compression.Configuration.()
         }
     }
 
-@KtorExperimentalAPI
 fun Application.main() {
     val context =
         System.getProperty("datadatdat.context")
@@ -105,7 +104,6 @@ fun Application.main() {
     mainProvider(services)
 }
 
-@KtorExperimentalAPI
 fun Application.mainProvider(services: ServiceLocator) {
     val log = LoggerFactory.getLogger(Application::class.java)
     install(DefaultHeaders)
@@ -120,7 +118,7 @@ fun Application.mainProvider(services: ServiceLocator) {
         level = Level.INFO
     }
     install(Compression, applicationCompressionConfiguration())
-    install(Routing) {
+    routing {
         commitsApi(services)
         contextApi(services)
         operationsApi(services)
@@ -129,28 +127,33 @@ fun Application.mainProvider(services: ServiceLocator) {
         volumesApi(services)
     }
     install(StatusPages) {
-        exception<NoSuchObjectException> { cause ->
+        exception<NoSuchObjectException> { call, cause ->
             call.respond(HttpStatusCode.NotFound, exceptionToError(cause))
             call.application.log.info(cause.message)
         }
-        exception<ObjectExistsException> { cause ->
+        exception<ObjectExistsException> { call, cause ->
             call.respond(HttpStatusCode.Conflict, exceptionToError(cause))
             call.application.log.info(cause.message)
         }
-        exception<IllegalArgumentException> { cause ->
+        exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, exceptionToError(cause))
             call.application.log.info(cause.message)
         }
-        exception<JsonSyntaxException> { cause ->
+        exception<JsonSyntaxException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, exceptionToError(cause))
             call.application.log.info(cause.message)
         }
-        exception<ApiException> { cause ->
+        exception<BadRequestException> { call, cause ->
+            val rootCause = cause.cause ?: cause
+            call.respond(HttpStatusCode.BadRequest, exceptionToError(rootCause))
+            call.application.log.info(rootCause.message)
+        }
+        exception<ApiException> { call, cause ->
             // Kubernetes API exceptions don't often provide useful messages, so log the response body instead
             call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
             log.error(cause.responseBody, cause)
         }
-        exception<Throwable> { cause ->
+        exception<Throwable> { call, cause ->
             call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
             // For internal errors, log the whole exception and stack trace
             throw cause
@@ -158,7 +161,6 @@ fun Application.mainProvider(services: ServiceLocator) {
     }
 }
 
-@KtorExperimentalAPI
 fun main(
     @Suppress("UNUSED_PARAMETER") args: Array<String>,
 ) {

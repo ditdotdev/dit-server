@@ -20,16 +20,15 @@ import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.StringSpec
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.testing.TestApplicationEngine
-import io.ktor.server.testing.contentType
-import io.ktor.server.testing.createTestEnvironment
-import io.ktor.server.testing.handleRequest
-import io.ktor.server.testing.setBody
-import io.ktor.util.KtorExperimentalAPI
+import io.ktor.http.contentType
+import io.ktor.server.testing.testApplication
 import io.mockk.MockKAnnotations
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -42,7 +41,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-@OptIn(KtorExperimentalAPI::class)
 class CommitsApiTest : StringSpec() {
     lateinit var vs: String
 
@@ -53,18 +51,8 @@ class CommitsApiTest : StringSpec() {
     @OverrideMockKs
     var services = ServiceLocator(mockk())
 
-    var engine = TestApplicationEngine(createTestEnvironment())
-
     override fun beforeSpec(spec: Spec) {
-        with(engine) {
-            start()
-            services.metadata.init()
-            application.mainProvider(services)
-        }
-    }
-
-    override fun afterSpec(spec: Spec) {
-        engine.stop(0L, 0L)
+        services.metadata.init()
     }
 
     override fun beforeTest(testCase: TestCase) {
@@ -88,10 +76,13 @@ class CommitsApiTest : StringSpec() {
 
     init {
         "list empty commits succeeds" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[]"
+                }
             }
         }
 
@@ -122,10 +113,13 @@ class CommitsApiTest : StringSpec() {
                     ),
                 )
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe
-                    "[{\"id\":\"hash1\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-09-20T13:45:38Z\"}},{\"id\":\"hash2\",\"properties\":{\"c\":\"d\",\"timestamp\":\"2019-09-20T13:45:37Z\"}}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe
+                        "[{\"id\":\"hash1\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-09-20T13:45:38Z\"}},{\"id\":\"hash2\",\"properties\":{\"c\":\"d\",\"timestamp\":\"2019-09-20T13:45:37Z\"}}]"
+                }
             }
         }
         "list commits filters result with exact match" {
@@ -133,9 +127,12 @@ class CommitsApiTest : StringSpec() {
                 services.metadata.createCommit("foo", vs, Commit(id = "hash1", properties = mapOf("tags" to mapOf("a" to "b"))))
                 services.metadata.createCommit("foo", vs, Commit(id = "hash2", properties = mapOf("tags" to mapOf("c" to "d"))))
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits?tag=a=b")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\"}}}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits?tag=a=b").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\"}}}]"
+                }
             }
         }
 
@@ -144,9 +141,12 @@ class CommitsApiTest : StringSpec() {
                 services.metadata.createCommit("foo", vs, Commit(id = "hash1", properties = mapOf("tags" to mapOf("a" to "b"))))
                 services.metadata.createCommit("foo", vs, Commit(id = "hash2", properties = mapOf("tags" to mapOf("c" to "d"))))
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits?tag=a")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\"}}}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits?tag=a").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\"}}}]"
+                }
             }
         }
 
@@ -155,18 +155,24 @@ class CommitsApiTest : StringSpec() {
                 services.metadata.createCommit("foo", vs, Commit(id = "hash1", properties = mapOf("tags" to mapOf("a" to "b", "c" to "d"))))
                 services.metadata.createCommit("foo", vs, Commit(id = "hash2", properties = mapOf("tags" to mapOf("c" to "d"))))
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits?tag=a=b&tag=c=d")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\",\"c\":\"d\"}}}]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits?tag=a=b&tag=c=d").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "[{\"id\":\"hash1\",\"properties\":{\"tags\":{\"a\":\"b\",\"c\":\"d\"}}}]"
+                }
             }
         }
 
         "list commits fails with non existent repository" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/repo/commits")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such repository 'repo'"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/repo/commits").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such repository 'repo'"
+                }
             }
         }
 
@@ -174,9 +180,12 @@ class CommitsApiTest : StringSpec() {
             transaction {
                 services.metadata.createCommit("foo", vs, Commit(id = "hash", properties = mapOf("a" to "b")))
             }
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits/hash").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}"
+                }
             }
         }
 
@@ -186,36 +195,48 @@ class CommitsApiTest : StringSpec() {
             }
             every { context.getCommitStatus(any(), any(), any()) } returns
                 CommitStatus(logicalSize = 3, actualSize = 6, uniqueSize = 9, ready = false, error = "error")
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits/hash/status")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.content shouldBe "{\"logicalSize\":3,\"actualSize\":6,\"uniqueSize\":9,\"ready\":false,\"error\":\"error\"}"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits/hash/status").apply {
+                    status shouldBe HttpStatusCode.OK
+                    bodyAsText() shouldBe "{\"logicalSize\":3,\"actualSize\":6,\"uniqueSize\":9,\"ready\":false,\"error\":\"error\"}"
+                }
             }
         }
 
         "get commit from non-existent repo returns no such object" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/bar/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such repository 'bar'"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/bar/commits/hash").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such repository 'bar'"
+                }
             }
         }
 
         "get non-existent commit returns no such object" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such commit 'hash' in repository 'foo'"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits/hash").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such commit 'hash' in repository 'foo'"
+                }
             }
         }
 
         "get bad commit id returns bad request" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/commits/bad@hash")) {
-                response.status() shouldBe HttpStatusCode.BadRequest
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "IllegalArgumentException"
-                error.message shouldContain "invalid commit id"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/commits/bad@hash").apply {
+                    status shouldBe HttpStatusCode.BadRequest
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "IllegalArgumentException"
+                    error.message shouldContain "invalid commit id"
+                }
             }
         }
 
@@ -223,17 +244,19 @@ class CommitsApiTest : StringSpec() {
             transaction {
                 services.metadata.createCommit("foo", vs, Commit("hash"))
             }
-            with(
-                engine.handleRequest(HttpMethod.Post, "/v1/repositories/foo/commits/hash") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}")
-                },
-            ) {
-                response.status() shouldBe HttpStatusCode.OK
-                transaction {
-                    val commit = services.metadata.getCommit("foo", "hash").second
-                    commit.properties["a"] shouldBe "b"
-                }
+            testApplication {
+                application { mainProvider(services) }
+                client
+                    .post("/v1/repositories/foo/commits/hash") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}")
+                    }.apply {
+                        status shouldBe HttpStatusCode.OK
+                        transaction {
+                            val commit = services.metadata.getCommit("foo", "hash").second
+                            commit.properties["a"] shouldBe "b"
+                        }
+                    }
             }
         }
 
@@ -241,63 +264,76 @@ class CommitsApiTest : StringSpec() {
             transaction {
                 services.metadata.createCommit("foo", vs, Commit("hash"))
             }
-            with(engine.handleRequest(HttpMethod.Delete, "/v1/repositories/foo/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.NoContent
-                shouldThrow<NoSuchObjectException> {
-                    transaction {
-                        services.metadata.getCommit("foo", "hash")
+            testApplication {
+                application { mainProvider(services) }
+                client.delete("/v1/repositories/foo/commits/hash").apply {
+                    status shouldBe HttpStatusCode.NoContent
+                    shouldThrow<NoSuchObjectException> {
+                        transaction {
+                            services.metadata.getCommit("foo", "hash")
+                        }
                     }
                 }
             }
         }
 
         "delete commit from non-existent repo returns no such object" {
-            with(engine.handleRequest(HttpMethod.Delete, "/v1/repositories/bar/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such repository 'bar'"
+            testApplication {
+                application { mainProvider(services) }
+                client.delete("/v1/repositories/bar/commits/hash").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such repository 'bar'"
+                }
             }
         }
 
         "delete non-existent commit returns no such object" {
-            with(engine.handleRequest(HttpMethod.Delete, "/v1/repositories/foo/commits/hash")) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such commit 'hash' in repository 'foo'"
+            testApplication {
+                application { mainProvider(services) }
+                client.delete("/v1/repositories/foo/commits/hash").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "NoSuchObjectException"
+                    error.message shouldBe "no such commit 'hash' in repository 'foo'"
+                }
             }
         }
 
         "create commit succeeds" {
             every { context.commitVolumeSet(any(), any()) } just Runs
             every { context.commitVolume(any(), any(), any(), any()) } just Runs
-            with(
-                engine.handleRequest(HttpMethod.Post, "/v1/repositories/foo/commits") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}")
-                },
-            ) {
-                response.status() shouldBe HttpStatusCode.Created
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}"
-                verify {
-                    context.commitVolumeSet(vs, "hash")
-                }
+            testApplication {
+                application { mainProvider(services) }
+                client
+                    .post("/v1/repositories/foo/commits") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}")
+                    }.apply {
+                        status shouldBe HttpStatusCode.Created
+                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        bodyAsText() shouldBe "{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}"
+                        verify {
+                            context.commitVolumeSet(vs, "hash")
+                        }
+                    }
             }
         }
 
         "create commit in non-existent repo returns no such object" {
-            with(
-                engine.handleRequest(HttpMethod.Post, "/v1/repositories/bar/commits") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}")
-                },
-            ) {
-                response.status() shouldBe HttpStatusCode.NotFound
-                val error = Gson().fromJson(response.content, Error::class.java)
-                error.code shouldBe "NoSuchObjectException"
-                error.message shouldBe "no such repository 'bar'"
+            testApplication {
+                application { mainProvider(services) }
+                client
+                    .post("/v1/repositories/bar/commits") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\"}}")
+                    }.apply {
+                        status shouldBe HttpStatusCode.NotFound
+                        val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                        error.code shouldBe "NoSuchObjectException"
+                        error.message shouldBe "no such repository 'bar'"
+                    }
             }
         }
 
@@ -309,15 +345,18 @@ class CommitsApiTest : StringSpec() {
             every { context.cloneVolumeSet(any(), any(), any()) } just Runs
             every { context.cloneVolume(any(), any(), any(), any(), any()) } returns emptyMap()
 
-            with(engine.handleRequest(HttpMethod.Post, "/v1/repositories/foo/commits/hash/checkout")) {
-                response.status() shouldBe HttpStatusCode.NoContent
-                val activeVs =
-                    transaction {
-                        services.metadata.getActiveVolumeSet("foo")
+            testApplication {
+                application { mainProvider(services) }
+                client.post("/v1/repositories/foo/commits/hash/checkout").apply {
+                    status shouldBe HttpStatusCode.NoContent
+                    val activeVs =
+                        transaction {
+                            services.metadata.getActiveVolumeSet("foo")
+                        }
+                    activeVs shouldNotBe vs
+                    verify {
+                        context.cloneVolumeSet(vs, "hash", activeVs)
                     }
-                activeVs shouldNotBe vs
-                verify {
-                    context.cloneVolumeSet(vs, "hash", activeVs)
                 }
             }
         }

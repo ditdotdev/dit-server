@@ -104,7 +104,7 @@ func (e *EndToEndTest) RunDatadatdatDocker(entryPoint string, daemon bool) error
 		"-e", fmt.Sprintf("DATADATDAT_PORT=%d", e.Port),
 		e.Image, "/bin/bash", fmt.Sprintf("/datadatdat/%s", entryPoint))
 
-	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
+	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
 }
 
 /*
@@ -138,14 +138,14 @@ func (e *EndToEndTest) RunDatadatdatKubernetes(entryPoint string, parameters ...
 		fmt.Sprintf("/datadatdat/%s", entryPoint),
 	}
 
-	return exec.Command("docker", args...).Run() // #nosec G204 - controlled docker command in test
+	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
 }
 
 /*
  * Start the server depending on the context type.
  */
 func (e *EndToEndTest) StartServer(parameters ...string) error {
-	err := exec.Command("docker", "volume", "create", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204 - controlled docker command in test
+	err := exec.Command("docker", "volume", "create", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204,G702 - controlled docker command in test
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (e *EndToEndTest) WaitForServer() error {
 		} else {
 			tried++
 			if tried == waitRetries {
-				logs, err := exec.Command("docker", "logs", e.GetPrimaryContainer()).CombinedOutput() // #nosec G204 - controlled docker logs command in test
+				logs, err := exec.Command("docker", "logs", e.GetPrimaryContainer()).CombinedOutput() // #nosec G204,G702 - controlled docker logs command in test
 				if err != nil {
 					return err
 				}
@@ -205,7 +205,7 @@ func (e *EndToEndTest) WaitForServer() error {
  * Restart the server. This only works for docker-zfs.
  */
 func (e *EndToEndTest) RestartServer() error {
-	return exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204 - controlled docker rm command in test
+	return exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204,G702 - controlled docker rm command in test
 }
 
 /*
@@ -213,12 +213,12 @@ func (e *EndToEndTest) RestartServer() error {
  */
 func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
 	if e.Context == dockerZfsContext {
-		err := exec.Command("docker", "rm", "-f", e.GetContainer("launch")).Run() // #nosec G204 - controlled docker rm command in test
+		err := exec.Command("docker", "rm", "-f", e.GetContainer("launch")).Run() // #nosec G204,G702 - controlled docker rm command in test
 		if err != nil && !ignoreErrors {
 			return err
 		}
 	}
-	err := exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204 - controlled docker rm command in test
+	err := exec.Command("docker", "rm", "-f", e.GetContainer("server")).Run() // #nosec G204,G702 - controlled docker rm command in test
 	if err != nil && !ignoreErrors {
 		return err
 	}
@@ -230,7 +230,7 @@ func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
 		}
 	}
 
-	err = exec.Command("docker", "volume", "rm", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204 - controlled docker command in test
+	err = exec.Command("docker", "volume", "rm", fmt.Sprintf("%s-data", e.Identity)).Run() // #nosec G204,G702 - controlled docker command in test
 	if err != nil && !ignoreErrors {
 		return err
 	}
@@ -255,7 +255,7 @@ func (e *EndToEndTest) GetVolumePath(repo string, volume string) (string, error)
 func (e *EndToEndTest) ExecServer(args ...string) (string, error) {
 	fullArgs := []string{"exec", e.GetContainer("server")}
 	fullArgs = append(fullArgs, args...)
-	out, err := exec.Command("docker", fullArgs...).Output() // #nosec G204 - controlled docker command in test
+	out, err := exec.Command("docker", fullArgs...).Output() // #nosec G204,G702 - controlled docker command in test
 	if err != nil {
 		return "", err
 	}
@@ -272,7 +272,7 @@ func (e *EndToEndTest) WriteFile(repo string, volume string, filename string, co
 		return err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	return exec.Command("docker", "exec", e.GetContainer("server"), "sh", "-c", // #nosec G204 - controlled docker exec command in test
+	return exec.Command("docker", "exec", e.GetContainer("server"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
 		fmt.Sprintf("echo -n \"%s\" > %s", content, path)).Run()
 }
 
@@ -285,7 +285,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
 		return "", err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	out, err := exec.Command("docker", "exec", e.GetContainer("server"), "cat", path).Output() // #nosec G204 - controlled docker exec command in test
+	out, err := exec.Command("docker", "exec", e.GetContainer("server"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -296,7 +296,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
  * Check to see whether the given path exists on the server
  */
 func (e *EndToEndTest) PathExists(path string) bool {
-	err := exec.Command("docker", "exec", e.GetContainer("server"), "ls", path).Run() // #nosec G204 - controlled docker command in test
+	err := exec.Command("docker", "exec", e.GetContainer("server"), "ls", path).Run() // #nosec G204,G702 - controlled docker command in test
 	return err != nil
 }
 
@@ -304,12 +304,12 @@ func (e *EndToEndTest) PathExists(path string) bool {
  * Write to a file on the SSH server.
  */
 func (e *EndToEndTest) WriteFileSsh(path string, content string) error {
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "sh", "-c", // #nosec G204 - controlled docker exec command in test
+	return exec.Command("docker", "exec", e.GetContainer("ssh"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
 		fmt.Sprintf("echo \"%s\" > %s", content, path)).Run()
 }
 
 func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
-	out, err := exec.Command("docker", "exec", e.GetContainer("ssh"), "cat", path).Output() // #nosec G204 - controlled docker exec command in test
+	out, err := exec.Command("docker", "exec", e.GetContainer("ssh"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -317,20 +317,20 @@ func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
 }
 
 func (e *EndToEndTest) MkdirSsh(path string) error {
-	err := exec.Command("docker", "exec", e.GetContainer("ssh"), "mkdir", "-p", path).Run() // #nosec G204 - controlled docker command in test
+	err := exec.Command("docker", "exec", e.GetContainer("ssh"), "mkdir", "-p", path).Run() // #nosec G204,G702 - controlled docker command in test
 	if err != nil {
 		return err
 	}
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "chown", sshUser, path).Run() // #nosec G204 - controlled docker command in test
+	return exec.Command("docker", "exec", e.GetContainer("ssh"), "chown", sshUser, path).Run() // #nosec G204,G702 - controlled docker command in test
 }
 
 func (e *EndToEndTest) StartSsh() error {
-	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"), // #nosec G204 - controlled docker run command in test
+	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"), // #nosec G204,G702 - controlled docker run command in test
 		"--network", e.Identity, "datadatdat/ssh-test-server:latest").Run()
 }
 
 func (e *EndToEndTest) StopSsh() error {
-	return exec.Command("docker", "rm", "-f", e.GetContainer("ssh")).Run() // #nosec G204 - controlled docker rm command in test
+	return exec.Command("docker", "rm", "-f", e.GetContainer("ssh")).Run() // #nosec G204,G702 - controlled docker rm command in test
 }
 
 func (e *EndToEndTest) WaitForSsh() error {
@@ -357,7 +357,7 @@ func (e *EndToEndTest) WaitForSsh() error {
 		if !success {
 			tried++
 			if tried == waitRetries {
-				logs, err := exec.Command("docker", "logs", e.GetContainer("test-ssh")).CombinedOutput() // #nosec G204 - controlled docker logs command in test
+				logs, err := exec.Command("docker", "logs", e.GetContainer("test-ssh")).CombinedOutput() // #nosec G204,G702 - controlled docker logs command in test
 				if err != nil {
 					return err
 				}
@@ -367,7 +367,7 @@ func (e *EndToEndTest) WaitForSsh() error {
 		}
 	}
 
-	out, err := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", // #nosec G204 - controlled docker inspect command in test
+	out, err := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", // #nosec G204,G702 - controlled docker inspect command in test
 		e.GetContainer("ssh")).Output()
 	if err != nil {
 		return err

@@ -12,13 +12,11 @@ import io.kotlintest.TestCaseOrder
 import io.kotlintest.TestResult
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
-import io.ktor.http.HttpMethod
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.testing.TestApplicationEngine
-import io.ktor.server.testing.contentType
-import io.ktor.server.testing.createTestEnvironment
-import io.ktor.server.testing.handleRequest
-import io.ktor.util.KtorExperimentalAPI
+import io.ktor.http.contentType
+import io.ktor.server.testing.testApplication
 import io.mockk.MockKAnnotations
 import io.mockk.clearAllMocks
 import io.mockk.impl.annotations.InjectMockKs
@@ -27,7 +25,6 @@ import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.mockk
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-@OptIn(KtorExperimentalAPI::class)
 class VolumesApiTest : StringSpec() {
     lateinit var vs: String
 
@@ -38,18 +35,8 @@ class VolumesApiTest : StringSpec() {
     @OverrideMockKs
     var services = ServiceLocator(mockk())
 
-    var engine = TestApplicationEngine(createTestEnvironment())
-
     override fun beforeSpec(spec: Spec) {
-        with(engine) {
-            start()
-            services.metadata.init()
-            application.mainProvider(services)
-        }
-    }
-
-    override fun afterSpec(spec: Spec) {
-        engine.stop(0L, 0L)
+        services.metadata.init()
     }
 
     override fun beforeTest(testCase: TestCase) {
@@ -73,16 +60,22 @@ class VolumesApiTest : StringSpec() {
 
     init {
         "list volumes succeeds" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/foo/volumes")) {
-                response.status() shouldBe HttpStatusCode.OK
-                response.contentType().toString() shouldBe "application/json; charset=UTF-8"
-                response.content shouldBe "[]"
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/foo/volumes").apply {
+                    status shouldBe HttpStatusCode.OK
+                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    bodyAsText() shouldBe "[]"
+                }
             }
         }
 
         "list volumes for non-existent repo fails" {
-            with(engine.handleRequest(HttpMethod.Get, "/v1/repositories/bar/volumes")) {
-                response.status() shouldBe HttpStatusCode.NotFound
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/repositories/bar/volumes").apply {
+                    status shouldBe HttpStatusCode.NotFound
+                }
             }
         }
     }
