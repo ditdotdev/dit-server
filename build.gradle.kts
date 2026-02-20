@@ -31,7 +31,7 @@ allprojects {
     val ktlint by configurations.creating
 
     dependencies {
-        ktlint("com.pinterest.ktlint:ktlint-cli:1.7.1")
+        ktlint("com.pinterest.ktlint:ktlint-cli:1.8.0")
     }
 
     tasks.withType<KotlinCompile>().configureEach {
