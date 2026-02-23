@@ -91,10 +91,14 @@ fun Application.main() {
             "docker-zfs" -> {
                 DockerZfsContext(contextConfig)
             }
+
             "kubernetes-csi" -> {
                 KubernetesCsiContext(contextConfig)
             }
-            else -> throw IllegalArgumentException("unknown context '$context', must be one of ('docker-zfs', 'kubernetes-csi')")
+
+            else -> {
+                throw IllegalArgumentException("unknown context '$context', must be one of ('docker-zfs', 'kubernetes-csi')")
+            }
         }
 
     val services = ServiceLocator(runtimeContext, false)
