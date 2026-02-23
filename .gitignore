@@ -16,3 +16,4 @@ out
 # Development files
 /notes
 /.env
+.claude
