@@ -514,14 +514,15 @@ class MetadataProvider(
                 it[Commits.state] = VolumeState.ACTIVE
             } get Commits.id
 
-        @Suppress("UNCHECKED_CAST")
-        val tags = commit.properties["tags"] as Map<String, String>?
-        if (tags != null) {
-            for ((key, value) in tags) {
-                Tags.insert {
-                    it[Tags.commit] = id.value
-                    it[Tags.key] = key
-                    it[Tags.value] = value
+        val rawTags = commit.properties["tags"]
+        if (rawTags is Map<*, *>) {
+            for ((key, value) in rawTags) {
+                if (key is String) {
+                    Tags.insert {
+                        it[Tags.commit] = id.value
+                        it[Tags.key] = key
+                        it[Tags.value] = (value as? String) ?: ""
+                    }
                 }
             }
         }
@@ -586,8 +587,11 @@ class MetadataProvider(
         existCheck: List<String>,
         matchCheck: Map<String, String>,
     ): Boolean {
-        @Suppress("UNCHECKED_CAST")
-        val tags = commit.properties["tags"] as Map<String, String>? ?: return false
+        val rawTags = commit.properties["tags"]
+        val tags: Map<String, String> = when (rawTags) {
+            is Map<*, *> -> rawTags.entries.associate { (k, v) -> (k as? String ?: "") to (v as? String ?: "") }
+            else -> return false
+        }
 
         for (key in existCheck) {
             if (!tags.containsKey(key)) {
@@ -712,14 +716,15 @@ class MetadataProvider(
         Tags.deleteWhere {
             Tags.commit eq id
         }
-        @Suppress("UNCHECKED_CAST")
-        val tags = commit.properties["tags"] as Map<String, String>?
-        if (tags != null) {
-            for ((key, value) in tags) {
-                Tags.insert {
-                    it[Tags.commit] = id
-                    it[Tags.key] = key
-                    it[Tags.value] = value
+        val rawTags = commit.properties["tags"]
+        if (rawTags is Map<*, *>) {
+            for ((key, value) in rawTags) {
+                if (key is String) {
+                    Tags.insert {
+                        it[Tags.commit] = id
+                        it[Tags.key] = key
+                        it[Tags.value] = (value as? String) ?: ""
+                    }
                 }
             }
         }
