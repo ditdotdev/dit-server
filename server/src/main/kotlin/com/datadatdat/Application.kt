@@ -40,6 +40,7 @@ import io.ktor.server.routing.routing
 import io.kubernetes.client.openapi.ApiException
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -156,6 +157,14 @@ fun Application.mainProvider(services: ServiceLocator) {
             // Kubernetes API exceptions don't often provide useful messages, so log the response body instead
             call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
             log.error(cause.responseBody, cause)
+        }
+        exception<IOException> { call, cause ->
+            if (cause.message?.contains("401") == true) {
+                call.respond(HttpStatusCode.Unauthorized, exceptionToError(cause))
+            } else {
+                call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
+                throw cause
+            }
         }
         exception<Throwable> { call, cause ->
             call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))

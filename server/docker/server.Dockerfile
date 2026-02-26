@@ -37,6 +37,7 @@ RUN apt-get -y install lsof
 RUN apt-get -y install docker.io
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
 RUN apt-get -y install postgresql postgresql-client postgresql-contrib
+RUN apt-get -y install unzip
 
 RUN curl -o /usr/local/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 RUN chmod 755 /usr/local/bin/kubectl
