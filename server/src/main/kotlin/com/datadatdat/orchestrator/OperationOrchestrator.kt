@@ -109,11 +109,9 @@ class OperationOrchestrator(
             var localCommit: String? = null
             val provider = services.remoteProvider(remote.provider)
             var remoteCommit = provider.getCommit(remote.properties, params.properties, commitId)
-            while (localCommit == null && remoteCommit != null && remoteCommit.containsKey("tags")) {
-                @Suppress("UNCHECKED_CAST")
-                val tags = remoteCommit["tags"] as Map<String, String>
-                if (tags.containsKey("source")) {
-                    val source = tags["source"]!!
+            while (localCommit == null && remoteCommit != null) {
+                val source = remoteCommit["source"] as? String
+                if (source != null) {
                     try {
                         localCommit = services.commits.getCommit(repo, source).id
                     } catch (e: NoSuchObjectException) {

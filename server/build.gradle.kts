@@ -12,6 +12,7 @@ group = "com.datadatdat"
 version = datadatdatVersion
 
 repositories {
+    mavenLocal()
     mavenCentral()
     gradlePluginPortal()
     maven("https://repo1.maven.org/maven2/")
