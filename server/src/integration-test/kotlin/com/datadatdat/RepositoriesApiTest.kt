@@ -67,7 +67,7 @@ class RepositoriesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
@@ -96,7 +96,7 @@ class RepositoriesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/repo").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}"
                 }
             }
@@ -135,7 +135,7 @@ class RepositoriesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/foo/status").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "{}"
                 }
             }
@@ -175,7 +175,7 @@ class RepositoriesApiTest : StringSpec() {
                         setBody("{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}")
                     }.apply {
                         status shouldBe HttpStatusCode.Created
-                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        contentType().toString() shouldBe "application/json"
                         bodyAsText() shouldBe "{\"name\":\"repo\",\"properties\":{\"a\":\"b\"}}"
                     }
             }
@@ -222,7 +222,7 @@ class RepositoriesApiTest : StringSpec() {
                         setBody("{\"name\":\"repo2\",\"properties\":{\"a\":\"b\"}}")
                     }.apply {
                         status shouldBe HttpStatusCode.OK
-                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        contentType().toString() shouldBe "application/json"
                         bodyAsText() shouldBe "{\"name\":\"repo2\",\"properties\":{\"a\":\"b\"}}"
                     }
             }
