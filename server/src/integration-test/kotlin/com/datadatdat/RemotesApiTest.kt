@@ -61,7 +61,7 @@ class RemotesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/repo/remotes").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
@@ -89,7 +89,7 @@ class RemotesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/repo/remotes").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[{\"provider\":\"nop\",\"name\":\"foo\",\"properties\":{}}," +
                         "{\"provider\":\"engine\",\"name\":\"bar\",\"properties\":{\"address\":\"a\"," +
                         "\"username\":\"u\",\"password\":\"p\",\"repository\":\"r\"}}]"
@@ -228,7 +228,7 @@ class RemotesApiTest : StringSpec() {
                         header("datadatdat-remote-parameters", "{\"provider\":\"nop\",\"properties\":{}}")
                     }.apply {
                         status shouldBe HttpStatusCode.OK
-                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        contentType().toString() shouldBe "application/json"
                         bodyAsText() shouldBe "[]"
                     }
             }
@@ -246,7 +246,7 @@ class RemotesApiTest : StringSpec() {
                         header("datadatdat-remote-parameters", "{\"provider\":\"nop\",\"properties\":{}}")
                     }.apply {
                         status shouldBe HttpStatusCode.OK
-                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        contentType().toString() shouldBe "application/json"
                         bodyAsText() shouldBe "{\"id\":\"c\",\"properties\":{}}"
                     }
             }

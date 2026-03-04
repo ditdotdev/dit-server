@@ -64,7 +64,7 @@ class VolumesApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/foo/volumes").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
