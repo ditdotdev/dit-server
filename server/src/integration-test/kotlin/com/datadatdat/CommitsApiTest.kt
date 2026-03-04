@@ -80,7 +80,7 @@ class CommitsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/repositories/foo/commits").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
@@ -312,7 +312,7 @@ class CommitsApiTest : StringSpec() {
                         setBody("{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}")
                     }.apply {
                         status shouldBe HttpStatusCode.Created
-                        contentType().toString() shouldBe "application/json; charset=UTF-8"
+                        contentType().toString() shouldBe "application/json"
                         bodyAsText() shouldBe "{\"id\":\"hash\",\"properties\":{\"a\":\"b\",\"timestamp\":\"2019-04-28T23:04:06Z\"}}"
                         verify {
                             context.commitVolumeSet(vs, "hash")

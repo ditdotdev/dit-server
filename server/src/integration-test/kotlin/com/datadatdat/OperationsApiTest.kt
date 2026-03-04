@@ -134,7 +134,7 @@ class OperationsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/operations").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
@@ -146,7 +146,7 @@ class OperationsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/operations").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
                         "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
                         "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
@@ -161,7 +161,7 @@ class OperationsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/operations?repository=foo").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
                         "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}," +
                         "{\"id\":\"$vs2\",\"type\":\"PULL\",\"state\":\"RUNNING\"," +
@@ -179,7 +179,7 @@ class OperationsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/operations?repository=bar").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "[]"
                 }
             }
@@ -204,7 +204,7 @@ class OperationsApiTest : StringSpec() {
                 application { mainProvider(services) }
                 client.get("/v1/operations/$vs1").apply {
                     status shouldBe HttpStatusCode.OK
-                    contentType().toString() shouldBe "application/json; charset=UTF-8"
+                    contentType().toString() shouldBe "application/json"
                     bodyAsText() shouldBe "{\"id\":\"$vs1\",\"type\":\"PUSH\"," +
                         "\"state\":\"RUNNING\",\"remote\":\"remote\",\"commitId\":\"commit1\"}"
                 }
