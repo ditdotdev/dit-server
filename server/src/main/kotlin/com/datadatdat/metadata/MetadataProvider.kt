@@ -588,10 +588,11 @@ class MetadataProvider(
         matchCheck: Map<String, String>,
     ): Boolean {
         val rawTags = commit.properties["tags"]
-        val tags: Map<String, String> = when (rawTags) {
-            is Map<*, *> -> rawTags.entries.associate { (k, v) -> (k as? String ?: "") to (v as? String ?: "") }
-            else -> return false
-        }
+        val tags: Map<String, String> =
+            when (rawTags) {
+                is Map<*, *> -> rawTags.entries.associate { (k, v) -> (k as? String ?: "") to (v as? String ?: "") }
+                else -> return false
+            }
 
         for (key in existCheck) {
             if (!tags.containsKey(key)) {
