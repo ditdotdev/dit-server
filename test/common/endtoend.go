@@ -372,7 +372,7 @@ func (e *EndToEndTest) WaitForSsh() error {
 	if err != nil {
 		return err
 	}
-	e.SshHost = string(out)
+	e.SshHost = strings.TrimSpace(string(out))
 	return nil
 }
 
