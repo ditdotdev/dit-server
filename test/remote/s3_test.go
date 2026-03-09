@@ -350,7 +350,7 @@ func (s *S3TestSuite) TestS3_054_ListCommitsIncorrectKeys() {
 				"region":    s.remote.Properties["region"],
 			},
 		}, nil)
-	s.e.APIError(err, "AmazonS3Exception")
+	s.e.APIError(err, "S3Exception")
 }
 
 func (s *S3TestSuite) TestS3_055_PullKeys() {
