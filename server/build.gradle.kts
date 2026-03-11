@@ -55,7 +55,7 @@ dependencies {
     try {
         implementation("com.datadatdat:remote-sdk:1.7.0")
         implementation("com.datadatdat:datadatdat-remote-client:1.7.0")
-        implementation("com.datadatdat:datadatdat-remote-server:1.7.2")
+        implementation("com.datadatdat:datadatdat-remote-server:1.7.1")
         implementation("com.datadatdat:nop-remote-server:1.7.0")
         implementation("com.datadatdat:ssh-remote-server:1.7.0")
         implementation("com.datadatdat:s3-remote-server:1.7.0")
