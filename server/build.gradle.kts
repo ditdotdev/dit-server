@@ -45,7 +45,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-java-time:1.1.1")
     implementation("org.postgresql:postgresql:42.7.10")
     implementation("com.zaxxer:HikariCP:7.0.2")
-    implementation("joda-time:joda-time:2.14.0")
+    implementation("joda-time:joda-time:2.14.1")
     implementation("io.kubernetes:client-java:25.0.0")
     implementation("io.kubernetes:client-java-api-fluent:25.0.0")
     implementation("com.datadatdat:command-executor:1.7.0")
@@ -55,7 +55,7 @@ dependencies {
     try {
         implementation("com.datadatdat:remote-sdk:1.7.0")
         implementation("com.datadatdat:datadatdat-remote-client:1.7.0")
-        implementation("com.datadatdat:datadatdat-remote-server:1.7.2")
+        implementation("com.datadatdat:datadatdat-remote-server:1.7.1")
         implementation("com.datadatdat:nop-remote-server:1.7.0")
         implementation("com.datadatdat:ssh-remote-server:1.7.0")
         implementation("com.datadatdat:s3-remote-server:1.7.0")
