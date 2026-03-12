@@ -52,21 +52,27 @@ function mount_database() {
 }
 
 #
+# Detect the installed PostgreSQL version and set PG_BIN accordingly
+#
+PG_VERSION_INSTALLED=$(ls /usr/lib/postgresql/ | sort -n | tail -1)
+PG_BIN="/usr/lib/postgresql/${PG_VERSION_INSTALLED}/bin"
+echo "Detected PostgreSQL version: $PG_VERSION_INSTALLED (binaries: $PG_BIN)"
+
+#
 # Fix database permissions and handle version incompatibilities
 #
 function fix_database_permissions() {
   local db_dir=$1
-  
+
   # Ensure proper ownership of database directory
   echo "Fixing database directory ownership"
   chown -R postgres:postgres $db_dir
-  
+
   # Check for PostgreSQL version incompatibility
   if [[ -f $db_dir/PG_VERSION ]]; then
     local db_version=$(cat $db_dir/PG_VERSION)
-    local server_version="12"
-    if [[ "$db_version" != "$server_version" ]]; then
-      echo "WARNING: Database version $db_version incompatible with server version $server_version"
+    if [[ "$db_version" != "$PG_VERSION_INSTALLED" ]]; then
+      echo "WARNING: Database version $db_version incompatible with server version $PG_VERSION_INSTALLED"
       echo "Clearing database directory for fresh initialization"
       rm -rf $db_dir/*
       chown postgres:postgres $db_dir
@@ -84,19 +90,19 @@ function start_database() {
   if [[ ! -f $db_dir/postgresql.conf ]]; then
     echo "Initializing database at $db_dir"
     chown postgres $db_dir
-    su - postgres -c "/usr/lib/postgresql/12/bin/pg_ctl -D $db_dir initdb" || exit 1
+    su - postgres -c "$PG_BIN/pg_ctl -D $db_dir initdb" || exit 1
     create_db=true
   fi
 
   # Start postgres
   echo "Starting postgres"
   rm -f $db_dir/postmaster.pid
-  su - postgres -c "/usr/lib/postgresql/12/bin/pg_ctl -D $db_dir -l /var/log/postgresql/logfile start"
+  su - postgres -c "$PG_BIN/pg_ctl -D $db_dir -l /var/log/postgresql/logfile start"
   if [[ $? == 1 ]]; then
     cat /var/log/postgresql/logfile
     exit 1
   fi
-  [[ $create_db == "true" ]] && su - postgres -c "/usr/lib/postgresql/12/bin/createdb datadatdat"
+  [[ $create_db == "true" ]] && su - postgres -c "$PG_BIN/createdb datadatdat"
   echo "Postgres started"
 }
 
