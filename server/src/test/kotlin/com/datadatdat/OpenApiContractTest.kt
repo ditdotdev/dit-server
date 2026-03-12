@@ -16,7 +16,6 @@ import io.kotlintest.specs.StringSpec
 import java.io.File
 
 class OpenApiContractTest : StringSpec() {
-
     /**
      * Parse the OpenAPI YAML to extract all path+method pairs.
      * Uses simple line-based parsing to avoid adding a YAML library dependency.
@@ -28,7 +27,7 @@ class OpenApiContractTest : StringSpec() {
             val altFile = File("openapi/datadatdat.yml")
             if (!altFile.exists()) {
                 throw IllegalStateException(
-                    "OpenAPI spec not found at ${specFile.absolutePath} or ${altFile.absolutePath}"
+                    "OpenAPI spec not found at ${specFile.absolutePath} or ${altFile.absolutePath}",
                 )
             }
             return parseYamlPaths(altFile.readText())
@@ -129,13 +128,15 @@ class OpenApiContractTest : StringSpec() {
             val ktorRoutes = parseKtorRoutes()
 
             // Normalize for comparison
-            val specNormalized = specEndpoints.map { (method, path) ->
-                Pair(method, normalizePath(path))
-            }.toSet()
+            val specNormalized =
+                specEndpoints.map { (method, path) ->
+                    Pair(method, normalizePath(path))
+                }.toSet()
 
-            val ktorNormalized = ktorRoutes.map { (method, path) ->
-                Pair(method, normalizePath(path))
-            }.toSet()
+            val ktorNormalized =
+                ktorRoutes.map { (method, path) ->
+                    Pair(method, normalizePath(path))
+                }.toSet()
 
             val missingInServer = specNormalized - ktorNormalized
             val extraInServer = ktorNormalized - specNormalized
