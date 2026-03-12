@@ -1,46 +1,28 @@
-FROM ubuntu:focal
-
-################################################
-# Ubuntu repository configuration
-################################################
-
-RUN apt-get -y update --fix-missing
-
-# Tools required for adding repositories
-RUN apt-get -y install apt-transport-https \
-     ca-certificates \
-     curl \
-     gnupg2 \
-     software-properties-common
-
-# Add docker repository
-RUN curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg > /tmp/dkey; apt-key add /tmp/dkey
-RUN add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") \
-   $(lsb_release -cs) \
-   stable"
-
-# Note: Using Ubuntu's default PostgreSQL packages instead of PostgreSQL APT repository
-# Ubuntu Focal includes PostgreSQL 12 in the default repositories
-
-RUN apt-get -y update --fix-missing
+FROM ubuntu:24.04
 
 ################################################
 # Ubuntu software installation
 ################################################
 
-RUN apt-get -y install kmod iproute2
-RUN apt-get -y install vim rsync sshpass jq
-RUN apt-get -y install openjdk-17-jre-headless
-RUN apt-get -y install zfsutils-linux
-RUN apt-get -y install lsof
-RUN apt-get -y install docker.io
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
-RUN apt-get -y install postgresql postgresql-client postgresql-contrib
-RUN apt-get -y install unzip
+RUN apt-get -y update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y install \
+        ca-certificates \
+        curl \
+        kmod iproute2 \
+        vim rsync sshpass jq \
+        openjdk-17-jre-headless \
+        zfsutils-linux \
+        lsof \
+        docker.io \
+        tzdata \
+        postgresql postgresql-client postgresql-contrib \
+        unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -o /usr/local/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
-RUN chmod 755 /usr/local/bin/kubectl
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -o /usr/local/bin/kubectl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${ARCH}/kubectl" && \
+    chmod 755 /usr/local/bin/kubectl
 
 ################################################
 # Datadatdat software installation and configuration
