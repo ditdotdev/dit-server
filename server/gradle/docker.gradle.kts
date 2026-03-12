@@ -11,14 +11,15 @@ val datadatdatVersion = when(project.hasProperty("datadatdatVersion")) {
 var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
-    commandLine("docker", "build", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    environment("DOCKER_BUILDKIT", "1")
+    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
 var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build and publish docker server image"
-    commandLine("docker", "buildx", "build", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "buildx", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
@@ -26,7 +27,8 @@ var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
 var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
-    commandLine("docker", "build", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    environment("DOCKER_BUILDKIT", "1")
+    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 

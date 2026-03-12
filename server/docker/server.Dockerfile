@@ -52,11 +52,15 @@ COPY assets/* /datadatdat/assets/
 
 RUN /datadatdat/get-userland
 
-# Download pre-built docker-volume-proxy binary with unified volume naming fix from S3
-# TODO: Update CDN to point to datadatdat organization and use CDN URL instead
-#
-RUN curl -fssL https://datadatdat-maven.s3.amazonaws.com/datadatdat-docker-proxy/docker-volume-proxy -o /datadatdat/docker-volume-proxy
-RUN chmod 755 /datadatdat/docker-volume-proxy
+# Download pre-built docker-volume-proxy binary from GitHub Releases
+RUN --mount=type=secret,id=gh_token \
+    GH_TOKEN=$(cat /run/secrets/gh_token) && \
+    ASSET_URL=$(curl -sH "Authorization: token $GH_TOKEN" \
+      "https://api.github.com/repos/datadatdat/datadatdat-docker-proxy/releases/latest" | \
+      jq -r '.assets[] | select(.name == "docker-volume-proxy") | .url') && \
+    curl -fsSL -H "Authorization: token $GH_TOKEN" -H "Accept: application/octet-stream" \
+      "$ASSET_URL" -o /datadatdat/docker-volume-proxy && \
+    chmod 755 /datadatdat/docker-volume-proxy
 
 RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/datadatdat"' >> /etc/bash.bashrc
 
