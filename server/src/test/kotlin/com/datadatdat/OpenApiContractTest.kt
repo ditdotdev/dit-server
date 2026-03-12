@@ -129,14 +129,14 @@ class OpenApiContractTest : StringSpec() {
 
             // Normalize for comparison
             val specNormalized =
-                specEndpoints.map { (method, path) ->
-                    Pair(method, normalizePath(path))
-                }.toSet()
+                specEndpoints
+                    .map { (method, path) -> Pair(method, normalizePath(path)) }
+                    .toSet()
 
             val ktorNormalized =
-                ktorRoutes.map { (method, path) ->
-                    Pair(method, normalizePath(path))
-                }.toSet()
+                ktorRoutes
+                    .map { (method, path) -> Pair(method, normalizePath(path)) }
+                    .toSet()
 
             val missingInServer = specNormalized - ktorNormalized
             val extraInServer = ktorNormalized - specNormalized
