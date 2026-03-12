@@ -380,20 +380,10 @@ func (e *EndToEndTest) SetupStandardDocker() {
 	_ = e.StopServer(true)
 	err := e.StartServer()
 	if err != nil {
-		// Check if we should skip tests when ZFS setup fails
-		if os.Getenv("SKIP_ZFS_E2E_ON_FAILURE") == "true" {
-			e.Suite.T().Skipf("Skipping Docker E2E tests due to ZFS setup failure (SKIP_ZFS_E2E_ON_FAILURE=true): %v", err)
-			return
-		}
 		panic(err)
 	}
 	err = e.WaitForServer()
 	if err != nil {
-		// Check if we should skip tests when server fails to start (likely ZFS issue)
-		if os.Getenv("SKIP_ZFS_E2E_ON_FAILURE") == "true" {
-			e.Suite.T().Skipf("Skipping Docker E2E tests due to server startup failure (SKIP_ZFS_E2E_ON_FAILURE=true): %v", err)
-			return
-		}
 		panic(err)
 	}
 }
