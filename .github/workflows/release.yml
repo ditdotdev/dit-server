@@ -67,9 +67,9 @@ jobs:
           docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
           # publishDockerServer builds and pushes multi-arch images (amd64, arm64) with the version tag
           ./gradlew publishDockerServer -PserverImageName=datadatdat/datadatdat -PdatadatdatVersion=${GITHUB_REF#refs/tags/}
-        env:
-          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
           # Create :latest tag pointing to the versioned multi-arch manifest
           docker buildx imagetools create \
             --tag datadatdat/datadatdat:latest \
             datadatdat/datadatdat:${GITHUB_REF#refs/tags/}
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
