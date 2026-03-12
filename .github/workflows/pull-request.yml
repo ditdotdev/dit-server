@@ -111,6 +111,45 @@ jobs:
           name: style-reports
           path: '**/build/reports/ktlint/'
 
+  # OpenAPI spec breaking change detection
+  openapi-check:
+    name: OpenAPI Breaking Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+
+      - name: Checkout base branch spec
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Install oasdiff
+        run: |
+          OASDIFF_VERSION=$(curl -sSL -o /dev/null -w '%{url_effective}' https://github.com/Tufin/oasdiff/releases/latest | xargs basename)
+          curl -sSL "https://github.com/Tufin/oasdiff/releases/download/${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION#v}_linux_amd64.tar.gz" | tar xz
+          sudo mv oasdiff /usr/local/bin/
+
+      - name: Check for breaking changes
+        run: |
+          echo "## OpenAPI Spec Changes" >> $GITHUB_STEP_SUMMARY
+
+          # Check for breaking changes
+          if oasdiff breaking base/openapi/datadatdat.yml openapi/datadatdat.yml; then
+            echo "No breaking changes detected." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Breaking changes detected** — verify datadatdat-client-go compatibility." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Show diff summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changelog" >> $GITHUB_STEP_SUMMARY
+          oasdiff changelog base/openapi/datadatdat.yml openapi/datadatdat.yml >> $GITHUB_STEP_SUMMARY 2>&1 || true
+
   # Go code quality checks
   go-quality:
     name: Go Code Quality
