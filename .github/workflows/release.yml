@@ -29,6 +29,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
       - uses: actions/setup-go@v6
         with:
           go-version: '1.25.1'
@@ -66,6 +67,8 @@ jobs:
           docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
           # publishDockerServer builds and pushes multi-arch images (amd64, arm64) with the version tag
           ./gradlew publishDockerServer -PserverImageName=datadatdat/datadatdat -PdatadatdatVersion=${GITHUB_REF#refs/tags/}
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
           # Create :latest tag pointing to the versioned multi-arch manifest
           docker buildx imagetools create \
             --tag datadatdat/datadatdat:latest \
