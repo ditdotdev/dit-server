@@ -8,10 +8,23 @@ val datadatdatVersion = when(project.hasProperty("datadatdatVersion")) {
     false -> "latest"
 }
 
+// Resolve GitHub token: use GO_MODULES_TOKEN if set, otherwise fall back to gh CLI auth
+fun resolveGhToken(): String {
+    val envToken = System.getenv("GO_MODULES_TOKEN")
+    if (!envToken.isNullOrBlank()) return envToken
+    return try {
+        val process = ProcessBuilder("gh", "auth", "token").start()
+        process.inputStream.bufferedReader().readText().trim()
+    } catch (e: Exception) {
+        ""
+    }
+}
+
 var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
     environment("DOCKER_BUILDKIT", "1")
+    environment("GO_MODULES_TOKEN", resolveGhToken())
     commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
@@ -19,6 +32,7 @@ var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
 var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build and publish docker server image"
+    environment("GO_MODULES_TOKEN", resolveGhToken())
     commandLine("docker", "buildx", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
@@ -28,6 +42,7 @@ var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build docker server image"
     environment("DOCKER_BUILDKIT", "1")
+    environment("GO_MODULES_TOKEN", resolveGhToken())
     commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
