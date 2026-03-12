@@ -252,7 +252,17 @@ function update_pool() {
 #
 function destroy_pool() {
   local pool=$1
-  zpool destroy $pool
+  # Try direct destroy first. If it fails (e.g., hostid mismatch on WSL2
+  # where the pool was created from the WSL host but teardown runs in a
+  # Docker container), export the pool to release the hostid association
+  # and then import + destroy.
+  if ! zpool destroy -f $pool 2>/dev/null; then
+    echo "Direct destroy failed, attempting export/reimport workaround..."
+    zpool export -f $pool 2>/dev/null || true
+    if zpool import -f $pool 2>/dev/null; then
+      zpool destroy -f $pool
+    fi
+  fi
 }
 
 #
