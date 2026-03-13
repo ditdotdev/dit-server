@@ -21,6 +21,8 @@ jobs:
           distribution: 'temurin'
       - name: Build and test
         run: ./gradlew build
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
       - uses: actions/setup-go@v6
         with:
           go-version: '1.25.1'
