@@ -86,7 +86,11 @@ function get_asset_url() {
 # 'zfs' depends on all the others, so if it is loaded then we should be good.
 #
 function is_zfs_loaded() {
-  lsmod | grep "^zfs " >/dev/null 2>&1
+  # Check for ZFS as a loadable module
+  lsmod | grep "^zfs " >/dev/null 2>&1 && return 0
+  # Check for ZFS built into the kernel (e.g., custom WSL2 kernel with CONFIG_ZFS=y)
+  grep -q "^nodev.*zfs" /proc/filesystems 2>/dev/null && return 0
+  return 1
 }
 
 #
@@ -95,7 +99,10 @@ function is_zfs_loaded() {
 # a container.
 #
 function get_running_zfs_version() {
-  cat /sys/module/zfs/version 2>/dev/null
+  # Module version file (standard loadable modules)
+  cat /sys/module/zfs/version 2>/dev/null && return 0
+  # For built-in ZFS, try the zfs version command
+  zfs version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
 
 #
