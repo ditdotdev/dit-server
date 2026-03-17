@@ -9,6 +9,10 @@
 # older versions of the kernel modules.
 min_zfs_version=2.0.0
 
+# Configurable system paths for testing. Default to real paths.
+: "${ZFS_PROC_FILESYSTEMS:=/proc/filesystems}"
+: "${ZFS_SYS_MODULE_VERSION:=/sys/module/zfs/version}"
+
 #
 # Return the tag in the ZFS repository we should be using to build ZFS binaries.
 #
@@ -86,7 +90,11 @@ function get_asset_url() {
 # 'zfs' depends on all the others, so if it is loaded then we should be good.
 #
 function is_zfs_loaded() {
-  lsmod | grep "^zfs " >/dev/null 2>&1
+  # Check for ZFS as a loadable module
+  lsmod | grep "^zfs " >/dev/null 2>&1 && return 0
+  # Check for ZFS built into the kernel (e.g., custom WSL2 kernel with CONFIG_ZFS=y)
+  grep -q "^nodev.*zfs" "$ZFS_PROC_FILESYSTEMS" 2>/dev/null && return 0
+  return 1
 }
 
 #
@@ -95,7 +103,10 @@ function is_zfs_loaded() {
 # a container.
 #
 function get_running_zfs_version() {
-  cat /sys/module/zfs/version 2>/dev/null
+  # Module version file (standard loadable modules)
+  cat "$ZFS_SYS_MODULE_VERSION" 2>/dev/null && return 0
+  # For built-in ZFS, try the zfs version command
+  zfs version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
 
 #
@@ -377,7 +388,12 @@ function compile_and_load_zfs() {
 
   log_start "Building ZFS kernel modules (this could take 30 minutes, submit a request for $(uname -r) prebuilt binaries)"
   mkdir -p $dstdir
-  docker run --rm -v $dstdir:/build \
+  local arch=$(uname -m)
+  case "$arch" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+  docker run --rm --platform "linux/$arch" -v $dstdir:/build \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -e ZFS_VERSION=zfs-$(get_zfs_build_version) \
     -e ZFS_CONFIG=kernel datadatdat/zfs-builder:latest || log_error "ZFS build failed"
