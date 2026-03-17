@@ -384,7 +384,12 @@ function compile_and_load_zfs() {
 
   log_start "Building ZFS kernel modules (this could take 30 minutes, submit a request for $(uname -r) prebuilt binaries)"
   mkdir -p $dstdir
-  docker run --rm -v $dstdir:/build \
+  local arch=$(uname -m)
+  case "$arch" in
+    x86_64)  arch="amd64" ;;
+    aarch64) arch="arm64" ;;
+  esac
+  docker run --rm --platform "linux/$arch" -v $dstdir:/build \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -e ZFS_VERSION=zfs-$(get_zfs_build_version) \
     -e ZFS_CONFIG=kernel datadatdat/zfs-builder:latest || log_error "ZFS build failed"
