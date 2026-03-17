@@ -9,6 +9,10 @@
 # older versions of the kernel modules.
 min_zfs_version=2.0.0
 
+# Configurable system paths for testing. Default to real paths.
+: "${ZFS_PROC_FILESYSTEMS:=/proc/filesystems}"
+: "${ZFS_SYS_MODULE_VERSION:=/sys/module/zfs/version}"
+
 #
 # Return the tag in the ZFS repository we should be using to build ZFS binaries.
 #
@@ -89,7 +93,7 @@ function is_zfs_loaded() {
   # Check for ZFS as a loadable module
   lsmod | grep "^zfs " >/dev/null 2>&1 && return 0
   # Check for ZFS built into the kernel (e.g., custom WSL2 kernel with CONFIG_ZFS=y)
-  grep -q "^nodev.*zfs" /proc/filesystems 2>/dev/null && return 0
+  grep -q "^nodev.*zfs" "$ZFS_PROC_FILESYSTEMS" 2>/dev/null && return 0
   return 1
 }
 
@@ -100,7 +104,7 @@ function is_zfs_loaded() {
 #
 function get_running_zfs_version() {
   # Module version file (standard loadable modules)
-  cat /sys/module/zfs/version 2>/dev/null && return 0
+  cat "$ZFS_SYS_MODULE_VERSION" 2>/dev/null && return 0
   # For built-in ZFS, try the zfs version command
   zfs version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
