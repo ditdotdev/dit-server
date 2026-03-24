@@ -169,12 +169,30 @@ function import_pool() {
 # ensures that we can store data on docker volumes that might not be available when the system
 # boots.
 #
+# On WSL2, zpool cannot use raw files as vdevs directly. We detect this and fall back to
+# creating a loop device via losetup, which works reliably.
+#
 function create_pool() {
   local pool=$1
   local data=$2
   local mountpoint=$3
   local cachefile=$4
-  zpool create -m "$mountpoint" -o cachefile="$cachefile" "$pool" "$data"
+
+  # Try direct file-backed pool first
+  if zpool create -m "$mountpoint" -o cachefile="$cachefile" "$pool" "$data" 2>/dev/null; then
+    zfs create -o mountpoint=legacy -o compression=lz4 "$pool"/data
+    zfs create -o mountpoint=legacy "$pool"/db
+    return 0
+  fi
+
+  # Fall back to loop device (required on WSL2)
+  echo "Direct file vdev failed, trying loop device (WSL2 workaround)..."
+  local loop_dev
+  loop_dev=$(losetup -f --show "$data" 2>/dev/null) || return 1
+  if ! zpool create -m "$mountpoint" -o cachefile="$cachefile" "$pool" "$loop_dev"; then
+    losetup -d "$loop_dev" 2>/dev/null
+    return 1
+  fi
   zfs create -o mountpoint=legacy -o compression=lz4 "$pool"/data
   zfs create -o mountpoint=legacy "$pool"/db
 }
