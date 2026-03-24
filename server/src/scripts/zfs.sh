@@ -38,28 +38,17 @@ ZFS_MODULES_BUCKET="datadatdat-zfs-builds.s3-website-us-west-2.amazonaws.com"
 #
 function zfs_version_compatible() {
   [[ -z "$1" ]] && return 1
-  local min_components=(${min_zfs_version//./ })  # Replace periods with spaces
+  local min_components
+  IFS='.' read -ra min_components <<< "$min_zfs_version"
   local req_version=${1%-*}                       # Trim any trailing "-XYZ" modifier
-  local req_components=(${req_version//./ })      # Replace periods with spaces
+  local req_components
+  IFS='.' read -ra req_components <<< "$req_version"
 
   # The major version (0.*) doesn't match, fail
   [[ ${min_components[0]} -ne ${req_components[0]} ]] && return 1
 
   # The current version is less than the minimum version, fail
   [[ ${min_components[1]} -gt ${req_components[1]} ]] && return 1
-
-
-# Since moving to ZFS 2.0 + allow an older userland to run with later kernel modules.
-
-#  local build_version=$(get_zfs_build_version)
-#  local build_components=(${build_version//./ })
-#
-#  # The minor version is greater than current version, fail
-#  [[ ${build_components[1]} -gt ${req_components[1]} ]] && return 1
-#
-#  # The patch version is greater than current version, fail
-#  [[ ${build_components[1]} -eq ${req_components[1]} &&
-#     ${build_components[2]} -lt ${req_components[2]} ]] && return 1
 
   return 0
 }
@@ -97,8 +86,8 @@ function get_running_zfs_version() {
 #
 function get_filesystem_zfs_version() {
   local directory=$1
-  depmod -b $directory >/dev/null 2>&1
-  modinfo -F version -b $directory zfs 2>/dev/null
+  depmod -b "$directory" >/dev/null 2>&1
+  modinfo -F version -b "$directory" zfs 2>/dev/null
 }
 
 #
@@ -108,27 +97,27 @@ function get_filesystem_zfs_version() {
 #
 function load_zfs_module() {
   local directory=$1
-  
+
   # First check if ZFS is already built into the kernel
   if grep -q "^nodev.*zfs" /proc/filesystems 2>/dev/null; then
     echo "ZFS is built into the kernel"
     check_zfs_device  # Ensure /dev/zfs exists
     return 0
   fi
-  
+
   # Try loading as a module
   echo "Running depmod to update module dependencies..."
-  depmod -b $directory 2>&1 | head -5
-  
+  depmod -b "$directory" 2>&1 | head -5
+
   echo "Attempting to load ZFS module from $directory..."
   echo "Module directory contents:"
-  find $directory/lib/modules/$(uname -r) -name "*.ko" 2>/dev/null | head -10
-  
-  if ! modprobe -v -d $directory zfs 2>&1; then
+  find "$directory/lib/modules/$(uname -r)" -name "*.ko" 2>/dev/null | head -10
+
+  if ! modprobe -v -d "$directory" zfs 2>&1; then
     echo "modprobe failed - returning error"
     return 1
   fi
-  
+
   echo "modprobe succeeded"
   return 0
 }
@@ -141,7 +130,9 @@ function load_zfs_module() {
 #
 function check_zfs_device() {
   if [[ ! -e /dev/zfs ]]; then
-      mknod -m 660 /dev/zfs c $(cat /sys/class/misc/zfs/dev |sed 's/:/ /g') >/dev/null 2>&1
+      # Intentional word splitting: mknod needs separate major minor args
+      # shellcheck disable=SC2046
+      mknod -m 660 /dev/zfs c $(sed 's/:/ /g' < /sys/class/misc/zfs/dev) >/dev/null 2>&1
   fi
 }
 
@@ -160,7 +151,7 @@ function sanity_check_zfs() {
 #
 function pool_exists() {
   local pool=$1
-  zpool status $pool >/dev/null 2>&1
+  zpool status "$pool" >/dev/null 2>&1
 }
 
 #
@@ -169,7 +160,7 @@ function pool_exists() {
 function import_pool() {
   local cachefile=$1
   local pool=$2
-  zpool import -f -c $cachefile $pool >/dev/null
+  zpool import -f -c "$cachefile" "$pool" >/dev/null
 }
 
 #
@@ -183,9 +174,9 @@ function create_pool() {
   local data=$2
   local mountpoint=$3
   local cachefile=$4
-  zpool create -m $mountpoint -o cachefile=$cachefile $pool $data
-  zfs create -o mountpoint=legacy -o compression=lz4 $pool/data
-  zfs create -o mountpoint=legacy $pool/db
+  zpool create -m "$mountpoint" -o cachefile="$cachefile" "$pool" "$data"
+  zfs create -o mountpoint=legacy -o compression=lz4 "$pool"/data
+  zfs create -o mountpoint=legacy "$pool"/db
 }
 
 #
@@ -195,13 +186,13 @@ function update_pool() {
   local pool=$1
 
   # We didn't end up using this space, remove it now
-  zfs list $pool/deathrow > /dev/null 2>&1 && zfs destroy $pool/deathrow
+  zfs list "$pool"/deathrow > /dev/null 2>&1 && zfs destroy "$pool"/deathrow
   # As part of migrating away from repositories and just to volumesets, we got rid of the repo namespace
-  zfs list $pool/repo > /dev/null 2>&1 && zfs destroy -R $pool/repo
+  zfs list "$pool"/repo > /dev/null 2>&1 && zfs destroy -R "$pool"/repo
   # Create the data filesystem (replacing repo) if it doesn't exist
-  zfs list $pool/data > /dev/null 2>&1 || zfs create -o mountpoint=legacy $pool/data
+  zfs list "$pool"/data > /dev/null 2>&1 || zfs create -o mountpoint=legacy "$pool"/data
   # Create the db filesystem if it doesn't exist
-  zfs list $pool/db > /dev/null 2>&1 || zfs create -o mountpoint=legacy $pool/db
+  zfs list "$pool"/db > /dev/null 2>&1 || zfs create -o mountpoint=legacy "$pool"/db
 }
 
 #
@@ -213,11 +204,11 @@ function destroy_pool() {
   # where the pool was created from the WSL host but teardown runs in a
   # Docker container), export the pool to release the hostid association
   # and then import + destroy.
-  if ! zpool destroy -f $pool 2>/dev/null; then
+  if ! zpool destroy -f "$pool" 2>/dev/null; then
     echo "Direct destroy failed, attempting export/reimport workaround..."
-    zpool export -f $pool 2>/dev/null || true
-    if zpool import -f $pool 2>/dev/null; then
-      zpool destroy -f $pool
+    zpool export -f "$pool" 2>/dev/null || true
+    if zpool import -f "$pool" 2>/dev/null; then
+      zpool destroy -f "$pool"
     fi
   fi
 }
@@ -236,8 +227,9 @@ function check_running_zfs() {
   log_start "Checking if compatible ZFS is running"
   local retval=1
   if is_zfs_loaded; then
-    local version=$(get_running_zfs_version)
-    if ! zfs_version_compatible $version; then
+    local version
+    version=$(get_running_zfs_version)
+    if ! zfs_version_compatible "$version"; then
       log_error "System is running ZFS $version incompatible with minimum $min_zfs_version, upgrade and retry"
     fi
     echo "System is running ZFS version $version"
@@ -262,14 +254,14 @@ function load_zfs() {
   local retval=1
 
   log_start "Checking if compatible $module_type ZFS is available"
-  version=$(get_filesystem_zfs_version $module_dir)
-  zfs_version_compatible $version
+  local version
+  version=$(get_filesystem_zfs_version "$module_dir")
 
-  if [[ $? -eq 0 ]]; then
+  if zfs_version_compatible "$version"; then
     echo "Version $version compatible"
-    if load_zfs_module $module_dir; then
+    if load_zfs_module "$module_dir"; then
       echo "ZFS loaded"
-      echo $module_dir > $install_dir/installed_zfs
+      echo "$module_dir" > "$install_dir/installed_zfs"
       retval=0
     else
       echo "Failed to load module"
@@ -304,7 +296,8 @@ function check_modules_supported() {
     zcat "$ZFS_PROC_CONFIG_GZ" 2>/dev/null | grep -q "^CONFIG_MODULES=y" && return 0
     return 1
   fi
-  local config="/boot/config-$(uname -r)"
+  local config
+  config="/boot/config-$(uname -r)"
   if [[ -f "$config" ]]; then
     grep -q "^CONFIG_MODULES=y" "$config" && return 0
     return 1
@@ -335,7 +328,8 @@ function check_zfs_in_repos() {
 #
 function install_zfs_packages() {
   local install_dir=$1
-  local pkg_mgr=$(detect_package_manager)
+  local pkg_mgr
+  pkg_mgr=$(detect_package_manager)
 
   log_start "Installing ZFS via package manager"
 
@@ -383,7 +377,8 @@ function install_zfs_packages() {
 #
 function insmod_prebuilt_zfs() {
   local install_dir=$1
-  local krel=$(uname -r)
+  local krel
+  krel=$(uname -r)
   local module_dir="$install_dir/modules/$krel"
 
   log_start "Loading prebuilt ZFS modules via insmod for '$krel'"
@@ -437,8 +432,9 @@ function check_zfs() {
 #
 function unload_zfs() {
   local install_dir=$1
-  if [[ is_zfs_loaded && -f $install_dir/installed_zfs ]]; then
-    local module_location=$(cat $install_dir/installed_zfs)
+  if is_zfs_loaded && [[ -f "$install_dir/installed_zfs" ]]; then
+    local module_location
+    module_location=$(cat "$install_dir/installed_zfs")
     modprobe -d "$module_location" -r zfs || return 1
   fi
   return 0
@@ -449,8 +445,9 @@ function unload_zfs() {
 #
 function unmount_filesystems() {
   local pool=$1
-  local dirs=$(mount -t zfs | grep ^$pool | awk '{print $3}' | sort -r)
+  local dirs
+  dirs=$(mount -t zfs | grep "^$pool" | awk '{print $3}' | sort -r)
   for dir in $dirs; do
-     nsenter -m -u -t 1 -n -i umount $dir
+     nsenter -m -u -t 1 -n -i umount "$dir"
   done
 }
