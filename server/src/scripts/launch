@@ -12,40 +12,36 @@
 # installed a compatible ZFS that we could use. This leads to the following flow diagram:
 #
 # +---------------------+      +---------------------+      +--------------------+
-# |      ZFS module     | Yes  |  Running compatible | No   |       FAILURE      |
-# |       Loaded?       +----->+        version?     +----->+ User must upgrade  |
+# |   Step 1: ZFS       | Yes  |  Running compatible | No   |       FAILURE      |
+# |  already loaded?    +----->+       version?      +----->+ User must upgrade  |
 # +----------+----------+      +----------+----------+      +--------------------+
 #            | No                         | Yes
-#            |                            +--------------------------------------------+
-#            v                                                                         |
-# +----------+----------+      +---------------------+      +--------------------+     |
-# |      ZFS module     | Yes  |      Host module    | Yes  |      Load host     | OK  |
-# |  available on host? +----->+       compatible?   +----->+        module      +-----+
-# +----------+----------+      +----------+----------+      +---------+----------+     |
-#            | No                         | No                        | Fail           |
-#            +----------------------------+---------------------------+                |
-#            V                                                                         |
-# +----------+-----------+     +---------------------+                                 |
-# | Precompiled ZFS for  | Yes | Load precompiled    | OK                              |
-# |   kernel exists?     +---->+ ZFS module          +---------------------------------+
-# +----------+-----------+     +----------+----------+                                 |
-#            | No                         | Fail                                       |
-#            +----------------------------+                                            |
-#            V                                                                         |
-# +----------+----------+       +--------------------+      +--------------------+     |
-# |  Build ZFS kernel   | OK    |   Load compiled    | OK   |       SUCCESS      |     |
-# |        module       +------>+     ZFS module     +----->+                    +<----+
-# +----------+----------+       +--------+-----------+      +--------------------+
-#            | Fail                      | Fail
-#            V                           |
-# +----------+----------+                |
-# |        FAIL         |                |
-# |                     +<---------------+
+#            v                            +-----------------------------+
+# +----------+----------+      +----------+----------+                  |
+# |   Step 2: Host      | Yes  |   Load host module  | OK              |
+# |  system modules?    +----->+    via modprobe      +---->  SUCCESS <-+
+# +----------+----------+      +----------+----------+          ^
+#            | No                         | Fail                |
+#            v                            v                     |
+# +----------+----------+      +----------+----------+          |
+# |   Step 3: Package   | Yes  |   apt install +     | OK      |
+# |  manager install?   +----->+   modprobe zfs      +---------+
+# +----------+----------+      +----------+----------+          |
+#            | No                         | Fail                |
+#            v                            v                     |
+# +----------+----------+      +----------+----------+          |
+# |   Step 4: Prebuilt  | Yes  | Download + insmod   | OK      |
+# |  insmod modules?    +----->+ spl.ko + zfs.ko     +---------+
+# +----------+----------+      +----------+----------+
+#            | No                         | Fail
+#            v                            v
+# +----------+----------+
+# |        FAIL         |
 # +---------------------+
 #
-# While this flowchart is complicated, it provides maximum flexiblity in terms of using existing
-# or precompiled ZFS kernel modules, but then always falling back to something usable. Once the
-# ZFS module, the following operations are performed:
+# This 4-step chain provides maximum flexibility: using existing ZFS, host modules,
+# distro packages, or prebuilt kernel modules via insmod (for WSL2 and non-standard
+# kernels). Once the ZFS module is loaded, the following operations are performed:
 #
 #   1. Create miscellaneous directories required by the system
 #   2. Import the ZFS pool if it doesn't exist
@@ -78,40 +74,23 @@ source $(dirname $0)/util.sh
 log_begin
 
 #
-# Linuxkit / Docker Desktop is a special case that installs through a docker image. This needs
-# to be installed every time docker restarts. In order for previously mounted datasets to load
-# ZFS needs to be loaded early each time.
-#
-uname=$(uname -r)
-if [[ $uname == *"linuxkit"* ]]; then
-    echo "Installing ZFS for Docker Desktop ($uname)"
-    tag="${uname%%-*}"
-    docker run --rm --privileged datadatdat/docker-desktop-zfs-kernel:$tag
-fi
-
-#
-# Ensure that various needed
+# Ensure that various needed directories exist
 #
 mkdir -p $POOL_DIR || log_error "failed to create $POOL_DIR"
 
 #
-# Determine if ZFS is currently running on the host VM, and whether it's compatible. This will
-# exit with failure if ZFS is running an incompatible version. We deposit compiled ZFS modules
-# in a kernel-specific subdirectory so that if the underlying system is upgraded and rebooted,
-# we won't try to load the previously compiled modules and instead try to find a new compatible
-# module.
-#
-# If we don't have a running ZFS module, no compatible system modules are available, and no
-# previously compiled modules are available, then we'll try our prebuilt modules. Failing that,
-# compile new modules on demand.
+# Load ZFS via the 4-step fallback chain:
+#   1. Check if compatible ZFS is already running
+#   2. Try loading from host system modules via modprobe
+#   3. Install via package manager (apt/dnf/pacman/apk) + modprobe
+#   4. Download prebuilt modules and load via insmod (WSL2 / non-standard kernels)
 #
 mkdir -p $INSTALL_DIR || log_error "failed to create $INSTALL_DIR"
 if ! check_running_zfs &&
    ! load_zfs $SYSTEM_MODULES system $INSTALL_DIR &&
-   ! load_zfs $COMPILED_MODULES/$KERNEL_RELEASE compiled $INSTALL_DIR &&
-   ! load_precompiled_zfs $COMPILED_MODULES/$KERNEL_RELEASE $INSTALL_DIR &&
-   ! compile_and_load_zfs $COMPILED_MODULES/$KERNEL_RELEASE $INSTALL_DIR; then
-    log_error "Failed to load ZFS modules"
+   ! install_zfs_packages $INSTALL_DIR &&
+   ! insmod_prebuilt_zfs $INSTALL_DIR; then
+    log_error "Failed to load ZFS. Install manually: apt install zfsutils-linux (or equivalent for your distro)"
 fi
 
 # Create necessary bind mounts
