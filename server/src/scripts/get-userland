@@ -7,12 +7,12 @@
 # methods as are used at runtime.
 #
 
-source $(dirname $0)/zfs.sh
-source $(dirname $0)/util.sh
+# shellcheck source=util.sh
+source "$(dirname "$0")/util.sh"
 
 set -xe
 
-zfs_version=$(get_zfs_build_version)
+zfs_version="2.3.4"
 
 # Detect architecture
 arch=$(uname -m)
