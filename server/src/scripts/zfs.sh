@@ -405,9 +405,32 @@ function insmod_prebuilt_zfs() {
 
   # Download modules if not already cached
   if [[ ! -f "$module_dir/zfs.ko" ]]; then
-    local url="http://$ZFS_MODULES_BUCKET/zfs-modules-$krel.tar.gz"
-    echo "Downloading ZFS modules from $url"
-    if ! curl -fsSL "$url" | tar -xzf - -C "$module_dir"; then
+    local downloaded=false
+
+    # Try versioned archive first (zfs-<VER>-modules-<KREL>.tar.gz)
+    # Query latest ZFS version from S3 bucket listing
+    local zfs_ver
+    zfs_ver=$(curl -fsSL "http://$ZFS_MODULES_BUCKET/" 2>/dev/null | \
+      grep -oP "zfs-\K[0-9.]+(?=-modules-${krel}\.tar\.gz)" | sort -V | tail -1)
+
+    if [[ -n "$zfs_ver" ]]; then
+      local url="http://$ZFS_MODULES_BUCKET/zfs-${zfs_ver}-modules-${krel}.tar.gz"
+      echo "Downloading ZFS $zfs_ver modules from $url"
+      if curl -fsSL "$url" | tar -xzf - -C "$module_dir"; then
+        downloaded=true
+      fi
+    fi
+
+    # Fall back to legacy format (zfs-modules-<KREL>.tar.gz)
+    if [[ "$downloaded" != "true" ]]; then
+      local url="http://$ZFS_MODULES_BUCKET/zfs-modules-${krel}.tar.gz"
+      echo "Downloading ZFS modules from $url"
+      if curl -fsSL "$url" | tar -xzf - -C "$module_dir"; then
+        downloaded=true
+      fi
+    fi
+
+    if [[ "$downloaded" != "true" ]]; then
       echo "ERROR: No prebuilt ZFS modules available for kernel $krel"
       echo "Submit a request at https://github.com/datadatdat/zfs-releases/issues"
       log_end; return 1
@@ -426,6 +449,17 @@ function insmod_prebuilt_zfs() {
 
   if is_zfs_loaded; then
     echo "ZFS loaded via insmod"
+
+    # Install userland tools from archive if present
+    if [[ -d "$module_dir/sbin" ]]; then
+      echo "Installing ZFS userland tools from archive..."
+      cp "$module_dir"/sbin/* /usr/local/sbin/ 2>/dev/null || true
+      if [[ -d "$module_dir/lib" ]]; then
+        cp "$module_dir"/lib/* /usr/local/lib/ 2>/dev/null || true
+        ldconfig 2>/dev/null || true
+      fi
+    fi
+
     echo "insmod:$module_dir" > "$install_dir/installed_zfs"
     check_zfs_device
     log_end; return 0
