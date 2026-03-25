@@ -42,7 +42,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
