@@ -407,12 +407,13 @@ function insmod_prebuilt_zfs() {
   if [[ ! -f "$module_dir/zfs.ko" ]]; then
     local downloaded=false
 
-    # Try versioned archive first (zfs-<VER>-modules-<KREL>.tar.gz)
-    # Query latest ZFS version from S3 bucket listing
+    # Get latest stable ZFS version from GitHub API
     local zfs_ver
-    zfs_ver=$(curl -fsSL "http://$ZFS_MODULES_BUCKET/" 2>/dev/null | \
-      grep -oP "zfs-\K[0-9.]+(?=-modules-${krel}\.tar\.gz)" | sort -V | tail -1)
+    zfs_ver=$(curl -fsSL "https://api.github.com/repos/openzfs/zfs/releases" 2>/dev/null | \
+      grep '"tag_name"' | grep -v "rc\|alpha\|beta" | head -1 | \
+      sed 's/.*"zfs-\([^"]*\)".*/\1/')
 
+    # Try versioned archive (zfs-<VER>-modules-<KREL>.tar.gz)
     if [[ -n "$zfs_ver" ]]; then
       local url="http://$ZFS_MODULES_BUCKET/zfs-${zfs_ver}-modules-${krel}.tar.gz"
       echo "Downloading ZFS $zfs_ver modules from $url"
@@ -424,7 +425,7 @@ function insmod_prebuilt_zfs() {
     # Fall back to legacy format (zfs-modules-<KREL>.tar.gz)
     if [[ "$downloaded" != "true" ]]; then
       local url="http://$ZFS_MODULES_BUCKET/zfs-modules-${krel}.tar.gz"
-      echo "Downloading ZFS modules from $url"
+      echo "Downloading ZFS modules (legacy) from $url"
       if curl -fsSL "$url" | tar -xzf - -C "$module_dir"; then
         downloaded=true
       fi
