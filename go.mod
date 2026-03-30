@@ -2,7 +2,7 @@ module github.com/datadatdat/datadatdat-server
 
 require (
 	github.com/antihax/optional v1.0.0
-	github.com/aws/aws-sdk-go-v2 v1.41.4
+	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.12
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.2
 	github.com/datadatdat/datadatdat-client-go v1.7.2
