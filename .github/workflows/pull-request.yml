@@ -1,8 +1,7 @@
 ---
 #
-# We only build the java artifacts during pull request, because building the
-# full docker image takes much longer. That is only run after code has been
-# merged or as part of a release.
+# Pull request validation: unit tests, integration tests, E2E tests,
+# code style, Go quality, and OpenAPI breaking change detection.
 #
 name: Pull Request
 
@@ -66,6 +65,58 @@ jobs:
         with:
           name: build-logs
           path: '**/build/reports/'
+  e2e:
+    name: End to End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build Docker image
+        run: ./gradlew shadowJar buildDockerServer tagLocalDockerServer
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.1'
+
+      - name: Configure Git for private Go modules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Configure Go for private modules
+        run: |
+          go env -w GOPRIVATE=github.com/datadatdat/*
+          go env -w GONOPROXY=github.com/datadatdat/*
+          go env -w GONOSUMDB=github.com/datadatdat/*
+
+      - name: End to End tests
+        run: |
+          uname -a
+          echo "Kernel version: $(uname -r)"
+          echo "Checking for ZFS module compatibility..."
+          apt-cache search "linux-modules-$(uname -r)" || echo "No exact kernel modules found"
+          apt-cache search "linux-modules-extra-$(uname -r)" || echo "No extra kernel modules found"
+          go test -p 1 -v ./test/docker ./test/remote
+        env:
+          S3_LOCATION: ${{ secrets.S3_TEST_LOCATION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
   style:
     name: Code Style
     runs-on: ubuntu-latest

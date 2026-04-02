@@ -9,7 +9,7 @@ RUN apt-get -y update && \
         ca-certificates \
         curl \
         kmod \
-        jq \
+        jq sshpass rsync \
         openjdk-17-jre-headless \
         zfsutils-linux \
         lsof \
