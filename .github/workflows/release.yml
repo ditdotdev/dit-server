@@ -33,16 +33,19 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.25.1'
-      - name: Configure Git for private modules
-        run: git config --global url."https://${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
-        env:
-          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
+      - name: Configure Git for private Go modules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: Configure Go for private modules
+        run: |
+          go env -w GOPRIVATE=github.com/datadatdat/*
+          go env -w GONOPROXY=github.com/datadatdat/*
+          go env -w GONOSUMDB=github.com/datadatdat/*
       - name: End to End tests
         run: |
           uname -a
           echo "Kernel version: $(uname -r)"
           echo "Checking for ZFS module compatibility..."
-          # Try to find available kernel modules that match the current kernel
           apt-cache search "linux-modules-$(uname -r)" || echo "No exact kernel modules found"
           apt-cache search "linux-modules-extra-$(uname -r)" || echo "No extra kernel modules found"
           go test -p 1 -v ./test/docker ./test/remote
@@ -51,7 +54,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          GOPRIVATE: github.com/datadatdat/*
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
