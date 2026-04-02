@@ -1,8 +1,7 @@
 ---
 #
-# We only build the java artifacts during pull request, because building the
-# full docker image takes much longer. That is only run after code has been
-# merged or as part of a release.
+# Pull request validation: unit tests, integration tests, E2E tests,
+# code style, Go quality, and OpenAPI breaking change detection.
 #
 name: Pull Request
 
@@ -85,7 +84,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build Docker image
-        run: ./gradlew build
+        run: ./gradlew shadowJar buildDockerServer tagLocalDockerServer
         env:
           GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
 
