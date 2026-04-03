@@ -1,0 +1,50 @@
+#
+# Nightly, we do a full build and run a more complex set of end to end
+# tests that take longer to run (and may require secrets like S3 credentials).
+#
+name: Nightly Tests
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Build and test
+        run: ./gradlew build
+        env:
+          GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.1'
+      - name: Configure Git for private Go modules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: Configure Go for private modules
+        run: |
+          go env -w GOPRIVATE=github.com/datadatdat/*
+          go env -w GONOPROXY=github.com/datadatdat/*
+          go env -w GONOSUMDB=github.com/datadatdat/*
+      - name: End to End tests
+        run: |
+          uname -a
+          echo "Kernel version: $(uname -r)"
+          echo "Checking for ZFS module compatibility..."
+          # Try to find available kernel modules that match the current kernel
+          apt-cache search "linux-modules-$(uname -r)" || echo "No exact kernel modules found"
+          apt-cache search "linux-modules-extra-$(uname -r)" || echo "No extra kernel modules found"
+          go test -p 1 -v ./test/docker ./test/remote
+        env:
+          S3_LOCATION: ${{ secrets.S3_TEST_LOCATION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
