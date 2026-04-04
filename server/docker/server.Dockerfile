@@ -12,7 +12,7 @@ RUN apt-get -y update && \
         jq sshpass rsync \
         openjdk-17-jre-headless \
         zfsutils-linux \
-        lsof \
+        lsof netcat-openbsd \
         tzdata \
         postgresql postgresql-client && \
     # Remove PostgreSQL JIT/LLVM (~240MB) - not needed for metadata database
