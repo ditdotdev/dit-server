@@ -23,6 +23,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  debug-secret:
+    name: Debug S3 Secret
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check S3_TEST_LOCATION secret
+        env:
+          S3_LOCATION: ${{ secrets.S3_TEST_LOCATION }}
+        run: |
+          echo "Length: ${#S3_LOCATION}"
+          echo "Bucket part: $(echo "$S3_LOCATION" | cut -d/ -f1)"
+          echo "Path part: $(echo "$S3_LOCATION" | cut -d/ -f2-)"
+          echo "Contains slash: $(echo "$S3_LOCATION" | grep -c /)"
+          echo "MD5: $(echo -n "$S3_LOCATION" | md5sum)"
+
   buildandtest:
     name: Build and Test
     runs-on: ubuntu-latest
