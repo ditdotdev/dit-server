@@ -53,12 +53,12 @@ dependencies {
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("com.datadatdat:remote-sdk:1.8.3")
-        implementation("com.datadatdat:datadatdat-remote-server:1.8.3")
-        implementation("com.datadatdat:nop-remote-server:1.8.3")
-        implementation("com.datadatdat:ssh-remote-server:1.8.3")
-        implementation("com.datadatdat:s3-remote-server:1.8.3")
-        implementation("com.datadatdat:s3web-remote-server:1.8.3")
+        implementation("com.datadatdat:remote-sdk:1.8.4")
+        implementation("com.datadatdat:datadatdat-remote-server:1.8.4")
+        implementation("com.datadatdat:nop-remote-server:1.8.4")
+        implementation("com.datadatdat:ssh-remote-server:1.8.4")
+        implementation("com.datadatdat:s3-remote-server:1.8.4")
+        implementation("com.datadatdat:s3web-remote-server:1.8.4")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
