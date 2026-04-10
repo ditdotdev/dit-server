@@ -55,8 +55,12 @@ func (s *S3TestSuite) SetupSuite() {
 	if location == "" {
 		panic("S3_LOCATION must be set in environment")
 	}
-	s.s3bucket = location[:strings.IndexByte(location, '/')]
-	s.s3path = location[strings.IndexByte(location, '/')+1:]
+	idx := strings.IndexByte(location, '/')
+	if idx < 0 {
+		panic("S3_LOCATION must be in the format 'bucket/path', got: " + location)
+	}
+	s.s3bucket = location[:idx]
+	s.s3path = location[idx+1:]
 	err := s.ClearBucket()
 	if err != nil {
 		panic(err)
