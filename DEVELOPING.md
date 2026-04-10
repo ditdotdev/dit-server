@@ -144,7 +144,10 @@ There are three types of tests:
   * `docker` - Runs local workflows using docker. Should be runnable on any system that supports datadatdat with ZFS.
   * `remote` - Runs tests for each of the remotes. In addition to having datadatdat server running locally with docker,
     these tests require additional configuration, with `S3_LOCATION` set in the environment to a S3 bucket and path
-    that has S3 web server configured. These tests will eventually be moved into the corresponding remote repositories.
+    in the format `bucket/path` (e.g. `datadatdat-maven/titan-e2e-tests`). The bucket must have public read access
+    and a ListBucket policy for the path prefix, as the S3Web tests access objects over HTTP.
+    In CI, this is set via the `S3_TEST_LOCATION` GitHub secret (both repo and dependabot).
+    These tests will eventually be moved into the corresponding remote repositories.
   * `kubernetes` - Runs tests dependent on kubernetes. Must have a working, supported kubernetes cluster as the
     default cluster.
     
