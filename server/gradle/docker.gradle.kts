@@ -25,7 +25,7 @@ var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     description = "Build docker server image"
     environment("DOCKER_BUILDKIT", "1")
     environment("GO_MODULES_TOKEN", resolveGhToken())
-    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
