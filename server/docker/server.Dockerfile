@@ -23,15 +23,17 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Docker CLI only (not the full docker.io package with containerd/runc)
+# Pin version to avoid GitHub API rate limits during docker build (unauthenticated = 60 req/hr)
+ARG DOCKER_VERSION=29.4.0
 RUN DPKG_ARCH=$(dpkg --print-architecture) && \
     case "$DPKG_ARCH" in amd64) ARCH=x86_64;; arm64) ARCH=aarch64;; *) ARCH=$DPKG_ARCH;; esac && \
-    DOCKER_VERSION=$(curl -fsSL https://api.github.com/repos/moby/moby/releases/latest | jq -r .tag_name | sed 's/^docker-v//') && \
     curl -fsSL "https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_VERSION}.tgz" | \
     tar xz --strip-components=1 -C /usr/local/bin docker/docker && \
     chmod 755 /usr/local/bin/docker
 
+ARG KUBECTL_VERSION=v1.31.0
 RUN ARCH=$(dpkg --print-architecture) && \
-    curl -o /usr/local/bin/kubectl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${ARCH}/kubectl" && \
+    curl -o /usr/local/bin/kubectl -LO "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" && \
     chmod 755 /usr/local/bin/kubectl
 
 ################################################
