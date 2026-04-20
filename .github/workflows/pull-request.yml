@@ -276,3 +276,13 @@ jobs:
           GONOPROXY: github.com/datadatdat/*
           GONOSUMDB: github.com/datadatdat/*
           GIT_TERMINAL_PROMPT: 0
+
+      - name: Run Go security scanner (gosec)
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec ./...
+        env:
+          GOPRIVATE: github.com/datadatdat/*
+          GONOPROXY: github.com/datadatdat/*
+          GONOSUMDB: github.com/datadatdat/*
+          GIT_TERMINAL_PROMPT: 0
