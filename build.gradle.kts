@@ -8,13 +8,13 @@ buildscript {
     }
 
     dependencies {
-        classpath("com.github.ben-manes:gradle-versions-plugin:0.53.0")
+        classpath("com.github.ben-manes:gradle-versions-plugin:0.54.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20")
     }
 }
 
 plugins {
-    id("com.github.ben-manes.versions") version("0.53.0")
+    id("com.github.ben-manes.versions") version("0.54.0")
 }
 
 val datadatdatVersion by extra(when(project.hasProperty("datadatdatVersion")) {
