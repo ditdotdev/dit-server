@@ -18,6 +18,10 @@ updates:
         patterns:
           - "k8s.io/*"
           - "sigs.k8s.io/*"
+      aws-sdk-go-v2:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2*"
+          - "github.com/aws/smithy-go"
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
