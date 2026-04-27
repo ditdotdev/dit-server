@@ -123,14 +123,17 @@ fun Application.mainProvider(services: ServiceLocator) {
         level = Level.INFO
     }
     install(Compression, applicationCompressionConfiguration())
-    routing {
-        commitsApi(services)
-        contextApi(services)
-        operationsApi(services)
-        remotesApi(services)
-        repositoriesApi(services)
-        volumesApi(services)
-    }
+
+    // StatusPages MUST be installed before the routing block. In Ktor each
+    // plugin's interceptors are registered into the call pipeline at install
+    // time, in install order; routes opened with `routing { ... }` get a
+    // snapshot of that pipeline. Pre-fix StatusPages was installed AFTER
+    // routing, which left routes wired up without the exception interceptor
+    // visible to them on the very first request — exceptions on a fresh
+    // process leaked out of the pipeline and CIO closed the connection
+    // before sending a response, surfacing on the d3 CLI as
+    // `Post .../v1/repositories: EOF` (issue #139). Subsequent requests
+    // worked because the lazy plugin wiring caught up after the first call.
     install(StatusPages) {
         exception<NoSuchObjectException> { call, cause ->
             call.respond(HttpStatusCode.NotFound, exceptionToError(cause))
@@ -171,6 +174,15 @@ fun Application.mainProvider(services: ServiceLocator) {
             // For internal errors, log the whole exception and stack trace
             throw cause
         }
+    }
+
+    routing {
+        commitsApi(services)
+        contextApi(services)
+        operationsApi(services)
+        remotesApi(services)
+        repositoriesApi(services)
+        volumesApi(services)
     }
 }
 
