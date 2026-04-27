@@ -52,6 +52,37 @@ class VolumeSetMetadataTest : StringSpec() {
             }
         }
 
+        // Regression for issue #137: getActiveVolumeSet used to dereference
+        // a null with `firstOrNull()!!`, leaking a bare NullPointerException
+        // out of the HTTP layer (and breaking the connection mid-request,
+        // which crashed the CLI's next POST with EOF). Should now throw a
+        // clear NoSuchObjectException that callers can recognize.
+        "get active volumeset throws NoSuchObjectException when no active vs exists" {
+            transaction {
+                md.createRepository(Repository("foo"))
+                val ex =
+                    shouldThrow<NoSuchObjectException> {
+                        md.getActiveVolumeSet("foo")
+                    }
+                ex.message!!.contains("foo") shouldBe true
+            }
+        }
+
+        "get active volumeset OrNull returns null when no active vs exists" {
+            transaction {
+                md.createRepository(Repository("foo"))
+                md.getActiveVolumeSetOrNull("foo") shouldBe null
+            }
+        }
+
+        "get active volumeset OrNull returns vs when one is active" {
+            transaction {
+                md.createRepository(Repository("foo"))
+                val vs = md.createVolumeSet("foo", null, true)
+                md.getActiveVolumeSetOrNull("foo") shouldBe vs
+            }
+        }
+
         "get volumeset repo returns correct info" {
             transaction {
                 md.createRepository(Repository("foo"))
@@ -117,10 +148,14 @@ class VolumeSetMetadataTest : StringSpec() {
                 md.createRepository(Repository("foo"))
                 val vs = md.createVolumeSet("foo", null, true)
                 md.markVolumeSetDeleting(vs)
-                // Don't really have a way to verify this other than checking this fails
-                shouldThrow<NullPointerException> {
+                // After marking the only active VS as deleting there is no
+                // longer an active VS for this repo. Pre-issue-#137 this
+                // surfaced as a NullPointerException; now it's a typed
+                // NoSuchObjectException.
+                shouldThrow<NoSuchObjectException> {
                     md.getActiveVolumeSet("foo")
                 }
+                md.getActiveVolumeSetOrNull("foo") shouldBe null
             }
         }
 
@@ -140,10 +175,13 @@ class VolumeSetMetadataTest : StringSpec() {
                 md.createRepository(Repository("foo"))
                 val vs = md.createVolumeSet("foo", null, true)
                 md.deleteVolumeSet(vs)
-                // Don't really have a way to verify this other than checking this fails
-                shouldThrow<NullPointerException> {
+                // After deleting the only volume set the repo has no active
+                // VS. Pre-#137 this surfaced as NullPointerException; now
+                // we get a typed NoSuchObjectException.
+                shouldThrow<NoSuchObjectException> {
                     md.getActiveVolumeSet("foo")
                 }
+                md.getActiveVolumeSetOrNull("foo") shouldBe null
             }
         }
 
