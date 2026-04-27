@@ -33,14 +33,15 @@ class RepositoryOrchestrator(
 
     fun getRepositoryStatus(name: String): RepositoryStatus {
         NameUtil.validateRepoName(name)
-        val volumeSet =
-            transaction {
-                services.metadata.getActiveVolumeSet(name)
-            }
+        // A repository with no active volume set is a valid "no commits yet"
+        // state, not an error — surface null commit fields rather than 500.
+        // See issue #137: pre-fix this 500'd with NullPointerException, which
+        // broke the CLI's connection and made d3 run fail with EOF.
         return transaction {
+            val volumeSet = services.metadata.getActiveVolumeSetOrNull(name)
             RepositoryStatus(
                 lastCommit = services.metadata.getLastCommit(name),
-                sourceCommit = services.metadata.getCommitSource(volumeSet),
+                sourceCommit = volumeSet?.let { services.metadata.getCommitSource(it) },
             )
         }
     }
