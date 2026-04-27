@@ -173,5 +173,23 @@ class RepositoryOrchestratorTest : StringSpec() {
             status.lastCommit shouldBe "id"
             status.sourceCommit shouldBe "id"
         }
+
+        // Regression for issue #137: GET /v1/repositories/<repo>/status used
+        // to 500 with a bare NullPointerException whenever the repo had no
+        // active volume set yet. The 500 surfaced on the CLI side as EOF on
+        // the next POST request — d3 run on a fresh kubernetes context
+        // would crash mid-flow. Status for a repo without an active VS
+        // should now succeed with null commit fields.
+        "get repository status on a repo with no active volume set returns nulls instead of throwing" {
+            // Create the repo via the metadata layer directly so no active
+            // volume set is registered — mirrors the transient state seen
+            // between createRepository and createVolumeSet on a fresh repo.
+            transaction {
+                services.metadata.createRepository(Repository("foo"))
+            }
+            val status = services.repositories.getRepositoryStatus("foo")
+            status.lastCommit shouldBe null
+            status.sourceCommit shouldBe null
+        }
     }
 }

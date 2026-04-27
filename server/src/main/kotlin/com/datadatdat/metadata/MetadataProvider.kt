@@ -295,13 +295,34 @@ class MetadataProvider(
         return id.toString()
     }
 
-    fun getActiveVolumeSet(repoName: String): String =
+    /**
+     * Returns the id of the active volume set for the repository, or null
+     * when none is currently active. Use this from code paths where the
+     * absence of an active volume set is a normal state (e.g. status
+     * lookups for a freshly-created repository, or right after the only
+     * volume set has been marked deleting).
+     */
+    fun getActiveVolumeSetOrNull(repoName: String): String? =
         VolumeSets
             .selectAll()
             .where {
                 (VolumeSets.repo eq repoName) and (VolumeSets.state eq VolumeState.ACTIVE)
             }.map { it[VolumeSets.id].toString() }
-            .firstOrNull()!!
+            .firstOrNull()
+
+    /**
+     * Returns the id of the active volume set for the repository.
+     *
+     * Throws [NoSuchObjectException] when no active volume set exists.
+     * Pre-issue-#137 this method dereferenced a null with `firstOrNull()!!`
+     * and threw an unhelpful NullPointerException — which propagated out
+     * through the HTTP layer as a 500 and broke the connection mid-request,
+     * causing the CLI's next POST to receive EOF and crash `d3 run` on a
+     * fresh kubernetes context.
+     */
+    fun getActiveVolumeSet(repoName: String): String =
+        getActiveVolumeSetOrNull(repoName)
+            ?: throw NoSuchObjectException("repository '$repoName' has no active volume set")
 
     fun getVolumeSetRepo(volumeSet: String): String? {
         val uuid = Uuid.parse(volumeSet)
