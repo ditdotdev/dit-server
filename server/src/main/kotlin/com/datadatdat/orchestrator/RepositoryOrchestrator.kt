@@ -33,11 +33,21 @@ class RepositoryOrchestrator(
 
     fun getRepositoryStatus(name: String): RepositoryStatus {
         NameUtil.validateRepoName(name)
-        // A repository with no active volume set is a valid "no commits yet"
-        // state, not an error — surface null commit fields rather than 500.
-        // See issue #137: pre-fix this 500'd with NullPointerException, which
-        // broke the CLI's connection and made d3 run fail with EOF.
         return transaction {
+            // Validate the repo actually exists. getRepository throws
+            // NoSuchObjectException → 404 when it doesn't, which the CLI
+            // surfaces as a non-zero exit and "repository ... not found".
+            //
+            // Pre-#137 this distinction was implicit: getActiveVolumeSet's
+            // firstOrNull()!! NPE'd on BOTH "no active VS" (transient state
+            // for a freshly-created repo) AND "repo doesn't exist." The
+            // first PR for #137 (datadatdat-server#140) treated both as
+            // "200 with null fields", regressing
+            // tests/endtoend/container-lifecycle.bats:122 — `d3 status
+            // <nonexistent>` no longer errored. Splitting the cases here:
+            //   - repo doesn't exist                  -> 404 (this call)
+            //   - repo exists, no active volume set   -> 200 with nulls
+            services.metadata.getRepository(name)
             val volumeSet = services.metadata.getActiveVolumeSetOrNull(name)
             RepositoryStatus(
                 lastCommit = services.metadata.getLastCommit(name),
