@@ -191,5 +191,17 @@ class RepositoryOrchestratorTest : StringSpec() {
             status.lastCommit shouldBe null
             status.sourceCommit shouldBe null
         }
+
+        // Regression guard for the cleanup of #137: the first cut conflated
+        // "no active volume set" with "repo doesn't exist," so `d3 status
+        // <nonexistent>` started returning 200 with nulls instead of 404 —
+        // breaking tests/endtoend/container-lifecycle.bats:122 in the d3 CLI
+        // suite. getRepositoryStatus must throw NoSuchObjectException when
+        // the repo is genuinely missing.
+        "get repository status on a non-existent repository throws NoSuchObjectException" {
+            shouldThrow<NoSuchObjectException> {
+                services.repositories.getRepositoryStatus("does-not-exist")
+            }
+        }
     }
 }
