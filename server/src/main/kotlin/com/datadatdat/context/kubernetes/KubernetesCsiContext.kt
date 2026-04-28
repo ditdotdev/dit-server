@@ -484,7 +484,17 @@ class KubernetesCsiContext(
         scratchVolume: Volume,
         metadata: V1ObjectMeta,
     ) {
-        val image = properties["datadatdatImage"] ?: error("missing datadatdatImage property")
+        // Default to the public Docker Hub image so the demo path works
+        // out-of-the-box: `d3 context install -t kubernetes` doesn't pass
+        // any context config to the server, so without a default the
+        // very first PULL/PUSH operation throws IllegalStateException
+        // and the d3 CLI sees a bare 500. Surfaced by
+        // datadatdat-remote-server#639 — push 500 + clone-from-s3 500
+        // both traced back here. Class doc above already advertises a
+        // default of "datadatdat:latest"; this just makes the code
+        // honor it. Operators on private registries should override
+        // via the `datadatdatImage` context config.
+        val image = properties["datadatdatImage"] ?: "datadatdat/datadatdat:latest"
         val basePath = "/var/datadatdat"
 
         log.info("creating job ${metadata.name}")
