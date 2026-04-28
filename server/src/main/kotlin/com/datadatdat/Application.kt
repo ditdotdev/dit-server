@@ -166,12 +166,28 @@ fun Application.mainProvider(services: ServiceLocator) {
                 call.respond(HttpStatusCode.Unauthorized, exceptionToError(cause))
             } else {
                 call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
+                // Explicitly log + stack trace before rethrowing. The
+                // rethrow used to be the only signal but Ktor's pipeline
+                // tends to swallow re-thrown exceptions silently when the
+                // response has already been written — so callers see a
+                // bare 500 with no server-side breadcrumb. Always log
+                // first so the stack appears in `docker logs` regardless
+                // of what the upstream pipeline does with the rethrow.
+                log.error("Unhandled IOException -> 500 on ${call.request.local.uri}", cause)
                 throw cause
             }
         }
         exception<Throwable> { call, cause ->
             call.respond(HttpStatusCode.InternalServerError, exceptionToError(cause))
-            // For internal errors, log the whole exception and stack trace
+            // Always log the full stack trace before rethrowing. The
+            // bare `throw cause` previously here was supposed to surface
+            // the exception via Ktor's pipeline logger, but in practice
+            // (observed on PR datadatdat-remote-server#639 with the d3
+            // server returning 500 on `d3 push`) the stack trace never
+            // appeared in `docker logs`, leaving callers with an
+            // unactionable "500 Internal Server Error" response and no
+            // server-side context. Log explicitly first.
+            log.error("Unhandled exception -> 500 on ${call.request.local.uri}", cause)
             throw cause
         }
     }
