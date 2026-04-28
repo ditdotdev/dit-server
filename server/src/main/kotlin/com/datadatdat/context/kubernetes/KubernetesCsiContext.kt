@@ -114,6 +114,34 @@ class KubernetesCsiContext(
         }
     }
 
+    /**
+     * Write YAML to a temp file and `kubectl apply -f` it. On apply failure log the kubectl stderr
+     * AND the rejected YAML at ERROR level — the bare `Exit 1: kubectl, apply, ...` line that
+     * CommandExecutor logs by default tells us nothing about why kubectl rejected the manifest.
+     * Surfaced by datadatdat#639 where d3 push returned 500 from inside the server but the only
+     * server-side breadcrumb was an opaque "Exit 1: kubectl, apply" line.
+     *
+     * Always rethrows the original CommandException so callers (and the StatusPages handler)
+     * still see the failure — this is purely diagnostic, not a behavior change.
+     */
+    private fun applyYaml(
+        yaml: String,
+        label: String,
+    ) {
+        val file = createTempFile().toFile()
+        try {
+            file.writeText(yaml)
+            try {
+                executor.exec("kubectl", "apply", "-f", file.path)
+            } catch (e: CommandException) {
+                log.error("kubectl apply failed for $label: ${e.output}\n--- rejected YAML ---\n$yaml--- end YAML ---")
+                throw e
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
     override fun getProvider(): String = "kubernetes-csi"
 
     override fun getProperties(): Map<String, String> = properties
@@ -214,31 +242,24 @@ class KubernetesCsiContext(
         val size = config["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$pvc-$commitId"
 
-        val file = createTempFile().toFile()
-        try {
-            file.writeText(
-                "apiVersion: snapshot.storage.k8s.io/v1\n" +
-                    "kind: VolumeSnapshot\n" +
-                    "metadata:\n" +
-                    "  name: $name\n" +
-                    "  labels:\n" +
-                    "    datadatdatVolume: $volumeName\n" +
-                    "    datadatdatCommit: $commitId\n" +
-                    "    datadatdatSize: $size\n" +
-                    "spec:\n" +
-                    "  source:\n" +
-                    "    persistentVolumeClaimName: $pvc\n" +
-                    if (properties["snapshotClass"] != null) {
-                        "  volumeSnapshotClassName: ${properties["snapshotClass"]}\n"
-                    } else {
-                        ""
-                    },
-            )
-
-            executor.exec("kubectl", "apply", "-f", file.path)
-        } finally {
-            file.delete()
-        }
+        val yaml =
+            "apiVersion: snapshot.storage.k8s.io/v1\n" +
+                "kind: VolumeSnapshot\n" +
+                "metadata:\n" +
+                "  name: $name\n" +
+                "  labels:\n" +
+                "    datadatdatVolume: $volumeName\n" +
+                "    datadatdatCommit: $commitId\n" +
+                "    datadatdatSize: $size\n" +
+                "spec:\n" +
+                "  source:\n" +
+                "    persistentVolumeClaimName: $pvc\n" +
+                if (properties["snapshotClass"] != null) {
+                    "  volumeSnapshotClassName: ${properties["snapshotClass"]}\n"
+                } else {
+                    ""
+                }
+        applyYaml(yaml, "VolumeSnapshot/$name")
     }
 
     override fun deleteVolumeCommit(
@@ -260,31 +281,24 @@ class KubernetesCsiContext(
         val name = "$newVolumeSet-$volumeName"
         val snapshotName = "$sourceVolumeSet-$volumeName-$sourceCommit"
 
-        val file = createTempFile().toFile()
-        try {
-            file.writeText(
-                "apiVersion: v1\n" +
-                    "kind: PersistentVolumeClaim\n" +
-                    "metadata:\n" +
-                    "  name: $name\n" +
-                    "  labels:\n" +
-                    "    datadatdatVolume: $volumeName\n" +
-                    "spec:\n" +
-                    "  dataSource:\n" +
-                    "    kind: VolumeSnapshot\n" +
-                    "    apiGroup: snapshot.storage.k8s.io\n" +
-                    "    name: $snapshotName\n" +
-                    "  accessModes:\n" +
-                    "    - ReadWriteOnce\n" +
-                    "  resources:\n" +
-                    "    requests:\n" +
-                    "      storage: $size\n",
-            )
-
-            executor.exec("kubectl", "apply", "-f", file.path)
-        } finally {
-            file.delete()
-        }
+        val yaml =
+            "apiVersion: v1\n" +
+                "kind: PersistentVolumeClaim\n" +
+                "metadata:\n" +
+                "  name: $name\n" +
+                "  labels:\n" +
+                "    datadatdatVolume: $volumeName\n" +
+                "spec:\n" +
+                "  dataSource:\n" +
+                "    kind: VolumeSnapshot\n" +
+                "    apiGroup: snapshot.storage.k8s.io\n" +
+                "    name: $snapshotName\n" +
+                "  accessModes:\n" +
+                "    - ReadWriteOnce\n" +
+                "  resources:\n" +
+                "    requests:\n" +
+                "      storage: $size\n"
+        applyYaml(yaml, "PersistentVolumeClaim/$name (cloned from VolumeSnapshot/$snapshotName)")
 
         return mapOf(
             "pvc" to name,
