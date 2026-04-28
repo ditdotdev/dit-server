@@ -74,7 +74,7 @@ class KubernetesCsiContext(
     private val storageApi: StorageV1Api
     private val batchApi: BatchV1Api
     val namespace: String
-    private val executor = CommandExecutor()
+    internal val executor = CommandExecutor()
     private val gson = GsonBuilder().create()
 
     companion object {
@@ -194,9 +194,15 @@ class KubernetesCsiContext(
     }
 
     /**
-     * The VolumeSnapshot APIs are currently in alpha and not part of the published REST API (even using
-     * StorageV1alpha1), so we have to invoke kubectl in order to manage them. This should be updated to use the native
-     * API when it is available.
+     * VolumeSnapshot is GA on snapshot.storage.k8s.io/v1; the alpha API this code originally targeted has
+     * been removed from upstream Kubernetes for years. We still apply via `kubectl` instead of using the
+     * typed client-java VolumeSnapshot APIs to keep the snapshot/clone/delete codepath uniform — see
+     * `cloneVolume` and `getSnapshot` below. Switching all of those to the typed API is a separate
+     * refactor (kubernetes-client/java#86 — the historical reason for shelling out — has long been fixed).
+     *
+     * v1alpha1 → v1 field shape changes captured here:
+     *   - spec.source.{kind, name}        →  spec.source.persistentVolumeClaimName
+     *   - spec.snapshotClassName          →  spec.volumeSnapshotClassName
      */
     override fun commitVolume(
         volumeSet: String,
@@ -211,7 +217,7 @@ class KubernetesCsiContext(
         val file = createTempFile().toFile()
         try {
             file.writeText(
-                "apiVersion: snapshot.storage.k8s.io/v1alpha1\n" +
+                "apiVersion: snapshot.storage.k8s.io/v1\n" +
                     "kind: VolumeSnapshot\n" +
                     "metadata:\n" +
                     "  name: $name\n" +
@@ -221,10 +227,9 @@ class KubernetesCsiContext(
                     "    datadatdatSize: $size\n" +
                     "spec:\n" +
                     "  source:\n" +
-                    "    kind: PersistentVolumeClaim\n" +
-                    "    name: $pvc\n" +
+                    "    persistentVolumeClaimName: $pvc\n" +
                     if (properties["snapshotClass"] != null) {
-                        "  snapshotClassName: ${properties["snapshotClass"]}\n"
+                        "  volumeSnapshotClassName: ${properties["snapshotClass"]}\n"
                     } else {
                         ""
                     },
