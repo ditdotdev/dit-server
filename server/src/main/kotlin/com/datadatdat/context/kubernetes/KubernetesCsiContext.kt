@@ -574,11 +574,27 @@ class KubernetesCsiContext(
     }
 
     private fun getPodFromJob(name: String): String {
-        val pods = coreApi.listNamespacedPod(namespace).labelSelector("job-name=$name").execute()
-        if (pods.items.size != 1) {
-            throw IllegalStateException("found ${pods.items.size} pods instead of 1 for job $name")
+        // The Job controller creates pods asynchronously after the Job
+        // resource is admitted. On a busy or freshly-spun-up cluster the
+        // pod can take several seconds to appear — observed at ~110ms
+        // from job-create to first list-pods returning empty on
+        // datadatdat-remote-server#639. Bounded poll on the actual
+        // condition we want, same pattern as the BATS suites: explicit
+        // condition check in a loop, only the iteration count is
+        // arbitrary. 30 × 2s = 60s before we give up; if the pod still
+        // doesn't exist it's almost certainly unschedulable, not racy,
+        // and a longer wait won't help.
+        repeat(30) {
+            val pods = coreApi.listNamespacedPod(namespace).labelSelector("job-name=$name").execute()
+            if (pods.items.size == 1) {
+                return pods.items[0].metadata?.name ?: error("pod does not have an associated name")
+            }
+            if (pods.items.size > 1) {
+                throw IllegalStateException("found ${pods.items.size} pods instead of 1 for job $name")
+            }
+            Thread.sleep(2000)
         }
-        return pods.items[0].metadata?.name ?: error("pod does not have an associated name")
+        throw IllegalStateException("no pod created for job $name within 60s")
     }
 
     private fun isPodReady(name: String): Boolean {
