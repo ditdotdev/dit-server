@@ -567,7 +567,16 @@ class MetadataProvider(
             .selectAll()
             .where {
                 (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE)
-            }.orderBy(Commits.timestamp, SortOrder.DESC)
+            }
+            // Secondary sort on the auto-increment id breaks ties when two
+            // commits share a millisecond-resolution timestamp (Commits.timestamp
+            // is a varchar serialization of DateTime.now(); sub-millisecond
+            // inserts hit the same string). Without this, "last commit" is
+            // non-deterministic — observed as a ~17% flake in
+            // OperationOrchestratorTest "find local commit returns source of
+            // remote commit", which falls through to getLastCommit and expected
+            // the most-recently-inserted commit.
+            .orderBy(Commits.timestamp to SortOrder.DESC, Commits.id to SortOrder.DESC)
             .limit(1)
             .map { it[Commits.guid] }
             .firstOrNull()
@@ -580,7 +589,10 @@ class MetadataProvider(
                 .selectAll()
                 .where {
                     Commits.volumeSet eq volumeSetGuid
-                }.orderBy(Commits.timestamp, SortOrder.DESC)
+                }
+                // Secondary sort on id breaks ties for tied timestamps. See
+                // getLastCommit above for the same rationale.
+                .orderBy(Commits.timestamp to SortOrder.DESC, Commits.id to SortOrder.DESC)
                 .limit(1)
                 .firstOrNull()
 
