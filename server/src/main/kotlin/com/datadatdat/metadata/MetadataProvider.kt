@@ -94,7 +94,13 @@ class MetadataProvider(
         }
 
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(
+            // SchemaUtils.create generates CREATE TABLE IF NOT EXISTS — idempotent
+            // and safe to call on every startup. Replaces the deprecated
+            // createMissingTablesAndColumns, which Exposed flagged because partial
+            // failure can leave the schema half-applied. We don't rely on its
+            // missing-column behavior: real schema evolution should land via a
+            // migration tool, not as a silent ALTER on startup.
+            SchemaUtils.create(
                 Repositories,
                 Remotes,
                 VolumeSets,
@@ -122,8 +128,11 @@ class MetadataProvider(
         val metadata = it[Repositories.metadata]
         println("DEBUG convertRepository: name=$name, metadata='$metadata'")
         val properties: Map<String, Any> =
-            if (metadata == null || metadata == "null") {
-                println("DEBUG convertRepository: metadata is null or 'null', using empty map")
+            // Repositories.metadata is non-nullable in the schema, so only the
+            // literal-string "null" path is reachable (Gson serializes a null
+            // reference into the four-character string).
+            if (metadata == "null") {
+                println("DEBUG convertRepository: metadata is 'null', using empty map")
                 emptyMap()
             } else {
                 try {
@@ -138,10 +147,10 @@ class MetadataProvider(
     }
 
     fun createRepository(repo: Repository) {
-        val safeProperties = repo.properties ?: emptyMap<String, Any>()
-        val serialized = gson.toJson(safeProperties)
+        // Repository.properties is non-nullable per the model; no Elvis fallback needed.
+        val serialized = gson.toJson(repo.properties)
         println(
-            "DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, safeProperties=$safeProperties, serialized='$serialized'",
+            "DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, serialized='$serialized'",
         )
         try {
             Repositories.insert {
