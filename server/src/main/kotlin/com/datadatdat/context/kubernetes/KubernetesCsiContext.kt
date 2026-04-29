@@ -22,6 +22,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api
 import io.kubernetes.client.openapi.apis.StorageV1Api
 import io.kubernetes.client.openapi.models.V1ContainerBuilder
 import io.kubernetes.client.openapi.models.V1EnvVarBuilder
+import io.kubernetes.client.openapi.models.V1HostAliasBuilder
 import io.kubernetes.client.openapi.models.V1JobBuilder
 import io.kubernetes.client.openapi.models.V1JobSpecBuilder
 import io.kubernetes.client.openapi.models.V1ObjectMeta
@@ -79,6 +80,32 @@ class KubernetesCsiContext(
 
     companion object {
         val log = LoggerFactory.getLogger(KubernetesCsiContext::class.java)
+
+        /**
+         * Parse the `DATADATDAT_K8S_POD_HOST_ALIASES` env var into a list of
+         * V1HostAlias entries to inject into job-pod specs.
+         *
+         * Format: `host1=ip1,host2=ip2`. Whitespace and empty entries are
+         * tolerated. Used so that a d3 deployment whose remote isn't
+         * resolvable from inside the cluster (e.g. CI tests pointing at a
+         * docker-compose API stack on the host) can pin a hostname into
+         * /etc/hosts on every job pod. No-op when unset.
+         */
+        fun parseHostAliases(spec: String?): List<io.kubernetes.client.openapi.models.V1HostAlias> {
+            if (spec.isNullOrBlank()) return emptyList()
+            return spec
+                .split(",")
+                .mapNotNull { entry ->
+                    val trimmed = entry.trim()
+                    if (trimmed.isEmpty()) return@mapNotNull null
+                    val parts = trimmed.split("=", limit = 2)
+                    if (parts.size != 2 || parts[0].isBlank() || parts[1].isBlank()) {
+                        log.warn("Ignoring malformed host-alias entry '$trimmed' (expected host=ip)")
+                        return@mapNotNull null
+                    }
+                    V1HostAliasBuilder().withIp(parts[1].trim()).withHostnames(parts[0].trim()).build()
+                }
+        }
     }
 
     init {
@@ -496,6 +523,7 @@ class KubernetesCsiContext(
         // via the `datadatdatImage` context config.
         val image = properties["datadatdatImage"] ?: "datadatdat/datadatdat:latest"
         val basePath = "/var/datadatdat"
+        val hostAliases = parseHostAliases(System.getenv("DATADATDAT_K8S_POD_HOST_ALIASES"))
 
         log.info("creating job ${metadata.name}")
         // Now create the job that will run the operation
@@ -512,6 +540,7 @@ class KubernetesCsiContext(
                                     .withSpec(
                                         V1PodSpecBuilder()
                                             .withRestartPolicy("OnFailure")
+                                            .withHostAliases(*hostAliases.toTypedArray())
                                             .withContainers(
                                                 V1ContainerBuilder()
                                                     .withName("operation")
