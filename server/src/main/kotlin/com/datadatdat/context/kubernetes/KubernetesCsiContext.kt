@@ -81,6 +81,9 @@ class KubernetesCsiContext(
     companion object {
         val log = LoggerFactory.getLogger(KubernetesCsiContext::class.java)
 
+        /** Sentinel value in the env var that triggers IP auto-discovery. */
+        const val HOST_ALIAS_AUTO = "auto"
+
         /**
          * Parse the `DATADATDAT_K8S_POD_HOST_ALIASES` env var into a list of
          * V1HostAlias entries to inject into job-pod specs.
@@ -90,9 +93,30 @@ class KubernetesCsiContext(
          * resolvable from inside the cluster (e.g. CI tests pointing at a
          * docker-compose API stack on the host) can pin a hostname into
          * /etc/hosts on every job pod. No-op when unset.
+         *
+         * `host=auto` entries are skipped here — they require runtime
+         * discovery against the live cluster, which is an instance concern.
+         * Use [resolveHostAliasEntries] for the full resolution including
+         * discovery.
          */
-        fun parseHostAliases(spec: String?): List<io.kubernetes.client.openapi.models.V1HostAlias> {
+        fun parseHostAliases(spec: String?): List<io.kubernetes.client.openapi.models.V1HostAlias> =
+            resolveHostAliasEntries(spec) {
+                log.warn("Skipping host-alias auto-discovery entry — parseHostAliases is literal-only")
+                null
+            }
+
+        /**
+         * Resolve a host-aliases spec into V1HostAlias entries, calling
+         * [discoverIp] for any `host=auto` entry. The callback is invoked
+         * at most once per resolution; its return value is reused for every
+         * `auto` entry. A null return drops the entry with a warning.
+         */
+        fun resolveHostAliasEntries(
+            spec: String?,
+            discoverIp: () -> String?,
+        ): List<io.kubernetes.client.openapi.models.V1HostAlias> {
             if (spec.isNullOrBlank()) return emptyList()
+            val discovered: String? by lazy { discoverIp() }
             return spec
                 .split(",")
                 .mapNotNull { entry ->
@@ -100,13 +124,145 @@ class KubernetesCsiContext(
                     if (trimmed.isEmpty()) return@mapNotNull null
                     val parts = trimmed.split("=", limit = 2)
                     if (parts.size != 2 || parts[0].isBlank() || parts[1].isBlank()) {
-                        log.warn("Ignoring malformed host-alias entry '$trimmed' (expected host=ip)")
+                        log.warn("Ignoring malformed host-alias entry '$trimmed' (expected host=ip or host=auto)")
                         return@mapNotNull null
                     }
-                    V1HostAliasBuilder().withIp(parts[1].trim()).withHostnames(parts[0].trim()).build()
+                    val host = parts[0].trim()
+                    val target = parts[1].trim()
+                    val ip =
+                        if (target.equals(HOST_ALIAS_AUTO, ignoreCase = true)) {
+                            discovered ?: run {
+                                log.warn("Host-alias auto-discovery yielded no IP for '$host'; dropping entry")
+                                return@mapNotNull null
+                            }
+                        } else {
+                            target
+                        }
+                    V1HostAliasBuilder().withIp(ip).withHostnames(host).build()
                 }
         }
     }
+
+    /**
+     * Cached IP from [discoverHostAliasIp]. Discovery runs at most once per
+     * context — probing the cluster on every PUSH/PULL would add seconds of
+     * latency for no benefit, since the host's address relative to the
+     * cluster doesn't change while the context is alive.
+     */
+    @Volatile private var discoveredHostIp: String? = null
+
+    @Volatile private var discoveryAttempted = false
+    private val discoveryLock = Any()
+
+    /**
+     * Best-effort discovery of an IP that pods in this cluster can reach
+     * the docker host on. Two strategies, in order:
+     *
+     *   1. Probe pod resolves `host.minikube.internal`. minikube auto-injects
+     *      this entry into every pod's /etc/hosts on every driver EXCEPT
+     *      `--driver=none`, where the node IS the host so no special name
+     *      is needed. Works on docker / hyperv / hyperkit / kvm2 / qemu —
+     *      i.e. every Mac / Windows local-dev configuration.
+     *
+     *   2. Fall back to the kubernetes node's InternalIP. On `--driver=none`
+     *      (used by Linux CI) the node IP equals the host IP and host port
+     *      mappings are reachable via the node IP from inside pods.
+     *
+     * Returns null if both strategies fail; callers should drop the alias
+     * and log rather than fail the operation.
+     *
+     * Result is cached for the lifetime of the context.
+     */
+    internal fun discoverHostAliasIp(): String? {
+        if (discoveryAttempted) return discoveredHostIp
+        synchronized(discoveryLock) {
+            if (discoveryAttempted) return discoveredHostIp
+            discoveredHostIp = probeHostMinikubeInternal() ?: probeNodeInternalIp()
+            discoveryAttempted = true
+            if (discoveredHostIp == null) {
+                log.warn(
+                    "Host-alias auto-discovery failed: neither host.minikube.internal " +
+                        "(via probe pod) nor a node InternalIP could be resolved. " +
+                        "host=auto entries will be dropped.",
+                )
+            } else {
+                log.info("Host-alias auto-discovery resolved to $discoveredHostIp")
+            }
+            return discoveredHostIp
+        }
+    }
+
+    /**
+     * Spawn a short-lived busybox pod, run `getent hosts host.minikube.internal`,
+     * return the first whitespace-separated token from stdout (the IPv4
+     * address). Returns null on any failure, including timeout, image pull
+     * errors, missing hostname, or unparsable output.
+     *
+     * The pod name is randomized so concurrent probes don't collide; --rm
+     * cleans it up either way.
+     */
+    private fun probeHostMinikubeInternal(): String? {
+        val podName = "datadatdat-host-probe-${java.util.UUID.randomUUID().toString().substring(0, 8)}"
+        return try {
+            val out =
+                executor.exec(
+                    "kubectl",
+                    "run",
+                    podName,
+                    "--rm",
+                    "-i",
+                    "--quiet",
+                    "--restart=Never",
+                    "--image=busybox",
+                    "--namespace",
+                    namespace,
+                    "--command",
+                    "--",
+                    "getent",
+                    "hosts",
+                    "host.minikube.internal",
+                )
+            val ip =
+                out
+                    .lineSequence()
+                    .firstOrNull()
+                    ?.trim()
+                    ?.split(Regex("\\s+"))
+                    ?.firstOrNull()
+            if (ip.isNullOrBlank()) null else ip
+        } catch (e: CommandException) {
+            log.debug("host.minikube.internal probe pod failed: ${e.output.lineSequence().firstOrNull()}")
+            null
+        } catch (e: Exception) {
+            log.debug("host.minikube.internal probe pod errored: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Read the kubernetes node's InternalIP via kubectl. Picks the first
+     * node — single-node minikube is the documented target; multi-node
+     * setups would need explicit configuration anyway.
+     */
+    private fun probeNodeInternalIp(): String? =
+        try {
+            val out =
+                executor.exec(
+                    "kubectl",
+                    "get",
+                    "nodes",
+                    "-o",
+                    "jsonpath={.items[0].status.addresses[?(@.type==\"InternalIP\")].address}",
+                )
+            val ip = out.trim()
+            if (ip.isBlank()) null else ip
+        } catch (e: CommandException) {
+            log.debug("kubectl get nodes (InternalIP) failed: ${e.output.lineSequence().firstOrNull()}")
+            null
+        } catch (e: Exception) {
+            log.debug("kubectl get nodes (InternalIP) errored: ${e.message}")
+            null
+        }
 
     init {
         val home = System.getProperty("user.home")
@@ -523,7 +679,11 @@ class KubernetesCsiContext(
         // via the `datadatdatImage` context config.
         val image = properties["datadatdatImage"] ?: "datadatdat/datadatdat:latest"
         val basePath = "/var/datadatdat"
-        val hostAliases = parseHostAliases(System.getenv("DATADATDAT_K8S_POD_HOST_ALIASES"))
+        val hostAliases =
+            resolveHostAliasEntries(
+                System.getenv("DATADATDAT_K8S_POD_HOST_ALIASES"),
+                ::discoverHostAliasIp,
+            )
 
         log.info("creating job ${metadata.name}")
         // Now create the job that will run the operation
