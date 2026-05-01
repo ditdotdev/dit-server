@@ -229,7 +229,13 @@ jobs:
           go env -w GOPRIVATE=github.com/datadatdat/*
           go env -w GONOPROXY=github.com/datadatdat/*
           go env -w GONOSUMDB=github.com/datadatdat/*
-          go env -w GOPROXY=direct
+          # Leave GOPROXY at its default (https://proxy.golang.org,direct).
+          # GOPRIVATE above already opts datadatdat/* repos out of the proxy,
+          # so direct VCS fetches are scoped to private modules. Public
+          # transitive deps — notably gopkg.in/evanphx/json-patch.v4, pulled
+          # in by k8s.io/client-go — go through proxy.golang.org's cache
+          # instead of hitting gopkg.in's flaky single-server redirector,
+          # which has timed out the Go Code Quality job repeatedly.
         shell: bash
         env:
           GOPRIVATE: github.com/datadatdat/*
