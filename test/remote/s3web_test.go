@@ -30,6 +30,10 @@ type S3WebTestSuite struct {
 	webRemote     datadatdat.Remote
 	s3parameters  datadatdat.RemoteParameters
 	webParameters datadatdat.RemoteParameters
+
+	// clearBucketFn lets unit tests substitute the bucket-clearing call. In
+	// production it is wired to ClearBucket during SetupSuite. See issue #156.
+	clearBucketFn func() error
 }
 
 func (s *S3WebTestSuite) ClearBucket() error {
@@ -65,7 +69,10 @@ func (s *S3WebTestSuite) SetupSuite() {
 	}
 	s.s3bucket = location[:idx]
 	s.s3path = location[idx+1:]
-	err := s.ClearBucket()
+	if s.clearBucketFn == nil {
+		s.clearBucketFn = s.ClearBucket
+	}
+	err := s.clearBucketFn()
 	if err != nil {
 		panic(err)
 	}
@@ -115,7 +122,16 @@ func (s *S3WebTestSuite) SetupSuite() {
 }
 
 func (s *S3WebTestSuite) TearDownSuite() {
-	s.e.TeardownStandardDocker()
+	if s.clearBucketFn != nil {
+		// Clean up the per-run S3 prefix so it does not accumulate across CI
+		// runs. See issue #156.
+		if err := s.clearBucketFn(); err != nil {
+			s.T().Logf("S3WebTestSuite TearDownSuite ClearBucket failed: %v", err)
+		}
+	}
+	if s.e != nil {
+		s.e.TeardownStandardDocker()
+	}
 }
 
 func TestS3WebTestSuite(t *testing.T) {
