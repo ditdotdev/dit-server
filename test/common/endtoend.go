@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/antihax/optional"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/ssh"
@@ -441,7 +440,7 @@ func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, 
 	result := []datadatdat.ProgressEntry{}
 	for ok := true; ok; ok = !completed {
 		progress, _, err := e.Client.OperationsApi.GetOperationProgress(context.Background(), id,
-			&datadatdat.GetOperationProgressOpts{LastId: optional.NewInt32(lastEntry)})
+			&datadatdat.GetOperationProgressOpts{LastId: &lastEntry})
 		if err != nil {
 			return nil, err
 		}
