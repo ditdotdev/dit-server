@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/antihax/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -222,7 +221,7 @@ func (s *S3WebTestSuite) TestS3Web_021_ListRemoteCommit() {
 
 func (s *S3WebTestSuite) TestS3Web_022_ListRemoteFilterOut() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"e"}})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -230,7 +229,7 @@ func (s *S3WebTestSuite) TestS3Web_022_ListRemoteFilterOut() {
 
 func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"a=b", "c=d"}})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
