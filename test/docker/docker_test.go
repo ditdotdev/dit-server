@@ -5,7 +5,6 @@ package docker
 
 import (
 	"context"
-	"github.com/antihax/optional"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"github.com/stretchr/testify/suite"
@@ -249,7 +248,7 @@ func (s *WorkflowTestSuite) TestLocal_030_ListCommit() {
 
 func (s *WorkflowTestSuite) TestLocal_031_FilterOut() {
 	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
-		Tag: optional.NewInterface([]string{"a=c"}),
+		Tag: &[]string{"a=c"},
 	})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
@@ -258,7 +257,7 @@ func (s *WorkflowTestSuite) TestLocal_031_FilterOut() {
 
 func (s *WorkflowTestSuite) TestLocal_032_FilterPresent() {
 	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
-		Tag: optional.NewInterface([]string{"a=B"}),
+		Tag: &[]string{"a=B"},
 	})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
@@ -268,7 +267,7 @@ func (s *WorkflowTestSuite) TestLocal_032_FilterPresent() {
 
 func (s *WorkflowTestSuite) TestLocal_033_FilterCompound() {
 	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{
-		Tag: optional.NewInterface([]string{"a=B", "c"}),
+		Tag: &[]string{"a=B", "c"},
 	})
 	s.Len(res, 1)
 	if s.e.NoError(err) {
@@ -442,7 +441,7 @@ func (s *WorkflowTestSuite) TestLocal_062_GetOperation() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_063_ListOperations() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: datadatdat.PtrString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal(s.currentOp.Id, res[0].Id)
@@ -465,7 +464,7 @@ func (s *WorkflowTestSuite) TestLocal_064_GetPushProgress() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_065_ListNotPresent() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: datadatdat.PtrString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -492,7 +491,7 @@ func (s *WorkflowTestSuite) TestLocal_071_GetPull() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_072_ListPullOperation() {
-	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: optional.NewString("foo")})
+	res, _, err := s.e.OperationsApi.ListOperations(s.ctx, &datadatdat.ListOperationsOpts{Repository: datadatdat.PtrString("foo")})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal(s.currentOp.Id, res[0].Id)
@@ -529,7 +528,7 @@ func (s *WorkflowTestSuite) TestLocal_081_ListMultipleCommits() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_082_FilterOutCommit() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{Tag: optional.NewInterface([]string{"a=B"})})
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", &datadatdat.ListCommitsOpts{Tag: &[]string{"a=B"}})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)

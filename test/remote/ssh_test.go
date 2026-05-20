@@ -5,7 +5,6 @@ package remote
 
 import (
 	"context"
-	"github.com/antihax/optional"
 	datadatdat "github.com/datadatdat/datadatdat-client-go"
 	endtoend "github.com/datadatdat/datadatdat-server/test/common"
 	"github.com/stretchr/testify/suite"
@@ -142,7 +141,7 @@ func (s *SshTestSuite) TestSsh_021_ListRemoteCommit() {
 
 func (s *SshTestSuite) TestSsh_022_ListRemoteFilterOut() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"e"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"e"}})
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -150,7 +149,7 @@ func (s *SshTestSuite) TestSsh_022_ListRemoteFilterOut() {
 
 func (s *SshTestSuite) TestSsh_023_ListRemoteFilterInclude() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&datadatdat.ListRemoteCommitsOpts{Tag: optional.NewInterface([]string{"a=b", "c=d"})})
+		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"a=b", "c=d"}})
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -184,7 +183,7 @@ func (s *SshTestSuite) TestSsh_031_UpdateCommit() {
 
 func (s *SshTestSuite) TestSsh_032_PushMedata() {
 	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&datadatdat.PushOpts{MetadataOnly: optional.NewBool(true)})
+		&datadatdat.PushOpts{MetadataOnly: datadatdat.PtrBool(true)})
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -236,7 +235,7 @@ func (s *SshTestSuite) TestSsh_044_PullDuplicate() {
 
 func (s *SshTestSuite) TestSsh_045_PullMetadata() {
 	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&datadatdat.PullOpts{MetadataOnly: optional.NewBool(true)})
+		&datadatdat.PullOpts{MetadataOnly: datadatdat.PtrBool(true)})
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
