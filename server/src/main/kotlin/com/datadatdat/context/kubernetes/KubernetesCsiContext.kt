@@ -455,7 +455,7 @@ class KubernetesCsiContext(
         requireValidK8sName(volumeName, "volumeName")
         require(size.matches("^[0-9]+[a-zA-Z]+$".toRegex())) { "invalid k8s size string: '$size'" }
         if (snapshotClass != null) {
-            requireValidK8sName(snapshotClass.toString(), "snapshotClass")
+            requireValidK8sName(snapshotClass, "snapshotClass")
         }
 
         val yaml =

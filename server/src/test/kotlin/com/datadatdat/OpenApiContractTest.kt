@@ -265,9 +265,13 @@ class OpenApiContractTest : StringSpec() {
 
         @Suppress("UNCHECKED_CAST")
         val root = Yaml().load<Map<String, Any?>>(specFile.readText())
+
+        @Suppress("UNCHECKED_CAST")
         val components =
             root["components"] as? Map<String, Any?>
                 ?: throw IllegalStateException("spec has no components section")
+
+        @Suppress("UNCHECKED_CAST")
         val schemas =
             components["schemas"] as? Map<String, Any?>
                 ?: throw IllegalStateException("spec has no components.schemas section")
