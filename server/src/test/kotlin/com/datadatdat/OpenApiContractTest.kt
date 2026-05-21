@@ -1,19 +1,37 @@
 /*
  * Copyright Datadatdat.
  *
- * Contract validation: ensures the Ktor route handlers cover every endpoint
- * defined in the OpenAPI specification (openapi/datadatdat.yml).
+ * Contract validation in two layers:
  *
- * This test parses the spec, extracts all path+method pairs, and verifies
- * each one is reachable via the test server. It does NOT validate response
- * schemas — only that the route exists and doesn't return 404/405.
+ *   1. Path + method coverage — every operation defined in the OpenAPI
+ *      spec must have a corresponding Ktor route handler, and the spec
+ *      must not have orphan endpoints with no implementation.
+ *
+ *   2. Schema shape validation — for every `components.schemas.X` in the
+ *      spec, the corresponding Kotlin `com.datadatdat.models.X` data
+ *      class must:
+ *
+ *        a. Exist with the expected fully-qualified name.
+ *        b. Have every spec-required field declared as a non-nullable
+ *           property with the same name.
+ *        c. Not have extra non-spec properties that would indicate the
+ *           Kotlin model has drifted ahead of the spec.
+ *
+ *      This catches drift the path-coverage check misses: e.g. spec
+ *      adding a required field that the implementation never emits, or
+ *      the implementation adding a field that consumers can't rely on
+ *      because it's not in the spec.
  */
 
 package com.datadatdat
 
 import io.kotlintest.matchers.collections.shouldBeEmpty
+import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
+import org.yaml.snakeyaml.Yaml
 import java.io.File
+import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
 
 class OpenApiContractTest : StringSpec() {
     /**
@@ -175,6 +193,116 @@ class OpenApiContractTest : StringSpec() {
             assert("repositories" in domains) { "Missing repositories routes" }
             assert("operations" in domains) { "Missing operations routes" }
             assert("context" in domains) { "Missing context routes" }
+        }
+
+        // Schema-shape validation: every components.schemas.X in the spec
+        // must have a matching Kotlin data class. Required-by-spec fields
+        // must be non-nullable Kotlin properties with the same name. Kotlin
+        // properties that aren't in the spec are flagged so they don't
+        // accidentally become part of the over-the-wire contract.
+        "every OpenAPI schema has a matching Kotlin model class with required fields non-nullable" {
+            val schemas = parseOpenApiSchemas()
+            schemas.isEmpty() shouldBe false
+
+            val problems = mutableListOf<String>()
+
+            for ((schemaName, schema) in schemas) {
+                val kotlinClass = resolveModelClass(schemaName)
+                if (kotlinClass == null) {
+                    problems += "spec schema '$schemaName' has no Kotlin model class at com.datadatdat.models"
+                    continue
+                }
+
+                val kotlinProps = kotlinClass.memberProperties.associateBy { it.name }
+                val specProps = schema.properties.keys
+
+                // Every spec-required field must be a non-nullable Kotlin property.
+                for (required in schema.required) {
+                    val prop = kotlinProps[required]
+                    if (prop == null) {
+                        problems += "$schemaName: spec requires '$required' but the Kotlin model has no such property"
+                    } else if (prop.returnType.isMarkedNullable) {
+                        problems +=
+                            "$schemaName: spec requires '$required' but the Kotlin property is nullable " +
+                            "(serialized JSON could be null/absent and consumers would fail)"
+                    }
+                }
+
+                // Every Kotlin property should correspond to a spec field. Extras
+                // indicate the implementation has drifted ahead of the spec.
+                for (propName in kotlinProps.keys) {
+                    if (propName !in specProps) {
+                        problems +=
+                            "$schemaName: Kotlin property '$propName' is not declared in the spec " +
+                            "(either add it to openapi/datadatdat.yml or remove it from the model)"
+                    }
+                }
+            }
+
+            if (problems.isNotEmpty()) {
+                println("OpenAPI schema / Kotlin model drift detected:")
+                problems.forEach { println("  $it") }
+            }
+            problems.shouldBeEmpty()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Schema parsing + reflection helpers
+    // ------------------------------------------------------------------
+
+    private data class SpecSchema(
+        val name: String,
+        val required: Set<String>,
+        val properties: Map<String, Any?>,
+    )
+
+    private fun parseOpenApiSchemas(): Map<String, SpecSchema> {
+        val specFile =
+            File("${System.getProperty("user.dir")}/../openapi/datadatdat.yml").takeIf { it.exists() }
+                ?: File("openapi/datadatdat.yml").takeIf { it.exists() }
+                ?: throw IllegalStateException("OpenAPI spec not found")
+
+        @Suppress("UNCHECKED_CAST")
+        val root = Yaml().load<Map<String, Any?>>(specFile.readText())
+        val components =
+            root["components"] as? Map<String, Any?>
+                ?: throw IllegalStateException("spec has no components section")
+        val schemas =
+            components["schemas"] as? Map<String, Any?>
+                ?: throw IllegalStateException("spec has no components.schemas section")
+
+        return schemas.mapValues { (name, raw) ->
+            @Suppress("UNCHECKED_CAST")
+            val schema = raw as? Map<String, Any?> ?: emptyMap<String, Any?>()
+
+            @Suppress("UNCHECKED_CAST")
+            val required = (schema["required"] as? List<String>)?.toSet() ?: emptySet()
+
+            @Suppress("UNCHECKED_CAST")
+            val properties = (schema["properties"] as? Map<String, Any?>) ?: emptyMap()
+            SpecSchema(name = name, required = required, properties = properties)
+        }
+    }
+
+    /**
+     * Maps an OpenAPI schema name to its Kotlin data class. The convention is
+     * UpperCamelCase under `com.datadatdat.models`. Spec uses lowerCamelCase
+     * (commit, repositoryStatus); Kotlin uses UpperCamelCase (Commit,
+     * RepositoryStatus). The `apiError` schema maps to the `Error` model
+     * class (renamed for Java compatibility — `ApiError` would collide with
+     * the openapi-generator client's class on the consumer side).
+     */
+    private fun resolveModelClass(schemaName: String): KClass<*>? {
+        val classNameMap =
+            mapOf(
+                "apiError" to "Error",
+            )
+        val className = classNameMap[schemaName] ?: schemaName.replaceFirstChar { it.uppercase() }
+        return try {
+            Class.forName("com.datadatdat.models.$className").kotlin
+        } catch (e: ClassNotFoundException) {
+            null
         }
     }
 }
