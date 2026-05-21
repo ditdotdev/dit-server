@@ -212,32 +212,36 @@ class OperationsApiTest : StringSpec() {
         }
 
         "abort in-progress operation results in aborted state" {
+            // Pre-fix this test used loadState() to bring a RUNNING DB row
+            // into runtime as an executor. After the operation-restart-
+            // contract change (loadState marks RUNNING ops FAILED), that
+            // path no longer puts an executor in runningOperations — the
+            // abort would have nothing to cancel. Restructure to start a
+            // real operation via POST /push, abort it via DELETE while
+            // the nop provider's delay keeps it RUNNING, and assert
+            // ABORTED.
             transaction {
                 services.metadata.createCommit("foo", vs1, Commit("commit"))
             }
-            loadOperation(
-                OperationData(
-                    Operation(
-                        id = vs2,
-                        type = Operation.Type.PUSH,
-                        commitId = "commit",
-                        state = Operation.State.RUNNING,
-                        remote = "remote",
-                    ),
-                    repo = "foo",
-                    params = RemoteParameters("nop", mapOf("delay" to 10)),
-                ),
-            )
-            services.operations.loadState()
             testApplication {
                 application { mainProvider(services) }
-                client.delete("/v1/operations/$vs2").apply {
+                // The nop provider's `delay` keeps the operation RUNNING
+                // long enough for the DELETE to land before completion.
+                val response =
+                    client.post("/v1/repositories/foo/remotes/remote/commits/commit/push") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"provider\":\"nop\",\"properties\":{\"delay\":10}}")
+                    }
+                response.status shouldBe HttpStatusCode.Created
+                val operation = gson.fromJson(response.bodyAsText(), Operation::class.java)
+
+                client.delete("/v1/operations/${operation.id}").apply {
                     status shouldBe HttpStatusCode.NoContent
                 }
 
                 delay(Duration.ofMillis(500))
 
-                client.get("/v1/operations/$vs2").apply {
+                client.get("/v1/operations/${operation.id}").apply {
                     status shouldBe HttpStatusCode.OK
                     val op = gson.fromJson(bodyAsText(), Operation::class.java)
                     op.state shouldBe Operation.State.ABORTED
@@ -277,11 +281,14 @@ class OperationsApiTest : StringSpec() {
             }
         }
 
-        "get resumed progress returns correct state" {
+        // loadState no longer resumes operations across a restart — instead
+        // it marks any RUNNING operation FAILED with a documented progress
+        // entry so the CLI can surface the abort to the user. See
+        // OperationOrchestrator.loadState for the rationale.
+        "loadState marks running operations failed with a progress entry" {
             transaction {
                 services.metadata.createCommit("foo", vs1, Commit("commit"))
             }
-            every { context.createVolume(any(), any()) } returns emptyMap()
             loadOperation(
                 OperationData(
                     Operation(
@@ -296,15 +303,19 @@ class OperationsApiTest : StringSpec() {
                 ),
             )
             services.operations.loadState()
-            delay(Duration.ofMillis(500))
             testApplication {
                 application { mainProvider(services) }
+                client.get("/v1/operations/$vs2").apply {
+                    status shouldBe HttpStatusCode.OK
+                    val op = gson.fromJson(bodyAsText(), Operation::class.java)
+                    op.state shouldBe Operation.State.FAILED
+                }
                 client.get("/v1/operations/$vs2/progress").apply {
                     status shouldBe HttpStatusCode.OK
                     val entries: List<ProgressEntry> = gson.fromJson(bodyAsText(), object : TypeToken<List<ProgressEntry>>() { }.type)
                     entries.size shouldBe 1
-                    entries[0].type shouldBe ProgressEntry.Type.MESSAGE
-                    entries[0].message shouldBe "Retrying operation after restart"
+                    entries[0].type shouldBe ProgressEntry.Type.FAILED
+                    entries[0].message shouldBe "Server restarted; operation aborted. Retry the operation."
                 }
             }
         }

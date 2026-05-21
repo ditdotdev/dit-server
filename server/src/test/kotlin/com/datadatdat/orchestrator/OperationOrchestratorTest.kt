@@ -660,27 +660,28 @@ class OperationOrchestratorTest : StringSpec() {
             op.state shouldBe Operation.State.COMPLETE
         }
 
-        "load state restarts operation" {
+        // Operations don't survive a server restart — see the long comment
+        // in OperationOrchestrator.loadState for why. The pre-fix code
+        // re-`start()`ed the executor (which threw ObjectExistsException on
+        // already-created scratch storage); the new code marks the
+        // operation FAILED with a progress entry. The CLI's polling loop
+        // sees the FAILED entry and surfaces it to the user.
+        "load state marks running operations failed" {
             transaction {
                 services.metadata.addRemote("foo", Remote("nop", "remote"))
                 services.metadata.createOperation("foo", vs, buildOperation(Operation.Type.PUSH))
                 services.metadata.createCommit("foo", vs, Commit("id"))
             }
 
-            every { context.createVolume(any(), any()) } returns mapOf("mountpoint" to "/mountpoint")
-            every { context.cloneVolume(any(), any(), any(), any(), any()) } returns mapOf("mountpoint" to "/mountpoint")
-
             services.operations.loadState()
-            services.operations.waitForComplete(vs)
 
-            var op = services.operations.getOperation(vs)
-            op.state shouldBe Operation.State.COMPLETE
+            val op = services.operations.getOperation(vs)
+            op.state shouldBe Operation.State.FAILED
 
             val progress = services.operations.getProgress(op.id)
-            progress.size shouldBe 2
-            progress[0].type shouldBe ProgressEntry.Type.MESSAGE
-            progress[0].message shouldBe "Retrying operation after restart"
-            progress[1].type shouldBe ProgressEntry.Type.COMPLETE
+            progress.size shouldBe 1
+            progress[0].type shouldBe ProgressEntry.Type.FAILED
+            progress[0].message shouldBe "Server restarted; operation aborted. Retry the operation."
         }
     }
 }
