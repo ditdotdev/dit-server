@@ -138,20 +138,20 @@ func TestS3WebTestSuite(t *testing.T) {
 }
 
 func (s *S3WebTestSuite) TestS3Web_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3WebTestSuite) TestS3Web_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	if s.e.NoError(err) {
-		_, err := s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol")
+		_, err := s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol").Execute()
 		s.e.NoError(err)
 	}
 }
@@ -167,43 +167,43 @@ func (s *S3WebTestSuite) TestS3Web_003_CreateFile() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
 			"c": "d",
 		}},
-	})
+	}).Execute()
 	if s.e.NoError(err) {
 		s.Equal("id", res.Id)
-		s.Equal("b", s.e.GetTag(res, "a"))
+		s.Equal("b", s.e.GetTag(*res, "a"))
 	}
 }
 
 func (s *S3WebTestSuite) TestS3Web_005_AddS3Remote() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", s.s3remote)
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(s.s3remote).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3WebTestSuite) TestS3Web_006_AddS3WebRemote() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", s.webRemote)
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(s.webRemote).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3WebTestSuite) TestS3Web_010_ListEmptyRemoteCommits() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters, nil)
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web").RemoteParameters(s.webParameters).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
 }
 
 func (s *S3WebTestSuite) TestS3Web_011_GetBadRemoteCommit() {
-	_, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "web", "id2", s.webParameters)
+	_, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "web", "id2").RemoteParameters(s.webParameters).Execute()
 	s.e.APIError(err, "NoSuchObjectException")
 }
 
 func (s *S3WebTestSuite) TestS3Web_020_PushCommit() {
-	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.s3parameters, nil)
+	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id").RemoteParameters(s.s3parameters).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -211,7 +211,7 @@ func (s *S3WebTestSuite) TestS3Web_020_PushCommit() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_021_ListRemoteCommit() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters, nil)
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web").RemoteParameters(s.webParameters).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -220,16 +220,16 @@ func (s *S3WebTestSuite) TestS3Web_021_ListRemoteCommit() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_022_ListRemoteFilterOut() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"e"}})
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web").
+		RemoteParameters(s.webParameters).Tag([]string{"e"}).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
 }
 
 func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters,
-		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"a=b", "c=d"}})
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web").
+		RemoteParameters(s.webParameters).Tag([]string{"a=b", "c=d"}).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -237,15 +237,15 @@ func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_030_CreateSecondCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
 		Id:         "id2",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3WebTestSuite) TestS3Web_031_PushWeb() {
-	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "web", "id2", s.webParameters, nil)
+	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "web", "id2").RemoteParameters(s.webParameters).Execute()
 	if s.e.NoError(err) {
 		progress, err := s.e.WaitForOperation(res.Id)
 		s.Error(err)
@@ -254,7 +254,7 @@ func (s *S3WebTestSuite) TestS3Web_031_PushWeb() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_032_PushSecondCommit() {
-	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id2", s.s3parameters, nil)
+	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id2").RemoteParameters(s.s3parameters).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -262,7 +262,7 @@ func (s *S3WebTestSuite) TestS3Web_032_PushSecondCommit() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_033_ListMultipleCommits() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web", s.webParameters, nil)
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "web").RemoteParameters(s.webParameters).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 2)
 		s.Equal("id2", res[0].Id)
@@ -271,15 +271,15 @@ func (s *S3WebTestSuite) TestS3Web_033_ListMultipleCommits() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_040_DeleteLocalCommits() {
-	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
+	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 	if s.e.NoError(err) {
-		_, err = s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id2")
+		_, err = s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id2").Execute()
 		s.e.NoError(err)
 	}
 }
 
 func (s *S3WebTestSuite) TestS3Web_041_ListEmptyCommits() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", nil)
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo").Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -296,7 +296,7 @@ func (s *S3WebTestSuite) TestS3Web_042_UpdateFile() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_043_PullCommit() {
-	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "web", "id", s.webParameters, nil)
+	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "web", "id").RemoteParameters(s.webParameters).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -304,16 +304,16 @@ func (s *S3WebTestSuite) TestS3Web_043_PullCommit() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_044_PullDuplicate() {
-	_, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "web", "id", s.webParameters, nil)
+	_, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "web", "id").RemoteParameters(s.webParameters).Execute()
 	s.e.APIError(err, "ObjectExistsException")
 }
 
 func (s *S3WebTestSuite) TestS3Web_046_CheckoutCommit() {
-	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol")
+	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
-		_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id")
+		_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id").Execute()
 		if s.e.NoError(err) {
-			_, err = s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol")
+			_, err = s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol").Execute()
 			s.e.NoError(err)
 		}
 	}
@@ -327,19 +327,19 @@ func (s *S3WebTestSuite) TestS3Web_047_OriginalContents() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_050_RemoveRemote() {
-	_, err := s.e.RemoteApi.DeleteRemote(s.ctx, "foo", "origin")
+	_, err := s.e.RemoteApi.DeleteRemote(s.ctx, "foo", "origin").Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3WebTestSuite) TestS3Web_051_DeleteVolume() {
-	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol")
+	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
-		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol")
+		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol").Execute()
 		s.e.NoError(err)
 	}
 }
 
 func (s *S3WebTestSuite) TestS3Web_052_DeleteRepository() {
-	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo")
+	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo").Execute()
 	s.e.NoError(err)
 }

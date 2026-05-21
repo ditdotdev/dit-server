@@ -152,7 +152,7 @@ func (s *KubernetesWorkflowTestSuite) LaunchPod(name string, claim string) error
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_001_GetContext() {
-	res, _, err := s.e.Client.ContextsApi.GetContext(context.Background())
+	res, _, err := s.e.Client.ContextsApi.GetContext(context.Background()).Execute()
 	if s.e.NoError(err) {
 		s.Equal("kubernetes-csi", res.Provider)
 	}
@@ -164,23 +164,23 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_002_Kubectl() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_010_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_011_CreateVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_012_LaunchPod() {
-	vol, _, err := s.e.VolumeApi.GetVolume(s.ctx, "foo", "vol")
+	vol, _, err := s.e.VolumeApi.GetVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
 		pvc := vol.Config["pvc"].(string)
 		err = s.LaunchPod(s.pod1, pvc)
@@ -199,29 +199,29 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_013_WriteData() {
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_014_VolumeStatus() {
 	err := s.e.WaitForVolume("foo", "vol")
 	if s.e.NoError(err) {
-		res, _, err := s.e.VolumeApi.GetVolumeStatus(s.ctx, "foo", "vol")
+		res, _, err := s.e.VolumeApi.GetVolumeStatus(s.ctx, "foo", "vol").Execute()
 		if s.e.NoError(err) {
 			s.True(res.Ready)
-			s.Empty(res.Error)
+			s.Empty(res.GetError())
 		}
 	}
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_020_CreateCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
 		Id:         "id",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_021_CommitStatus() {
 	err := s.e.WaitForCommit("foo", "id")
 	if s.e.NoError(err) {
-		res, _, err := s.e.CommitApi.GetCommitStatus(s.ctx, "foo", "id")
+		res, _, err := s.e.CommitApi.GetCommitStatus(s.ctx, "foo", "id").Execute()
 		if s.e.NoError(err) {
 			s.True(res.Ready)
-			s.Empty(res.Error)
+			s.Empty(res.GetError())
 		}
 	}
 }
@@ -237,12 +237,12 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_023_DeletePod() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_030_Checkout() {
-	_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id")
+	_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id").Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_031_LaunchNewPod() {
-	vol, _, err := s.e.VolumeApi.GetVolume(s.ctx, "foo", "vol")
+	vol, _, err := s.e.VolumeApi.GetVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
 		pvc := vol.Config["pvc"].(string)
 		err = s.LaunchPod(s.pod2, pvc)
@@ -266,12 +266,12 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_033_DeleteClonedPod()
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_040_AddRemote() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", s.remote)
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(s.remote).Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_041_Push() {
-	op, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	op, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(op.Id)
 		s.e.NoError(err)
@@ -279,12 +279,12 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_041_Push() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_042_DeleteCommit() {
-	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
+	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 	s.e.NoError(err)
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_043_Pull() {
-	op, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	op, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(op.Id)
 		s.e.NoError(err)
@@ -292,14 +292,14 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_043_Pull() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_070_DeleteVolume() {
-	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol")
+	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
-		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol")
+		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol").Execute()
 		s.e.NoError(err)
 	}
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_071_DeleteRepository() {
-	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo")
+	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo").Execute()
 	s.e.NoError(err)
 }

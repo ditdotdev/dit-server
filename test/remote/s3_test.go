@@ -122,20 +122,20 @@ func TestS3TestSuite(t *testing.T) {
 }
 
 func (s *S3TestSuite) TestS3_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx, datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3TestSuite) TestS3_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo", datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
-	})
+	}).Execute()
 	if s.e.NoError(err) {
-		_, err := s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol")
+		_, err := s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol").Execute()
 		s.e.NoError(err)
 	}
 }
@@ -151,21 +151,21 @@ func (s *S3TestSuite) TestS3_003_CreateFile() {
 }
 
 func (s *S3TestSuite) TestS3_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo", datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
 			"c": "d",
 		}},
-	})
+	}).Execute()
 	if s.e.NoError(err) {
 		s.Equal("id", res.Id)
-		s.Equal("b", s.e.GetTag(res, "a"))
+		s.Equal("b", s.e.GetTag(*res, "a"))
 	}
 }
 
 func (s *S3TestSuite) TestS3_005_AddRemote() {
-	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", s.remote)
+	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(s.remote).Execute()
 	if s.e.NoError(err) {
 		s.Equal("origin", res.Name)
 		s.Equal(s.s3bucket, res.Properties["bucket"])
@@ -174,19 +174,19 @@ func (s *S3TestSuite) TestS3_005_AddRemote() {
 }
 
 func (s *S3TestSuite) TestS3_010_ListEmptyRemoteCommits() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams, nil)
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
 }
 
 func (s *S3TestSuite) TestS3_011_GetBadRemoteCommit() {
-	_, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "origin", "id2", s.remoteParams)
+	_, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "origin", "id2").RemoteParameters(s.remoteParams).Execute()
 	s.e.APIError(err, "NoSuchObjectException")
 }
 
 func (s *S3TestSuite) TestS3_020_PushCommit() {
-	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -194,7 +194,7 @@ func (s *S3TestSuite) TestS3_020_PushCommit() {
 }
 
 func (s *S3TestSuite) TestS3_021_ListRemoteCommit() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams, nil)
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -203,16 +203,16 @@ func (s *S3TestSuite) TestS3_021_ListRemoteCommit() {
 }
 
 func (s *S3TestSuite) TestS3_022_ListRemoteFilterOut() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"e"}})
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
+		RemoteParameters(s.remoteParams).Tag([]string{"e"}).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
 }
 
 func (s *S3TestSuite) TestS3_023_ListRemoteFilterInclude() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams,
-		&datadatdat.ListRemoteCommitsOpts{Tag: &[]string{"a=b", "c=d"}})
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
+		RemoteParameters(s.remoteParams).Tag([]string{"a=b", "c=d"}).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -220,26 +220,26 @@ func (s *S3TestSuite) TestS3_023_ListRemoteFilterInclude() {
 }
 
 func (s *S3TestSuite) TestS3_030_PushDuplicateCommit() {
-	_, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	_, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	s.e.APIError(err, "ObjectExistsException")
 }
 
 func (s *S3TestSuite) TestS3_031_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id", datadatdat.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(datadatdat.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
 			"c": "e",
 		}},
-	})
+	}).Execute()
 	if s.e.NoError(err) {
-		s.Equal("B", s.e.GetTag(res, "a"))
+		s.Equal("B", s.e.GetTag(*res, "a"))
 	}
 }
 
 func (s *S3TestSuite) TestS3_032_PushMedata() {
-	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&datadatdat.PushOpts{MetadataOnly: datadatdat.PtrBool(true)})
+	res, _, err := s.e.OperationsApi.Push(s.ctx, "foo", "origin", "id").
+		RemoteParameters(s.remoteParams).MetadataOnly(true).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -247,20 +247,20 @@ func (s *S3TestSuite) TestS3_032_PushMedata() {
 }
 
 func (s *S3TestSuite) TestS3_033_RemoteMetadataUpdated() {
-	res, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "origin", "id", s.remoteParams)
+	res, _, err := s.e.RemoteApi.GetRemoteCommit(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		s.Equal("id", res.Id)
-		s.Equal("B", s.e.GetTag(res, "a"))
+		s.Equal("B", s.e.GetTag(*res, "a"))
 	}
 }
 
 func (s *S3TestSuite) TestS3_040_DeleteLocalCommit() {
-	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
+	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3TestSuite) TestS3_041_ListEmptyCommits() {
-	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo", nil)
+	res, _, err := s.e.CommitApi.ListCommits(s.ctx, "foo").Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 0)
 	}
@@ -277,7 +277,7 @@ func (s *S3TestSuite) TestS3_042_UpdateFile() {
 }
 
 func (s *S3TestSuite) TestS3_043_PullCommit() {
-	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -285,13 +285,13 @@ func (s *S3TestSuite) TestS3_043_PullCommit() {
 }
 
 func (s *S3TestSuite) TestS3_044_PullDuplicate() {
-	_, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams, nil)
+	_, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").RemoteParameters(s.remoteParams).Execute()
 	s.e.APIError(err, "ObjectExistsException")
 }
 
 func (s *S3TestSuite) TestS3_045_PullMetadata() {
-	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id", s.remoteParams,
-		&datadatdat.PullOpts{MetadataOnly: datadatdat.PtrBool(true)})
+	res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").
+		RemoteParameters(s.remoteParams).MetadataOnly(true).Execute()
 	if s.e.NoError(err) {
 		_, err = s.e.WaitForOperation(res.Id)
 		s.e.NoError(err)
@@ -299,11 +299,11 @@ func (s *S3TestSuite) TestS3_045_PullMetadata() {
 }
 
 func (s *S3TestSuite) TestS3_046_CheckoutCommit() {
-	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol")
+	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
-		_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id")
+		_, err := s.e.CommitApi.CheckoutCommit(s.ctx, "foo", "id").Execute()
 		if s.e.NoError(err) {
-			_, err = s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol")
+			_, err = s.e.VolumeApi.ActivateVolume(s.ctx, "foo", "vol").Execute()
 			s.e.NoError(err)
 		}
 	}
@@ -317,32 +317,32 @@ func (s *S3TestSuite) TestS3_047_OriginalContents() {
 }
 
 func (s *S3TestSuite) TestS3_050_RemoveRemote() {
-	_, err := s.e.RemoteApi.DeleteRemote(s.ctx, "foo", "origin")
+	_, err := s.e.RemoteApi.DeleteRemote(s.ctx, "foo", "origin").Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3TestSuite) TestS3_051_AddRemoteNoKeys() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo", datadatdat.Remote{
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
 			"bucket": s.s3bucket,
 			"path":   s.s3path,
 		},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *S3TestSuite) TestS3_052_ListCommitsKeys() {
-	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin",
-		datadatdat.RemoteParameters{
+	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
+		RemoteParameters(datadatdat.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": s.remote.Properties["accessKey"],
 				"secretKey": s.remote.Properties["secretKey"],
 				"region":    s.remote.Properties["region"],
 			},
-		}, nil)
+		}).Execute()
 	if s.e.NoError(err) {
 		s.Len(res, 1)
 		s.Equal("id", res[0].Id)
@@ -350,35 +350,35 @@ func (s *S3TestSuite) TestS3_052_ListCommitsKeys() {
 }
 
 func (s *S3TestSuite) TestS3_053_ListCommitsNoKeys() {
-	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin", s.remoteParams, nil)
+	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").RemoteParameters(s.remoteParams).Execute()
 	s.e.APIError(err, "IllegalArgumentException")
 }
 
 func (s *S3TestSuite) TestS3_054_ListCommitsIncorrectKeys() {
-	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin",
-		datadatdat.RemoteParameters{
+	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
+		RemoteParameters(datadatdat.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": "ACCESS",
 				"secretKey": "SECRET",
 				"region":    s.remote.Properties["region"],
 			},
-		}, nil)
+		}).Execute()
 	s.e.APIError(err, "S3Exception")
 }
 
 func (s *S3TestSuite) TestS3_055_PullKeys() {
-	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id")
+	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 	if s.e.NoError(err) {
-		res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id",
-			datadatdat.RemoteParameters{
+		res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").
+			RemoteParameters(datadatdat.RemoteParameters{
 				Provider: "s3",
 				Properties: map[string]interface{}{
 					"accessKey": s.remote.Properties["accessKey"],
 					"secretKey": s.remote.Properties["secretKey"],
 					"region":    s.remote.Properties["region"],
 				},
-			}, nil)
+			}).Execute()
 		if s.e.NoError(err) {
 			_, err = s.e.WaitForOperation(res.Id)
 			s.e.NoError(err)
@@ -387,14 +387,14 @@ func (s *S3TestSuite) TestS3_055_PullKeys() {
 }
 
 func (s *S3TestSuite) TestS3_070_DeleteVolume() {
-	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol")
+	_, err := s.e.VolumeApi.DeactivateVolume(s.ctx, "foo", "vol").Execute()
 	if s.e.NoError(err) {
-		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol")
+		_, err = s.e.VolumeApi.DeleteVolume(s.ctx, "foo", "vol").Execute()
 		s.e.NoError(err)
 	}
 }
 
 func (s *S3TestSuite) TestS3_071_DeleteRepository() {
-	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo")
+	_, err := s.e.RepoApi.DeleteRepository(s.ctx, "foo").Execute()
 	s.e.NoError(err)
 }
