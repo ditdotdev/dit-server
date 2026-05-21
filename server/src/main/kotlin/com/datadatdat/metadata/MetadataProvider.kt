@@ -804,6 +804,22 @@ class MetadataProvider(
         }
     }
 
+    // Direct GUID-based delete for partial-failure rollback in
+    // CommitOrchestrator.createCommit. We could re-query for the
+    // CommitInfo first and call the other deleteCommit, but the extra
+    // round-trip buys nothing when we already have the GUID + volumeset.
+    // Used only on the rollback path; happy-path deletion still goes
+    // through markVolumeSetCommitDeleting + reaper.
+    fun deleteCommitByGuid(
+        volumeSet: String,
+        guid: String,
+    ) {
+        val vsUuid = Uuid.parse(volumeSet)
+        Commits.deleteWhere {
+            (Commits.guid eq guid) and (Commits.volumeSet eq vsUuid)
+        }
+    }
+
     fun createOperation(
         repo: String,
         volumeSet: String,

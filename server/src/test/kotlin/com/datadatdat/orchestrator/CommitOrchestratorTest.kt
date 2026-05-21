@@ -98,6 +98,26 @@ class CommitOrchestratorTest : StringSpec() {
             }
         }
 
+        // Partial-failure rollback: when the storage layer's commitVolumeSet
+        // (or any subsequent commitVolume) throws, the commit row inserted
+        // earlier in this call must not survive. Without rollback,
+        // listDeletingCommits doesn't catch the orphan (it's ACTIVE) and
+        // the commit leaks forever (#177).
+        "storage-layer commit failure rolls back the commit row" {
+            every { context.commitVolumeSet(any(), any()) } throws RuntimeException("simulated ZFS failure")
+            every { context.deleteVolumeSetCommit(any(), any()) } just Runs
+            every { context.deleteVolumeCommit(any(), any(), any()) } just Runs
+
+            shouldThrow<RuntimeException> {
+                services.commits.createCommit("foo", Commit(id = "id"))
+            }
+
+            // Commit row must be gone — getCommit throws NoSuchObjectException
+            shouldThrow<NoSuchObjectException> {
+                transaction { services.metadata.getCommit("foo", "id") }
+            }
+        }
+
         "create commit uses current active volume set" {
             services.commits.createCommit("foo", Commit(id = "id", properties = mapOf("a" to "b")))
             val (volumeSet, commit) =
