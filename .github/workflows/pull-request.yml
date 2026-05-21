@@ -59,6 +59,18 @@ jobs:
         with:
           files: '**/build/test-results/**/*.xml'
 
+      # Jacoco generates the XML report at server/build/reports/jacoco/test
+      # as part of `./gradlew test` (server/gradle/unitTest.gradle wires
+      # jacocoTestReport into the test task). Upload it to Codecov so we
+      # can track coverage trends. continue-on-error so Codecov hiccups
+      # don't fail the whole PR.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        if: always()
+        with:
+          files: ./server/build/reports/jacoco/test/jacocoTestReport.xml
+        continue-on-error: true
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         if: failure()
