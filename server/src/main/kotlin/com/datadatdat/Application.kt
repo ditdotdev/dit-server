@@ -44,13 +44,32 @@ import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
 
+// When true, server stack traces are serialized into ApiError.details
+// for every error response. Acceptable for the local-CLI use case
+// (loopback, single trusted user) but leaks server file paths, class
+// names, and library versions to every API client. Gated off by
+// default; opt in via `-Ddatadatdat.debug=true` on the JVM command
+// line. Read on every call (not cached) so tests can toggle the
+// property; the lookup cost is negligible relative to the rest of
+// the error-response path.
+//
+// The local-CLI Docker image sets this in server/src/scripts/run; the
+// multi-tenant datadatdat-remote-server must NOT.
+internal fun includeStackTraceInErrors(): Boolean = System.getProperty("datadatdat.debug")?.toBoolean() == true
+
 fun exceptionToError(t: Throwable): Any {
-    val sw = StringWriter()
-    t.printStackTrace(PrintWriter(sw))
+    val details =
+        if (includeStackTraceInErrors()) {
+            val sw = StringWriter()
+            t.printStackTrace(PrintWriter(sw))
+            sw.toString()
+        } else {
+            null
+        }
     return Error(
         code = t.javaClass.simpleName,
         message = t.message ?: "unknown error",
-        details = sw.toString(),
+        details = details,
     )
 }
 
