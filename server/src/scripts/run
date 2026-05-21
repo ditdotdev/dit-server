@@ -124,11 +124,16 @@ if [[ $DATADATDAT_CONTEXT = "docker-zfs" ]]; then
   # Forward docker volume requests to datadatdat-server
   /datadatdat/docker-volume-proxy /run/docker/plugins/$DATADATDAT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
 
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=pool=$DATADATDAT_IDENTITY -jar /datadatdat/datadatdat-server.jar
+  # -Ddatadatdat.debug=true enables stack traces in ApiError.details
+  # responses. Safe here — this image serves the local CLI over
+  # loopback; the user is the operator and the stack helps diagnose
+  # ZFS / Docker plumbing issues. NOT set in datadatdat-remote-server
+  # which fronts the API to remote clients.
+  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=pool=$DATADATDAT_IDENTITY -Ddatadatdat.debug=true -jar /datadatdat/datadatdat-server.jar
 elif [[ $DATADATDAT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=$DATADATDAT_CONFIG -Djdk.tls.client.protocols=TLSv1.2 -jar /datadatdat/datadatdat-server.jar
+  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=$DATADATDAT_CONFIG -Ddatadatdat.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /datadatdat/datadatdat-server.jar
 else
   log_error "Unknown context $DATADATDAT_CONTEXT"
 fi
