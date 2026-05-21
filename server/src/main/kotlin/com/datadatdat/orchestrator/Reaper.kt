@@ -24,42 +24,79 @@ class Reaper(
         val log = LoggerFactory.getLogger(Reaper::class.java)
     }
 
+    // Signaled work pending. Read under the lock by the reaper thread,
+    // set under the lock by any other thread calling signal(). A simple
+    // boolean is sufficient — multiple signals while a reap is in flight
+    // collapse to "do one more iteration after this one finishes".
+    private var pending = false
+
     fun signal() {
         lock.lock()
-        cv.signal()
-        lock.unlock()
+        try {
+            pending = true
+            cv.signal()
+        } finally {
+            lock.unlock()
+        }
     }
 
     override fun run() {
-        lock.lock()
-        try {
-            var changed = true
-            while (true) {
-                if (!changed) {
-                    cv.await()
-                }
-
-                log.debug("reaping storage objects")
-
-                changed = false
-                // First pass - delete commits without clones
+        // Previously the lock was held for the ENTIRE body of run() (the
+        // condvar wait + all subsequent reap work, which includes
+        // shell-out ZFS calls that can take seconds). Any concurrent
+        // signal() from a request handler (deleteVolume, deleteCommit,
+        // …) would block on lock.lock() until the in-flight reap
+        // finished, adding ZFS latency directly to user-facing DELETE
+        // requests. Now we only hold the lock around the condvar
+        // wait/signal — the reap body runs without it, so signals are
+        // never blocked by ongoing work.
+        //
+        // Loop semantics match the old code: keep iterating while any
+        // reapXxx made progress (deleting one commit can unblock others
+        // via the no-clones constraint); only wait on the condvar when a
+        // full pass produced no changes.
+        var changed = true
+        while (true) {
+            if (!changed) {
+                lock.lock()
                 try {
-                    changed = reapCommits() || changed
-                } catch (e: Throwable) {
-                    log.error("error during reaping", e)
+                    while (!pending) {
+                        cv.await()
+                    }
+                    pending = false
+                } finally {
+                    lock.unlock()
                 }
-
-                // Next pass, mark any inactive volume sets that no longer have commits as deleting
-                markEmptyVolumeSets()
-
-                // Delete any volumes explicitly marked for deletion
-                changed = reapVolumes() || changed
-
-                // Now go and delete any volume sets that don't have commits
-                changed = reapVolumeSets() || changed
             }
-        } finally {
-            lock.unlock()
+
+            log.debug("reaping storage objects")
+
+            // Do the reap pass without holding the lock. A signal arriving
+            // mid-reap sets pending=true and the next iteration will pick
+            // it up. If multiple signals arrive during the reap, they
+            // collapse into one extra iteration (still correct — the
+            // reapXxx methods re-query the metadata each pass).
+            changed = false
+            try {
+                changed = reapCommits() || changed
+            } catch (e: Throwable) {
+                log.error("error during reapCommits", e)
+            }
+            try {
+                markEmptyVolumeSets()
+            } catch (e: Throwable) {
+                log.error("error during markEmptyVolumeSets", e)
+            }
+            try {
+                changed = reapVolumes() || changed
+            } catch (e: Throwable) {
+                log.error("error during reapVolumes", e)
+            }
+            try {
+                changed = reapVolumeSets() || changed
+            } catch (e: Throwable) {
+                log.error("error during reapVolumeSets", e)
+            }
         }
     }
 
