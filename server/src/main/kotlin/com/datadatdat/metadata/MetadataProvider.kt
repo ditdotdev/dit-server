@@ -54,6 +54,18 @@ class MetadataProvider(
     val inMemory: Boolean = true,
     val databaseName: String = "datadatdat",
 ) {
+    companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(MetadataProvider::class.java)
+
+        // Hikari connection pool sizing. The reaper thread, the Ktor request
+        // workers, and the operation-executor threads all borrow connections
+        // independently. The previous size (3) starved easily under a single
+        // in-flight push/pull operation plus three concurrent API requests.
+        // 10 leaves headroom without over-committing in resource-constrained
+        // environments.
+        private const val MAX_POOL_SIZE = 10
+    }
+
     enum class VolumeState {
         INACTIVE,
         ACTIVE,
@@ -66,7 +78,7 @@ class MetadataProvider(
         val config = HikariConfig()
         config.driverClassName = "org.h2.Driver"
         config.jdbcUrl = "jdbc:h2:mem:$databaseName"
-        config.maximumPoolSize = 3
+        config.maximumPoolSize = MAX_POOL_SIZE
         config.isAutoCommit = false
         config.transactionIsolation = "TRANSACTION_READ_COMMITTED"
         config.validate()
@@ -79,7 +91,7 @@ class MetadataProvider(
         config.jdbcUrl = "jdbc:postgresql:$databaseName"
         config.username = "postgres"
         config.password = "postgres"
-        config.maximumPoolSize = 3
+        config.maximumPoolSize = MAX_POOL_SIZE
         config.isAutoCommit = false
         config.transactionIsolation = "TRANSACTION_READ_COMMITTED"
         config.validate()
@@ -126,32 +138,26 @@ class MetadataProvider(
     private fun convertRepository(it: ResultRow): Repository {
         val name = it[Repositories.name]
         val metadata = it[Repositories.metadata]
-        println("DEBUG convertRepository: name=$name, metadata='$metadata'")
         val properties: Map<String, Any> =
             // Repositories.metadata is non-nullable in the schema, so only the
             // literal-string "null" path is reachable (Gson serializes a null
             // reference into the four-character string).
             if (metadata == "null") {
-                println("DEBUG convertRepository: metadata is 'null', using empty map")
                 emptyMap()
             } else {
                 try {
                     gson.fromJson(metadata, object : TypeToken<Map<String, Any>>() {}.type) as? Map<String, Any> ?: emptyMap()
                 } catch (e: Exception) {
-                    println("DEBUG convertRepository: failed to parse metadata '$metadata', using empty map: ${e.message}")
+                    log.warn("convertRepository: failed to parse metadata for '$name', using empty map", e)
                     emptyMap()
                 }
             }
-        println("DEBUG convertRepository: parsed_properties=$properties")
         return Repository(name = name, properties = properties)
     }
 
     fun createRepository(repo: Repository) {
         // Repository.properties is non-nullable per the model; no Elvis fallback needed.
         val serialized = gson.toJson(repo.properties)
-        println(
-            "DEBUG createRepository: name=${repo.name}, properties=${repo.properties}, serialized='$serialized'",
-        )
         try {
             Repositories.insert {
                 it[name] = repo.name
@@ -691,11 +697,15 @@ class MetadataProvider(
                     conditions.add((Tags.key eq key) and (Tags.value eq value))
                 }
 
+                // andWhere/withDistinct return a NEW query; the previous code
+                // built it then threw it away by returning the original `q`,
+                // which dropped the DISTINCT and allowed the inner-join with
+                // Tags to emit duplicate Commits rows when multiple tag
+                // filters match the same commit. Post-filtering by tagsMatch
+                // then preserved those duplicates in the response.
                 q
-                    .andWhere {
-                        conditions.compoundOr()
-                    }.withDistinct(true)
-                q
+                    .andWhere { conditions.compoundOr() }
+                    .withDistinct(true)
             } else {
                 Commits.selectAll().where { (Commits.repo eq repo) and (Commits.state eq VolumeState.ACTIVE) }
             }
