@@ -182,7 +182,7 @@ func (e *EndToEndTest) WaitForServer() error {
 	success := false
 	tried := 1
 	for ok := true; ok; ok = !success {
-		_, _, err := e.Client.RepositoriesApi.ListRepositories(context.Background())
+		_, _, err := e.Client.RepositoriesApi.ListRepositories(context.Background()).Execute()
 		if err == nil {
 			success = true
 		} else {
@@ -241,7 +241,7 @@ func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
  * Get the path of a volume.
  */
 func (e *EndToEndTest) GetVolumePath(repo string, volume string) (string, error) {
-	v, _, err := e.Client.VolumesApi.GetVolume(context.Background(), repo, volume)
+	v, _, err := e.Client.VolumesApi.GetVolume(context.Background(), repo, volume).Execute()
 	if err != nil {
 		return "", err
 	}
@@ -408,9 +408,9 @@ func (e *EndToEndTest) TeardownStandardSsh() {
 }
 
 func (e *EndToEndTest) APIError(err error, code string) bool {
-	if openApiError, ok := err.(datadatdat.GenericOpenAPIError); ok {
+	if openApiError, ok := err.(*datadatdat.GenericOpenAPIError); ok {
 		if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
-			return e.Equal(code, datadatdatApiError.Code, datadatdatApiError.Message)
+			return e.Equal(code, datadatdatApiError.GetCode(), datadatdatApiError.Message)
 		}
 	}
 	return e.Error(err)
@@ -418,7 +418,7 @@ func (e *EndToEndTest) APIError(err error, code string) bool {
 
 func (e *EndToEndTest) NoError(err error) bool {
 	if err != nil {
-		if openApiError, ok := err.(datadatdat.GenericOpenAPIError); ok {
+		if openApiError, ok := err.(*datadatdat.GenericOpenAPIError); ok {
 			if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
 				return e.Fail("unexpected error", datadatdatApiError.Message)
 			}
@@ -439,8 +439,8 @@ func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, 
 	var lastEntry int32 = 0
 	result := []datadatdat.ProgressEntry{}
 	for ok := true; ok; ok = !completed {
-		progress, _, err := e.Client.OperationsApi.GetOperationProgress(context.Background(), id,
-			&datadatdat.GetOperationProgressOpts{LastId: &lastEntry})
+		progress, _, err := e.Client.OperationsApi.GetOperationProgress(context.Background(), id).
+			LastId(lastEntry).Execute()
 		if err != nil {
 			return nil, err
 		}
@@ -450,9 +450,9 @@ func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, 
 			case "COMPLETE":
 				completed = true
 			case "ABORT":
-				return result, fmt.Errorf("operation aborted: %s", p.Message)
+				return result, fmt.Errorf("operation aborted: %s", p.GetMessage())
 			case "FAILED":
-				return result, fmt.Errorf("operation failed: %s", p.Message)
+				return result, fmt.Errorf("operation failed: %s", p.GetMessage())
 			}
 			if p.Id > lastEntry {
 				lastEntry = p.Id
@@ -468,12 +468,12 @@ func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, 
 func (e *EndToEndTest) WaitForVolume(repo string, volume string) error {
 	ready := false
 	for ok := true; ok; ok = !ready {
-		res, _, err := e.VolumeApi.GetVolumeStatus(context.Background(), repo, volume)
+		res, _, err := e.VolumeApi.GetVolumeStatus(context.Background(), repo, volume).Execute()
 		if err != nil {
 			return err
 		}
-		if res.Error != "" {
-			return errors.New(res.Error)
+		if res.GetError() != "" {
+			return errors.New(res.GetError())
 		}
 		ready = res.Ready
 		if !ready {
@@ -486,12 +486,12 @@ func (e *EndToEndTest) WaitForVolume(repo string, volume string) error {
 func (e *EndToEndTest) WaitForCommit(repo string, id string) error {
 	ready := false
 	for ok := true; ok; ok = !ready {
-		res, _, err := e.CommitApi.GetCommitStatus(context.Background(), repo, id)
+		res, _, err := e.CommitApi.GetCommitStatus(context.Background(), repo, id).Execute()
 		if err != nil {
 			return err
 		}
-		if res.Error != "" {
-			return errors.New(res.Error)
+		if res.GetError() != "" {
+			return errors.New(res.GetError())
 		}
 		ready = res.Ready
 		if !ready {

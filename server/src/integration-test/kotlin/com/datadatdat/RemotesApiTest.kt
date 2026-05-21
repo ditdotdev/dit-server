@@ -14,7 +14,6 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -224,8 +223,9 @@ class RemotesApiTest : StringSpec() {
             testApplication {
                 application { mainProvider(services) }
                 client
-                    .get("/v1/repositories/repo/remotes/foo/commits") {
-                        header("datadatdat-remote-parameters", "{\"provider\":\"nop\",\"properties\":{}}")
+                    .post("/v1/repositories/repo/remotes/foo/commits") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"provider\":\"nop\",\"properties\":{}}")
                     }.apply {
                         status shouldBe HttpStatusCode.OK
                         contentType().toString() shouldBe "application/json"
@@ -242,8 +242,9 @@ class RemotesApiTest : StringSpec() {
             testApplication {
                 application { mainProvider(services) }
                 client
-                    .get("/v1/repositories/repo/remotes/foo/commits/c") {
-                        header("datadatdat-remote-parameters", "{\"provider\":\"nop\",\"properties\":{}}")
+                    .post("/v1/repositories/repo/remotes/foo/commits/c") {
+                        contentType(ContentType.Application.Json)
+                        setBody("{\"provider\":\"nop\",\"properties\":{}}")
                     }.apply {
                         status shouldBe HttpStatusCode.OK
                         contentType().toString() shouldBe "application/json"
