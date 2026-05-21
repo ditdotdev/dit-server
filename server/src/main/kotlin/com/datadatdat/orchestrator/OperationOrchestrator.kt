@@ -16,6 +16,7 @@ import com.datadatdat.models.Volume
 import com.datadatdat.operation.OperationExecutor
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The operation manager is responsible for starting, stopping, and monitoring all active
@@ -31,7 +32,16 @@ class OperationOrchestrator(
         val log = LoggerFactory.getLogger(OperationOrchestrator::class.java)
     }
 
-    private val runningOperations: MutableMap<String, OperationExecutor> = mutableMapOf()
+    // ConcurrentHashMap because this map is mutated from three independent
+    // contexts:
+    //   - Ktor request handlers (put on startPull/startPush, lookup on abort)
+    //   - The OperationExecutor's completion callback (remove)
+    //   - loadState / clearState during startup/shutdown (clear, putAll)
+    // A plain MutableMap here was unsafe — two concurrent startPushes plus a
+    // completion racing the abort path could corrupt the structure or miss
+    // an abort. ConcurrentHashMap.put/remove/get are individually atomic;
+    // we don't need check-and-set semantics here so this is sufficient.
+    private val runningOperations: ConcurrentHashMap<String, OperationExecutor> = ConcurrentHashMap()
 
     private val operationComplete = fun(operationId: String) {
         runningOperations.remove(operationId)

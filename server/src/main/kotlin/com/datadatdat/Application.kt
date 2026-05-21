@@ -104,8 +104,15 @@ fun Application.main() {
 
     val services = ServiceLocator(runtimeContext, false)
     services.metadata.init()
-    Thread(services.reaper).start()
+    // Order matters: loadState() must run BEFORE the reaper starts.
+    // The reaper's markEmptyVolumeSets sweep treats INACTIVE volumesets
+    // with no associated commits as eligible for deletion. An in-flight
+    // operation that survived a previous run leaves its volumeset
+    // INACTIVE in the DB until loadState re-registers the executor as
+    // a runningOperation. If the reaper runs first, that window allows
+    // it to mark a still-needed volumeset DELETING.
     services.operations.loadState()
+    Thread(services.reaper).start()
     mainProvider(services)
 }
 
