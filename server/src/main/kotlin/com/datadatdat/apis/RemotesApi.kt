@@ -70,30 +70,27 @@ fun Route.remotesApi(services: ServiceLocator) {
         }
     }
 
+    // listRemoteCommits and getRemoteCommit historically used GET with a
+    // `datadatdat-remote-parameters` object header. The OpenAPI v7 client
+    // generator can't encode complex objects in HTTP headers without
+    // producing invalid header field names, so these moved to POST with
+    // RemoteParameters in the request body. See datadatdat-client-go#35.
     route("/v1/repositories/{repositoryName}/remotes/{remoteName}/commits") {
-        get {
+        post {
             val repo = getRepoName(call)
             val remoteName = getRemoteName(call)
-            val params =
-                services.gson.fromJson(
-                    call.request.headers["datadatdat-remote-parameters"],
-                    RemoteParameters::class.java,
-                )
+            val params = call.receive(RemoteParameters::class)
             val tags = call.request.queryParameters.getAll("tag")
             call.respond(services.remotes.listRemoteCommits(repo, remoteName, params, tags))
         }
     }
 
     route("/v1/repositories/{repositoryName}/remotes/{remoteName}/commits/{commitId}") {
-        get {
+        post {
             val repo = getRepoName(call)
             val remoteName = getRemoteName(call)
             val commitId = getCommitId(call)
-            val params =
-                services.gson.fromJson(
-                    call.request.headers["datadatdat-remote-parameters"],
-                    RemoteParameters::class.java,
-                )
+            val params = call.receive(RemoteParameters::class)
             call.respond(services.remotes.getRemoteCommit(repo, remoteName, params, commitId))
         }
     }

@@ -23,15 +23,15 @@ func (s *TeardownTestSuite) TearDownSuite() {
 }
 
 func (s *TeardownTestSuite) TestTeardown_001_CreateRepository() {
-	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background(), datadatdatclient.Repository{
+	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background()).Repository(datadatdatclient.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{"a": "b"},
-	})
+	}).Execute()
 	s.e.NoError(err)
 }
 
 func (s *TeardownTestSuite) TestTeardown_002_GetRepository() {
-	repo, _, err := s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo")
+	repo, _, err := s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo").Execute()
 	if s.e.NoError(err) {
 		s.Equal("foo", repo.Name)
 		s.Len(repo.Properties, 1)
@@ -44,7 +44,7 @@ func (s *TeardownTestSuite) TestTeardown_003_Restart() {
 	s.e.NoError(err)
 	err = s.e.WaitForServer()
 	s.e.NoError(err)
-	repo, _, err := s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo")
+	repo, _, err := s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo").Execute()
 	if s.e.NoError(err) {
 		s.NotNil(repo)
 		s.Equal("foo", repo.Name)
@@ -58,7 +58,7 @@ func (s *TeardownTestSuite) TestTeardown_004_RestartTeardown() {
 	s.e.NoError(err)
 	err = s.e.WaitForServer()
 	s.e.NoError(err)
-	_, _, err = s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo")
+	_, _, err = s.e.Client.RepositoriesApi.GetRepository(context.Background(), "foo").Execute()
 	s.e.APIError(err, "NoSuchObjectException")
 }
 

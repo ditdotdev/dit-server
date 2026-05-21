@@ -61,7 +61,7 @@ func (s *KubernetesConfigTestSuite) TestKubernetesConfig_001_StartServer() {
 }
 
 func (s *KubernetesConfigTestSuite) TestKubernetesConfig_002_GetConfiguration() {
-	res, _, err := s.e.Client.ContextsApi.GetContext(context.Background())
+	res, _, err := s.e.Client.ContextsApi.GetContext(context.Background()).Execute()
 	if s.e.NoError(err) {
 		s.Len(res.Properties, 5)
 		s.Equal(s.ConfigFile, res.Properties["configFile"])

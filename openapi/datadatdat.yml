@@ -528,18 +528,35 @@ paths:
         default:
           $ref: "#/components/responses/apiError"
 
+  # listRemoteCommits and getRemoteCommit historically used GET with a
+  # Datadatdat-remote-parameters object header. The OpenAPI v7 client
+  # generator can't encode complex objects in HTTP headers without
+  # producing invalid header field names, so these moved to POST with
+  # RemoteParameters in the request body — matching the pull/push
+  # pattern. See datadatdat-client-go#35.
   /v1/repositories/{repositoryName}/remotes/{remoteName}/commits:
     parameters:
       - $ref: "#/components/parameters/repositoryName"
       - $ref: "#/components/parameters/remoteName"
-      - $ref: "#/components/parameters/remoteParameters"
-    get:
+    post:
       summary: List remote commits
+      description: |
+        Lists the commits available on a remote. Despite being a read
+        operation, this uses POST because the remote-specific connection
+        parameters (credentials, region, etc.) are passed in the request
+        body to avoid encoding a complex object in headers or query strings.
       operationId: listRemoteCommits
       tags:
         - remotes
       parameters:
         - $ref: "#/components/parameters/tagQuery"
+      requestBody:
+        description: Provider-specific parameters used to reach the remote
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/remoteParameters"
       responses:
         "200":
           description: List of commits
@@ -549,7 +566,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/commit"
-        "401":
+        "400":
           $ref: "#/components/responses/badInput"
         "404":
           $ref: "#/components/responses/noSuchObject"
@@ -560,12 +577,22 @@ paths:
       - $ref: "#/components/parameters/repositoryName"
       - $ref: "#/components/parameters/remoteName"
       - $ref: "#/components/parameters/commitId"
-      - $ref: "#/components/parameters/remoteParameters"
-    get:
+    post:
       summary: Get a remote commit
+      description: |
+        Fetches a single commit from a remote. Uses POST for the same
+        reason as listRemoteCommits: the remote connection parameters
+        travel in the request body.
       operationId: getRemoteCommit
       tags:
         - remotes
+      requestBody:
+        description: Provider-specific parameters used to reach the remote
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/remoteParameters"
       responses:
         "200":
           description: Remote commit
@@ -573,7 +600,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/commit"
-        "401":
+        "400":
           $ref: "#/components/responses/badInput"
         "404":
           $ref: "#/components/responses/noSuchObject"
@@ -1008,13 +1035,6 @@ components:
       description: Name of the volume
       schema:
         type: string
-    remoteParameters:
-      name: datadatdat-remote-parameters
-      description: Remote-specific parameters
-      required: true
-      in: header
-      schema:
-        $ref: "#/components/schemas/remoteParameters"
     tagQuery:
       name: tag
       description: Tags (name or name=value) to search for
