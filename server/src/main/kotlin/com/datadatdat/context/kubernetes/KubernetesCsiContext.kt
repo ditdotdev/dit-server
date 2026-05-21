@@ -404,6 +404,27 @@ class KubernetesCsiContext(
         log.info("Deleted PersistentVolumeClaim '$pvc'")
     }
 
+    // Defense-in-depth: every name interpolated into YAML below already
+    // flows through NameUtil at the API entry points. This re-validates
+    // immediately before YAML construction so any future code path that
+    // reaches commitVolume/cloneVolume without prior validation (e.g. a
+    // new internal caller, a server-side derived name, an attacker-
+    // controlled config field that someone forgot was attacker-
+    // controlled) cannot inject YAML. Stricter than NameUtil — also
+    // rejects '_' and ':' which NameUtil's "ZFS subset" permits, but
+    // which Kubernetes resource names don't allow.
+    private val k8sNameRegex = "^[a-zA-Z0-9\\-.]+$".toRegex()
+
+    private fun requireValidK8sName(
+        name: String,
+        what: String,
+    ) {
+        require(k8sNameRegex.matches(name)) {
+            "invalid $what for Kubernetes YAML construction: '$name' — must match [a-zA-Z0-9.-]+"
+        }
+        require(name.length in 1..253) { "invalid $what length: $name" }
+    }
+
     /**
      * VolumeSnapshot is GA on snapshot.storage.k8s.io/v1; the alpha API this code originally targeted has
      * been removed from upstream Kubernetes for years. We still apply via `kubectl` instead of using the
@@ -424,6 +445,18 @@ class KubernetesCsiContext(
         val pvc = config["pvc"] as? String ?: throw IllegalStateException("missing or invalid pvc name in volume config")
         val size = config["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$pvc-$commitId"
+        val snapshotClass = properties["snapshotClass"]
+
+        // Validate every interpolated string. Size strings are an
+        // exception — they include digits + a unit suffix (e.g. "10Gi")
+        // and are validated separately.
+        requireValidK8sName(pvc, "pvc")
+        requireValidK8sName(commitId, "commitId")
+        requireValidK8sName(volumeName, "volumeName")
+        require(size.matches("^[0-9]+[a-zA-Z]+$".toRegex())) { "invalid k8s size string: '$size'" }
+        if (snapshotClass != null) {
+            requireValidK8sName(snapshotClass.toString(), "snapshotClass")
+        }
 
         val yaml =
             "apiVersion: snapshot.storage.k8s.io/v1\n" +
@@ -437,8 +470,8 @@ class KubernetesCsiContext(
                 "spec:\n" +
                 "  source:\n" +
                 "    persistentVolumeClaimName: $pvc\n" +
-                if (properties["snapshotClass"] != null) {
-                    "  volumeSnapshotClassName: ${properties["snapshotClass"]}\n"
+                if (snapshotClass != null) {
+                    "  volumeSnapshotClassName: $snapshotClass\n"
                 } else {
                     ""
                 }
@@ -463,6 +496,12 @@ class KubernetesCsiContext(
         val size = sourceConfig["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$newVolumeSet-$volumeName"
         val snapshotName = "$sourceVolumeSet-$volumeName-$sourceCommit"
+
+        requireValidK8sName(sourceVolumeSet, "sourceVolumeSet")
+        requireValidK8sName(sourceCommit, "sourceCommit")
+        requireValidK8sName(newVolumeSet, "newVolumeSet")
+        requireValidK8sName(volumeName, "volumeName")
+        require(size.matches("^[0-9]+[a-zA-Z]+$".toRegex())) { "invalid k8s size string: '$size'" }
 
         val yaml =
             "apiVersion: v1\n" +
