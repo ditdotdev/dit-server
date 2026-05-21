@@ -37,7 +37,7 @@ allprojects {
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-            allWarningsAsErrors.set(false)  // Temporarily disabled for Exposed 0.32.1 upgrade
+            allWarningsAsErrors.set(true)
             freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
         }
     }
