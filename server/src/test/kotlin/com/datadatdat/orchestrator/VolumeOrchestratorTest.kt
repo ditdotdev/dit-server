@@ -99,6 +99,26 @@ class VolumeOrchestratorTest : StringSpec() {
             }
         }
 
+        // Partial-failure rollback: when the storage layer fails, the
+        // metadata row inserted in the same call must not survive. Without
+        // this rollback, the volumeset is ACTIVE so markEmptyVolumeSets
+        // won't sweep it, and the orphaned row leaks forever (#177).
+        "storage-layer createVolume failure rolls back the metadata row" {
+            every { context.createVolume(any(), any()) } throws RuntimeException("simulated ZFS failure")
+            every { context.deleteVolume(any(), any(), any()) } just Runs
+
+            shouldThrow<RuntimeException> {
+                services.volumes.createVolume("foo", Volume("vol"))
+            }
+
+            // Metadata row must be gone — listVolumes returns nothing for "vol"
+            val volumes =
+                transaction {
+                    services.metadata.listVolumes(vs)
+                }
+            volumes.none { it.name == "vol" } shouldBe true
+        }
+
         "delete volume marks volume for deletion" {
             every { reaper.signal() } just Runs
 

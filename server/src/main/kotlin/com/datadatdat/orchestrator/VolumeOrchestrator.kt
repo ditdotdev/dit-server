@@ -21,7 +21,28 @@ class VolumeOrchestrator(
                 services.metadata.createVolume(vs, volume)
                 vs
             }
-        val config = services.context.createVolume(vs, volume.name)
+        // Partial-failure rollback: if the storage-layer createVolume fails
+        // (ZFS unavailable, k8s API errored, etc.), the metadata row
+        // committed above would otherwise persist forever — the volumeset
+        // is ACTIVE, so the reaper's markEmptyVolumeSets sweep (which only
+        // touches INACTIVE volumesets) won't catch it. Catch the failure,
+        // delete the orphaned metadata row, and rethrow so the API
+        // response carries the original error.
+        //
+        // Best-effort cleanup: we also try context.deleteVolume in case
+        // createVolume failed partway through (e.g. ZFS dataset created
+        // but a follow-up step failed). Swallow any error from that path
+        // — the metadata cleanup is what matters; orphaned ZFS state
+        // without metadata is a known follow-up class but not a leak
+        // visible to the user. See issue #177.
+        val config =
+            try {
+                services.context.createVolume(vs, volume.name)
+            } catch (t: Throwable) {
+                runCatching { services.context.deleteVolume(vs, volume.name, emptyMap()) }
+                transaction { services.metadata.deleteVolume(vs, volume.name) }
+                throw t
+            }
         return transaction {
             services.metadata.updateVolumeConfig(vs, volume.name, config)
             services.metadata.getVolume(vs, volume.name)
