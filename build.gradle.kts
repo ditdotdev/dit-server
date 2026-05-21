@@ -42,31 +42,38 @@ allprojects {
         }
     }
 
-    tasks.register("style") {
-        group = "Verification"
-        description = "Run all style checks"
-    }
+    val styleTask =
+        tasks.register("style") {
+            group = "Verification"
+            description = "Run all style checks"
+        }
 
-    // Enable ktlint checks and formatting
-    val ktlintTask = tasks.register<JavaExec>("ktlint") {
-        group = LifecycleBasePlugin.VERIFICATION_GROUP
-        description = "Check Kotlin code style"
-        classpath = ktlint
-        mainClass.set("com.pinterest.ktlint.Main")
-        args("src/**/*.kt")
-    }
+    // ktlint is only meaningful in projects that actually carry Kotlin
+    // sources. Registering it on the bare root project would point at a
+    // non-existent `src/` and either (a) noop silently or (b) fail when the
+    // glob resolves to nothing, depending on ktlint-cli version. Gate
+    // registration on the project actually having a src/ directory.
+    if (file("src").isDirectory) {
+        val ktlintTask =
+            tasks.register<JavaExec>("ktlint") {
+                group = LifecycleBasePlugin.VERIFICATION_GROUP
+                description = "Check Kotlin code style"
+                classpath = ktlint
+                mainClass.set("com.pinterest.ktlint.Main")
+                args("src/**/*.kt")
+            }
 
-    tasks.register<JavaExec>("ktlintFormat") {
-        group = LifecycleBasePlugin.VERIFICATION_GROUP
-        description = "Fix Kotlin code style deviations"
-        classpath = ktlint
-        mainClass.set("com.pinterest.ktlint.Main")
-        args("-F", "src/**/*.kt")
-    }
+        tasks.register<JavaExec>("ktlintFormat") {
+            group = LifecycleBasePlugin.VERIFICATION_GROUP
+            description = "Fix Kotlin code style deviations"
+            classpath = ktlint
+            mainClass.set("com.pinterest.ktlint.Main")
+            args("-F", "src/**/*.kt")
+        }
 
-    // Run ktlint as part of the check task (if it exists)
-    afterEvaluate {
-        tasks.findByName("check")?.dependsOn(ktlintTask)
+        // Make `style` and `check` actually do something: depend on ktlint.
+        styleTask.configure { dependsOn(ktlintTask) }
+        afterEvaluate { tasks.findByName("check")?.dependsOn(ktlintTask) }
     }
 
     tasks.withType<DependencyUpdatesTask>().configureEach {
