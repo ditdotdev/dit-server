@@ -54,9 +54,30 @@ class CommitOrchestrator(
                 services.metadata.listVolumes(volumeSet)
             }
 
-        services.context.commitVolumeSet(volumeSet, newCommit.id)
-        for (v in volumes) {
-            services.context.commitVolume(volumeSet, newCommit.id, v.name, v.config)
+        // Partial-failure rollback: if any storage-layer commit call fails,
+        // the metadata commit row committed above would otherwise persist
+        // forever — listDeletingCommits only catches DELETING commits,
+        // so an ACTIVE commit row with no underlying ZFS snapshot leaks.
+        // Catch, best-effort-clean-up any partial ZFS state, delete the
+        // metadata row, and rethrow with the original error. See #177.
+        try {
+            services.context.commitVolumeSet(volumeSet, newCommit.id)
+            for (v in volumes) {
+                services.context.commitVolume(volumeSet, newCommit.id, v.name, v.config)
+            }
+        } catch (t: Throwable) {
+            // Best-effort: drop whichever snapshots may have made it onto
+            // disk before the failure. Errors here are expected (the
+            // snapshot we failed to create won't exist for deleteX) and
+            // swallowed; the metadata cleanup is the load-bearing step.
+            runCatching { services.context.deleteVolumeSetCommit(volumeSet, newCommit.id) }
+            for (v in volumes) {
+                runCatching { services.context.deleteVolumeCommit(volumeSet, newCommit.id, v.name) }
+            }
+            transaction {
+                services.metadata.deleteCommitByGuid(volumeSet, newCommit.id)
+            }
+            throw t
         }
         return newCommit
     }
