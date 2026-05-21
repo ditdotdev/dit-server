@@ -216,27 +216,40 @@ class OperationOrchestrator(
                 services.metadata.listOperations()
             }
         for (op in operations) {
-            val exec =
-                createExecutor(
-                    op.operation,
-                    op.repo,
-                    services.remotes.getRemote(op.repo, op.operation.remote),
-                    op.params,
-                    op.metadataOnly,
-                )
             if (op.operation.state == Operation.State.RUNNING) {
-                runningOperations.put(exec.operation.id, exec)
-                log.info("retrying operation ${op.operation.id} after restart")
+                // Pre-fix this block re-`start()`ed the executor in hopes
+                // of resuming the operation across a server restart. That
+                // was never safe: the previous process had already created
+                // scratch storage (`{volumeset}-scratch` plus per-volume
+                // scratch volumes inside OperationExecutor.run) bound to
+                // the in-progress volumeset. Re-running on that state
+                // threw ObjectExistsException from createVolume the moment
+                // the executor tried to recreate the scratch, leaving the
+                // operation stuck in RUNNING forever.
+                //
+                // The honest contract is "operations don't survive a
+                // restart": mark RUNNING ops FAILED, add a FAILED progress
+                // entry so the caller (CLI polling
+                // /v1/operations/{id}/progress) sees why it stopped, and
+                // let the user re-issue the push/pull. The reaper's
+                // markEmptyVolumeSets sweep cleans up the orphaned
+                // volumeset once it has no commits or running operations.
+                log.warn(
+                    "operation {} ({}) was RUNNING at restart — marking FAILED",
+                    op.operation.id,
+                    op.operation.type,
+                )
                 transaction {
                     services.metadata.addProgressEntry(
                         op.operation.id,
                         ProgressEntry(
-                            ProgressEntry.Type.MESSAGE,
-                            "Retrying operation after restart",
+                            ProgressEntry.Type.FAILED,
+                            "Server restarted; operation aborted. Retry the operation.",
                         ),
                     )
+                    services.metadata.updateOperationState(op.operation.id, Operation.State.FAILED)
                 }
-                exec.start()
+                services.reaper.signal()
             }
         }
     }
