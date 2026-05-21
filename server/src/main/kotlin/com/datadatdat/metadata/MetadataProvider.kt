@@ -88,9 +88,13 @@ class MetadataProvider(
     private fun persistentConfig(): HikariDataSource {
         val config = HikariConfig()
         config.driverClassName = "org.postgresql.Driver"
-        config.jdbcUrl = "jdbc:postgresql:$databaseName"
-        config.username = "postgres"
-        config.password = "postgres"
+        // Hardcoded postgres/postgres works for the Docker image where
+        // the PostgreSQL server runs inside the same container; the
+        // env-var overrides let us point at an external DB (managed
+        // RDS, separate Postgres pod, etc.) without a code change.
+        config.jdbcUrl = System.getenv("DATADATDAT_DB_URL") ?: "jdbc:postgresql:$databaseName"
+        config.username = System.getenv("DATADATDAT_DB_USER") ?: "postgres"
+        config.password = System.getenv("DATADATDAT_DB_PASSWORD") ?: "postgres"
         config.maximumPoolSize = MAX_POOL_SIZE
         config.isAutoCommit = false
         config.transactionIsolation = "TRANSACTION_READ_COMMITTED"

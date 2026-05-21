@@ -15,6 +15,31 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
+// Parses an optional boolean query parameter strictly. Returns the default
+// when the key is absent. When the key is present but the value is not
+// exactly "true" or "false" (case-sensitive), throws IllegalArgumentException
+// — the StatusPages handler maps that to 400 Bad Request.
+//
+// Previously this used Kotlin's String.toBoolean(), which silently returns
+// false for anything that isn't "true" (e.g. "yse", "1", ""). Callers had
+// no way to learn their typo had been ignored.
+private fun parseBooleanQueryParam(
+    raw: String?,
+    name: String,
+    default: Boolean,
+): Boolean =
+    when (raw) {
+        null -> default
+
+        "true" -> true
+
+        "false" -> false
+
+        else -> throw IllegalArgumentException(
+            "$name must be 'true' or 'false', got '$raw'",
+        )
+    }
+
 fun Route.operationsApi(services: ServiceLocator) {
     route("/v1/operations") {
         get {
@@ -54,13 +79,11 @@ fun Route.operationsApi(services: ServiceLocator) {
             val commitId = call.parameters["commitId"] ?: throw IllegalArgumentException("missing commit id parameter")
             val params = call.receive(RemoteParameters::class)
             val metadataOnly =
-                if (call.request.queryParameters.contains("metadataOnly")) {
-                    call.request.queryParameters
-                        .get("metadataOnly")!!
-                        .toBoolean()
-                } else {
-                    false
-                }
+                parseBooleanQueryParam(
+                    call.request.queryParameters["metadataOnly"],
+                    "metadataOnly",
+                    default = false,
+                )
             call.respond(HttpStatusCode.Created, services.operations.startPull(repo, remote, commitId, params, metadataOnly))
         }
     }
@@ -72,13 +95,11 @@ fun Route.operationsApi(services: ServiceLocator) {
             val commitId = call.parameters["commitId"] ?: throw IllegalArgumentException("missing commit id parameter")
             val params = call.receive(RemoteParameters::class)
             val metadataOnly =
-                if (call.request.queryParameters.contains("metadataOnly")) {
-                    call.request.queryParameters
-                        .get("metadataOnly")!!
-                        .toBoolean()
-                } else {
-                    false
-                }
+                parseBooleanQueryParam(
+                    call.request.queryParameters["metadataOnly"],
+                    "metadataOnly",
+                    default = false,
+                )
             call.respond(HttpStatusCode.Created, services.operations.startPush(repo, remote, commitId, params, metadataOnly))
         }
     }
