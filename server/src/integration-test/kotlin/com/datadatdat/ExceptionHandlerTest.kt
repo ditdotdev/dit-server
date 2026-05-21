@@ -78,14 +78,40 @@ class ExceptionHandlerTest : StringSpec() {
             }
         }
 
-        "error response includes details field" {
-            testApplication {
-                application { mainProvider(services) }
-                client.get("/v1/repositories/missing").apply {
-                    status shouldBe HttpStatusCode.NotFound
-                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
-                    error.details shouldContain "NoSuchObjectException"
+        "error response includes details field when datadatdat.debug=true" {
+            // exceptionToError reads datadatdat.debug on every call (see
+            // Application.kt). The production Docker image sets it; this
+            // test sets it inline to match the production-with-debug
+            // configuration.
+            val previous = System.getProperty("datadatdat.debug")
+            System.setProperty("datadatdat.debug", "true")
+            try {
+                testApplication {
+                    application { mainProvider(services) }
+                    client.get("/v1/repositories/missing").apply {
+                        status shouldBe HttpStatusCode.NotFound
+                        val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                        error.details shouldContain "NoSuchObjectException"
+                    }
                 }
+            } finally {
+                if (previous == null) System.clearProperty("datadatdat.debug") else System.setProperty("datadatdat.debug", previous)
+            }
+        }
+
+        "error response omits details field when datadatdat.debug is unset" {
+            val previous = System.clearProperty("datadatdat.debug")
+            try {
+                testApplication {
+                    application { mainProvider(services) }
+                    client.get("/v1/repositories/missing").apply {
+                        status shouldBe HttpStatusCode.NotFound
+                        val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                        error.details shouldBe null
+                    }
+                }
+            } finally {
+                if (previous != null) System.setProperty("datadatdat.debug", previous)
             }
         }
     }
