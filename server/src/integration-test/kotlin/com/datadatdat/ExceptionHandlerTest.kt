@@ -19,13 +19,16 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
+import io.kubernetes.client.openapi.ApiException
 import io.mockk.MockKAnnotations
 import io.mockk.clearAllMocks
+import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.impl.annotations.OverrideMockKs
 import io.mockk.mockk
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.io.IOException
 
 class ExceptionHandlerTest : StringSpec() {
     @MockK
@@ -112,6 +115,59 @@ class ExceptionHandlerTest : StringSpec() {
                 }
             } finally {
                 if (previous != null) System.setProperty("datadatdat.debug", previous)
+            }
+        }
+
+        // The handler is invoked via the /v1/context route — we replace
+        // getProvider on the mocked DockerZfsContext to throw the target
+        // exception type so the StatusPages plugin's typed exception
+        // dispatch lights up the corresponding handler lambda.
+
+        "ApiException from a handler is mapped to 500" {
+            every { context.getProvider() } throws ApiException(500, "kube boom")
+            every { context.getProperties() } returns emptyMap()
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/context").apply {
+                    status shouldBe HttpStatusCode.InternalServerError
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "ApiException"
+                }
+            }
+        }
+
+        "IOException containing 401 is mapped to 401 Unauthorized" {
+            every { context.getProvider() } throws IOException("server returned 401 Unauthorized")
+            every { context.getProperties() } returns emptyMap()
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/context").apply {
+                    status shouldBe HttpStatusCode.Unauthorized
+                }
+            }
+        }
+
+        "IOException with non-auth message is mapped to 500" {
+            every { context.getProvider() } throws IOException("disk on fire")
+            every { context.getProperties() } returns emptyMap()
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/context").apply {
+                    status shouldBe HttpStatusCode.InternalServerError
+                }
+            }
+        }
+
+        "Generic Throwable is mapped to 500" {
+            every { context.getProvider() } throws RuntimeException("uncategorized boom")
+            every { context.getProperties() } returns emptyMap()
+            testApplication {
+                application { mainProvider(services) }
+                client.get("/v1/context").apply {
+                    status shouldBe HttpStatusCode.InternalServerError
+                    val error = Gson().fromJson(bodyAsText(), Error::class.java)
+                    error.code shouldBe "RuntimeException"
+                }
             }
         }
     }
