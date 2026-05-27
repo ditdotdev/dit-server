@@ -117,3 +117,23 @@ apply(from = "${project.projectDir}/gradle/unitTest.gradle")
 apply(from = "${project.projectDir}/gradle/integrationTest.gradle")
 apply(from = "${project.projectDir}/gradle/docker.gradle.kts")
 apply(from = "${project.projectDir}/gradle/shell.gradle.kts")
+
+// jacocoTestReport defaults to consuming only the `test` task's exec data. The
+// apis/* handlers and most context.* glue are exercised exclusively by the
+// integrationTest task (Ktor test-engine), so without this, those packages
+// score 0% in the report even when tests are passing. Include both exec
+// files in the report's executionData so coverage reflects what actually
+// ran.
+tasks.jacocoTestReport {
+    dependsOn(tasks.named("test"), tasks.named("integrationTest"))
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.dir("jacoco")) {
+            include("*.exec")
+        },
+    )
+    reports {
+        csv.required.set(true)
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
