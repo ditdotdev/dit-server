@@ -11,12 +11,8 @@ jobs:
     uses: datadatdat/.github/.github/workflows/repo-health.yml@master
     with:
       language: kotlin
-      # 70 leaves headroom while the Phase-5 concurrency/durability fixes
-      # land. The orchestrator + reaper layer is well-tested (~70-80%
-      # line coverage estimate from LOC ratios) but full happy-path-only
-      # coverage of every API handler isn't realistic right now.
-      coverage-floor: 70
+      coverage-floor: 90
       max-cyclomatic: 25
-      mode: warn
+      mode: block
     secrets:
       GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
