@@ -97,6 +97,10 @@ func (s *SshTestSuite) TestSsh_005_AddRemote() {
 				"username": "test",
 				"port":     22,
 				"path":     "/bar",
+				// Test server has an ephemeral host key that is never added
+				// to known_hosts; opt out of strict host-key checking (the
+				// supported way to reach a throwaway host since remote-sdk #48).
+				"skipHostCheck": true,
 			},
 		}).Execute()
 		if s.e.NoError(err) {
@@ -274,6 +278,9 @@ func (s *SshTestSuite) TestSsh_051_AddRemoteNoPassword() {
 			"username": "test",
 			"port":     22,
 			"path":     "/bar",
+			// See TestSsh_005_AddRemote: skip strict host-key checking
+			// against the throwaway ssh-test-server (ephemeral host key).
+			"skipHostCheck": true,
 		},
 	}).Execute()
 	if s.e.NoError(err) {
