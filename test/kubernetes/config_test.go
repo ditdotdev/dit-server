@@ -1,12 +1,12 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package kubernetes
 
 import (
 	"context"
 	"fmt"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 	"os/exec"
 	"strings"
@@ -68,6 +68,6 @@ func (s *KubernetesConfigTestSuite) TestKubernetesConfig_002_GetConfiguration() 
 		s.Equal(s.KubeContext, res.Properties["context"])
 		s.Equal(s.StorageClass, res.Properties["storageClass"])
 		s.Equal(s.SnapshotClass, res.Properties["snapshotClass"])
-		s.Equal("datadatdat/datadatdat:latest", res.Properties["datadatdatImage"])
+		s.Equal("ditdotdev/dit:latest", res.Properties["ditImage"])
 	}
 }

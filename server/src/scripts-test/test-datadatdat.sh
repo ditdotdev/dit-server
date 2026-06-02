@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
-datadatdat_script=/test/src/scripts/datadatdat.sh
+dit_script=/test/src/scripts/dit.sh
 util_script=/test/src/scripts/util.sh
 zfs_script=/test/src/scripts/zfs.sh
 
 @test "get pool size returns correct size" {
-  source $datadatdat_script
+  source $dit_script
   function df() {
      echo " Avail"
      echo "48076M"
@@ -24,7 +24,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function df() { /bin/false; }
@@ -38,7 +38,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function nsenter() { /bin/false; }
@@ -52,7 +52,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function nsenter() { /bin/true; }
@@ -66,7 +66,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $zfs_script
   source $util_script
 
@@ -83,7 +83,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $zfs_script
   source $util_script
 
@@ -106,7 +106,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $zfs_script
   source $util_script
 
@@ -129,7 +129,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $zfs_script
   source $util_script
 
@@ -153,7 +153,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $zfs_script
   source $util_script
 
@@ -176,7 +176,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function mkdir() { /bin/true; }
@@ -192,7 +192,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function mkdir() { /bin/true; }
@@ -208,7 +208,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function nsenter() { /bin/false; }
@@ -222,7 +222,7 @@ zfs_script=/test/src/scripts/zfs.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-  source $datadatdat_script
+  source $dit_script
   source $util_script
 
   function nsenter() { /bin/true; }

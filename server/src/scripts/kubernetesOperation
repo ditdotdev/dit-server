@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 #
@@ -8,5 +8,5 @@
 # environment variable to point to the base path for volumes and configuration, which is then passed to the runner.
 #
 
-exec java -DbasePath=$DATADATDAT_PATH -cp /datadatdat/datadatdat-server.jar com.datadatdat.context.kubernetes.KubernetesRunnerKt
+exec java -DbasePath=$DATADATDAT_PATH -cp /ditdotdev/dit-server.jar dev.dit.context.kubernetes.KubernetesRunnerKt
 

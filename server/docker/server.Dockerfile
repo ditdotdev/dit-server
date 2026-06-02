@@ -37,22 +37,22 @@ RUN ARCH=$(dpkg --print-architecture) && \
     chmod 755 /usr/local/bin/kubectl
 
 ################################################
-# Datadatdat software installation and configuration
+# Dit software installation and configuration
 ################################################
 
-COPY build/libs/datadatdat-server.jar /datadatdat/
-COPY src/scripts/* /datadatdat/
+COPY build/libs/dit-server.jar /ditdotdev/
+COPY src/scripts/* /ditdotdev/
 
 # Download pre-built docker-volume-proxy binary from GitHub Releases
 RUN --mount=type=secret,id=gh_token \
     GH_TOKEN=$(cat /run/secrets/gh_token) && \
     ASSET_URL=$(curl -sH "Authorization: token $GH_TOKEN" \
-      "https://api.github.com/repos/datadatdat/datadatdat-docker-proxy/releases/latest" | \
+      "https://api.github.com/repos/ditdotdev/dit-docker-proxy/releases/latest" | \
       jq -r '.assets[] | select(.name == "docker-volume-proxy") | .url') && \
     curl -fsSL -H "Authorization: token $GH_TOKEN" -H "Accept: application/octet-stream" \
-      "$ASSET_URL" -o /datadatdat/docker-volume-proxy && \
-    chmod 755 /datadatdat/docker-volume-proxy
+      "$ASSET_URL" -o /ditdotdev/docker-volume-proxy && \
+    chmod 755 /ditdotdev/docker-volume-proxy
 
-RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/datadatdat"' >> /etc/bash.bashrc
+RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/dit"' >> /etc/bash.bashrc
 
-WORKDIR /datadatdat
+WORKDIR /dit

@@ -1,13 +1,13 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package kubernetes
 
 import (
 	"context"
 	"fmt"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	dit "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 	coreV1 "k8s.io/api/core/v1"
@@ -30,8 +30,8 @@ type KubernetesWorkflowTestSuite struct {
 	uuid         string
 	pod1         string
 	pod2         string
-	remote       datadatdat.Remote
-	remoteParams datadatdat.RemoteParameters
+	remote       dit.Remote
+	remoteParams dit.RemoteParameters
 }
 
 func (s *KubernetesWorkflowTestSuite) SetupSuite() {
@@ -73,12 +73,12 @@ func (s *KubernetesWorkflowTestSuite) SetupSuite() {
 	s.Clientset = cs
 	s.namespace = "default"
 	s.ctx = context.Background()
-	s.remote = datadatdat.Remote{
+	s.remote = dit.Remote{
 		Provider:   "nop",
 		Name:       "origin",
 		Properties: map[string]interface{}{},
 	}
-	s.remoteParams = datadatdat.RemoteParameters{
+	s.remoteParams = dit.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{},
 	}
@@ -164,7 +164,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_002_Kubectl() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_010_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -172,7 +172,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_010_CreateRepository(
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_011_CreateVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -208,7 +208,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_014_VolumeStatus() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_020_CreateCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id:         "id",
 		Properties: map[string]interface{}{},
 	}).Execute()

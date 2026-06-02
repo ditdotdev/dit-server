@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 #
@@ -58,7 +58,7 @@ function create_import_pool() {
 
 #
 # Sets up a shared bind mount beneath the pool mountpoint. This is somewhat convoluted, but serves
-# an important purpose. The datadatdat server will mount files within the /var/lib/<pool>/mnt, but by
+# an important purpose. The dit server will mount files within the /var/lib/<pool>/mnt, but by
 # default these will only show up in the container namespace and not the host VM namespace. By
 # creating a shared mount, these new mounts will propagate to the host VM. But that this point,
 # that directory may or may not be a mountpoint. So we first create a bind mount to itself
@@ -94,7 +94,7 @@ function unbind_mounts() {
 }
 
 #
-# Creates a bridge network specifically for datadatdat. This is not generally required for normal operation, but provides
+# Creates a bridge network specifically for dit. This is not generally required for normal operation, but provides
 # better isolation and makes endtoend testing easier by providing an isolated network within which to run the
 # SSH server.
 #
@@ -104,7 +104,7 @@ function create_network() {
 }
 
 #
-# Remove the bridge network created for the datadatdat server.
+# Remove the bridge network created for the dit server.
 #
 function remove_network() {
   local identity=$1
@@ -112,7 +112,7 @@ function remove_network() {
 }
 
 #
-# Launch the actual datadatdat server.
+# Launch the actual dit server.
 #
 function launch_server() {
   local identity=$1
@@ -139,5 +139,5 @@ function launch_server() {
       -p $port:5001 \
       --network $identity \
       $image \
-      /datadatdat/run
+      /ditdotdev/run
 }

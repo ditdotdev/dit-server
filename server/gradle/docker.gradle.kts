@@ -1,10 +1,10 @@
 val imageName = when(project.hasProperty("serverImageName")) {
     true -> project.property("serverImageName")
-    false -> "datadatdat/datadatdat"
+    false -> "ditdotdev/dit"
 }
 
-val datadatdatVersion = when(project.hasProperty("datadatdatVersion")) {
-    true -> project.property("datadatdatVersion")
+val ditVersion = when(project.hasProperty("ditVersion")) {
+    true -> project.property("ditVersion")
     false -> "latest"
 }
 
@@ -25,7 +25,7 @@ var buildDockerServer = tasks.register<Exec>("buildDockerServer") {
     description = "Build docker server image"
     environment("DOCKER_BUILDKIT", "1")
     environment("GO_MODULES_TOKEN", resolveGhToken())
-    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$ditVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
@@ -33,7 +33,7 @@ var publishDockerServer = tasks.register<Exec>("publishDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Build and publish docker server image"
     environment("GO_MODULES_TOKEN", resolveGhToken())
-    commandLine("docker", "buildx", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "buildx", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "--platform", "linux/amd64,linux/arm64", "--push", "--no-cache", "-t", "$imageName:$ditVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
@@ -43,21 +43,21 @@ var rebuildDockerServer = tasks.register<Exec>("rebuildDockerServer") {
     description = "Build docker server image"
     environment("DOCKER_BUILDKIT", "1")
     environment("GO_MODULES_TOKEN", resolveGhToken())
-    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$datadatdatVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
+    commandLine("docker", "build", "--secret", "id=gh_token,env=GO_MODULES_TOKEN", "-t", "$imageName:$ditVersion", "-f", "${project.projectDir}/docker/server.Dockerfile", "${project.projectDir}")
     dependsOn(tasks.named("shadowJar"))
 }
 
 var tagDockerServer = tasks.register<Exec>("tagDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:$datadatdatVersion", "$imageName:${project.version}")
+    commandLine("docker", "tag", "$imageName:$ditVersion", "$imageName:${project.version}")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 
 var tagLocalDockerServer = tasks.register<Exec>("tagLocalDockerServer") {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Tag docker server image with current version"
-    commandLine("docker", "tag", "$imageName:$datadatdatVersion", "datadatdat:latest")
+    commandLine("docker", "tag", "$imageName:$ditVersion", "dit:latest")
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 

@@ -1,12 +1,12 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package remote
 
 import (
 	"context"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	dit "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
@@ -17,7 +17,7 @@ type SshTestSuite struct {
 	e   *endtoend.EndToEndTest
 	ctx context.Context
 
-	remoteParams datadatdat.RemoteParameters
+	remoteParams dit.RemoteParameters
 }
 
 func (s *SshTestSuite) SetupSuite() {
@@ -27,7 +27,7 @@ func (s *SshTestSuite) SetupSuite() {
 
 	s.ctx = context.Background()
 
-	s.remoteParams = datadatdat.RemoteParameters{
+	s.remoteParams = dit.RemoteParameters{
 		Provider:   "ssh",
 		Properties: map[string]interface{}{},
 	}
@@ -43,7 +43,7 @@ func TestSshTestSuite(t *testing.T) {
 }
 
 func (s *SshTestSuite) TestSsh_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -51,7 +51,7 @@ func (s *SshTestSuite) TestSsh_001_CreateRepository() {
 }
 
 func (s *SshTestSuite) TestSsh_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -72,7 +72,7 @@ func (s *SshTestSuite) TestSsh_003_CreateFile() {
 }
 
 func (s *SshTestSuite) TestSsh_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -88,7 +88,7 @@ func (s *SshTestSuite) TestSsh_004_CreateCommit() {
 func (s *SshTestSuite) TestSsh_005_AddRemote() {
 	err := s.e.MkdirSsh("/bar")
 	if s.e.NoError(err) {
-		res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
+		res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(dit.Remote{
 			Provider: "ssh",
 			Name:     "origin",
 			Properties: map[string]interface{}{
@@ -173,7 +173,7 @@ func (s *SshTestSuite) TestSsh_030_PushDuplicateCommit() {
 }
 
 func (s *SshTestSuite) TestSsh_031_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
@@ -270,7 +270,7 @@ func (s *SshTestSuite) TestSsh_050_RemoveRemote() {
 }
 
 func (s *SshTestSuite) TestSsh_051_AddRemoteNoPassword() {
-	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
+	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(dit.Remote{
 		Provider: "ssh",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -295,7 +295,7 @@ func (s *SshTestSuite) TestSsh_051_AddRemoteNoPassword() {
 
 func (s *SshTestSuite) TestSsh_052_ListCommitsPassword() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
-		RemoteParameters(datadatdat.RemoteParameters{
+		RemoteParameters(dit.RemoteParameters{
 			Provider:   "ssh",
 			Properties: map[string]interface{}{"password": "test"},
 		}).Execute()
@@ -312,7 +312,7 @@ func (s *SshTestSuite) TestSsh_053_ListCommitsNoPassword() {
 
 func (s *SshTestSuite) TestSsh_054_ListCommitsBadPassword() {
 	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
-		RemoteParameters(datadatdat.RemoteParameters{
+		RemoteParameters(dit.RemoteParameters{
 			Provider:   "ssh",
 			Properties: map[string]interface{}{"password": "r00t"},
 		}).Execute()
@@ -331,7 +331,7 @@ func (s *SshTestSuite) TestSsh_061_ListCommitsKey() {
 	key, err := os.ReadFile("id_rsa")
 	if s.e.NoError(err) {
 		res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
-			RemoteParameters(datadatdat.RemoteParameters{
+			RemoteParameters(dit.RemoteParameters{
 				Provider:   "ssh",
 				Properties: map[string]interface{}{"key": string(key)},
 			}).Execute()
@@ -348,7 +348,7 @@ func (s *SshTestSuite) TestSsh_062_PullCommitKey() {
 		_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 		if s.e.NoError(err) {
 			res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").
-				RemoteParameters(datadatdat.RemoteParameters{
+				RemoteParameters(dit.RemoteParameters{
 					Provider:   "ssh",
 					Properties: map[string]interface{}{"key": string(key)},
 				}).Execute()

@@ -1,0 +1,142 @@
+package dev.dit.metadata
+
+import dev.dit.exception.NoSuchObjectException
+import dev.dit.models.Operation
+import dev.dit.models.RemoteParameters
+import dev.dit.models.Repository
+import io.kotlintest.Spec
+import io.kotlintest.TestCase
+import io.kotlintest.shouldBe
+import io.kotlintest.shouldThrow
+import io.kotlintest.specs.StringSpec
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.util.UUID
+
+class OperationMetadataTest : StringSpec() {
+    val md = MetadataProvider()
+    lateinit var vs: String
+
+    override fun beforeSpec(spec: Spec) {
+        md.init()
+    }
+
+    override fun beforeTest(testCase: TestCase) {
+        md.clear()
+        transaction {
+            md.createRepository(Repository(name = "foo"))
+            vs = md.createVolumeSet("foo", null, true)
+        }
+    }
+
+    fun buildOperationData(id: String): OperationData =
+        OperationData(
+            metadataOnly = false,
+            params = RemoteParameters("nop"),
+            repo = "foo",
+            operation =
+                Operation(
+                    id = id,
+                    type = Operation.Type.PULL,
+                    state = Operation.State.RUNNING,
+                    remote = "origin",
+                    commitId = "id",
+                ),
+        )
+
+    init {
+        "create operation succeeds" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                val op = md.getOperation(vs)
+                op.metadataOnly shouldBe false
+                op.params.provider shouldBe "nop"
+                op.operation.id shouldBe vs
+                op.operation.type shouldBe Operation.Type.PULL
+                op.operation.state shouldBe Operation.State.RUNNING
+                op.operation.remote shouldBe "origin"
+                op.operation.commitId shouldBe "id"
+            }
+        }
+
+        "get non-existent operation fails" {
+            shouldThrow<NoSuchObjectException> {
+                transaction {
+                    md.getOperation(UUID.randomUUID().toString())
+                }
+            }
+        }
+
+        "list operations by repository succeeds" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                md.createRepository(Repository(name = "bar"))
+                val vs2 = md.createVolumeSet("bar")
+                md.createOperation("bar", vs2, buildOperationData(vs2))
+                val result = md.listOperationsByRepository("foo")
+                result.size shouldBe 1
+                result[0].operation.id shouldBe vs
+            }
+        }
+
+        "list operations succeeds" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                md.createRepository(Repository(name = "bar"))
+                val vs2 = md.createVolumeSet("bar")
+                md.createOperation("bar", vs2, buildOperationData(vs2))
+                val result = md.listOperations()
+                result.size shouldBe 2
+            }
+        }
+
+        "update operation state succeeds" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                md.updateOperationState(vs, Operation.State.COMPLETE)
+                val op = md.getOperation(vs)
+                op.operation.state shouldBe Operation.State.COMPLETE
+            }
+        }
+
+        "operation in progress succeeds" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                md.operationRunning(vs) shouldBe true
+            }
+        }
+
+        "operation in progress fails" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+                md.updateOperationState(vs, Operation.State.COMPLETE)
+                md.operationRunning(vs) shouldBe false
+            }
+        }
+
+        "operation in progress returns false when none in progress" {
+            transaction {
+                md.operationInProgress("foo", Operation.Type.PULL, "id", null) shouldBe null
+            }
+        }
+
+        "operation in progress returns false when criteria doesn't match" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+
+                md.operationInProgress("foo", Operation.Type.PULL, "id", "badremote") shouldBe null
+                md.operationInProgress("foo", Operation.Type.PULL, "badid", "origin") shouldBe null
+                md.operationInProgress("foo", Operation.Type.PUSH, "id", "origin") shouldBe null
+                md.operationInProgress("bar", Operation.Type.PULL, "id", "origin") shouldBe null
+            }
+        }
+
+        "operation in progress succeeds if operation is in progress" {
+            transaction {
+                md.createOperation("foo", vs, buildOperationData(vs))
+
+                md.operationInProgress("foo", Operation.Type.PULL, "id", "origin") shouldBe vs
+                md.operationInProgress("foo", Operation.Type.PULL, "id", null) shouldBe vs
+            }
+        }
+    }
+}

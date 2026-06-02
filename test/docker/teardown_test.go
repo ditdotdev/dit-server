@@ -2,8 +2,8 @@ package docker
 
 import (
 	"context"
-	datadatdatclient "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	ditclient "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -23,7 +23,7 @@ func (s *TeardownTestSuite) TearDownSuite() {
 }
 
 func (s *TeardownTestSuite) TestTeardown_001_CreateRepository() {
-	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background()).Repository(datadatdatclient.Repository{
+	_, _, err := s.e.Client.RepositoriesApi.CreateRepository(context.Background()).Repository(ditclient.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{"a": "b"},
 	}).Execute()

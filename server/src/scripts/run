@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 #
-# Main entry point for the datadatdat server. This server can be run in different contexts, such as managing local
+# Main entry point for the dit server. This server can be run in different contexts, such as managing local
 # docker containers or kubernetes pods. The behavior is controlled via the DATADATDAT_CONTEXT environemnt variable.
 # We currently support two contexts:
 #
@@ -39,7 +39,7 @@ function log_error {
 }
 
 #
-# Mount the database filesystem for the datadatdat server.
+# Mount the database filesystem for the dit server.
 #
 function mount_database() {
   local db_dir=$1
@@ -102,7 +102,7 @@ function start_database() {
     cat /var/log/postgresql/logfile
     exit 1
   fi
-  [[ $create_db == "true" ]] && su - postgres -c "$PG_BIN/createdb datadatdat"
+  [[ $create_db == "true" ]] && su - postgres -c "$PG_BIN/createdb dit"
   echo "Postgres started"
 }
 
@@ -121,19 +121,19 @@ if [[ $DATADATDAT_CONTEXT = "docker-zfs" ]]; then
   fix_database_permissions $DB_DIR
   start_database $DB_DIR
 
-  # Forward docker volume requests to datadatdat-server
-  /datadatdat/docker-volume-proxy /run/docker/plugins/$DATADATDAT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
+  # Forward docker volume requests to dit-server
+  /ditdotdev/docker-volume-proxy /run/docker/plugins/$DATADATDAT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
 
-  # -Ddatadatdat.debug=true enables stack traces in ApiError.details
+  # -Ddit.debug=true enables stack traces in ApiError.details
   # responses. Safe here — this image serves the local CLI over
   # loopback; the user is the operator and the stack helps diagnose
-  # ZFS / Docker plumbing issues. NOT set in datadatdat-remote-server
+  # ZFS / Docker plumbing issues. NOT set in dit-remote-server
   # which fronts the API to remote clients.
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=pool=$DATADATDAT_IDENTITY -Ddatadatdat.debug=true -jar /datadatdat/datadatdat-server.jar
+  exec java -Ddit.context=$DATADATDAT_CONTEXT -Ddit.contextConfig=pool=$DATADATDAT_IDENTITY -Ddit.debug=true -jar /ditdotdev/dit-server.jar
 elif [[ $DATADATDAT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=$DATADATDAT_CONFIG -Ddatadatdat.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /datadatdat/datadatdat-server.jar
+  exec java -Ddit.context=$DATADATDAT_CONTEXT -Ddit.contextConfig=$DATADATDAT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /ditdotdev/dit-server.jar
 else
   log_error "Unknown context $DATADATDAT_CONTEXT"
 fi

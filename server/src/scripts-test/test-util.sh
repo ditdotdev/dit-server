@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 util_script=/test/src/scripts/util.sh
@@ -10,9 +10,9 @@ util_script=/test/src/scripts/util.sh
   function jq() { /bin/true; }
 
    source $util_script
-   [ $IDENTITY = "datadatdat" ]
+   [ $IDENTITY = "dit" ]
    [ $PORT = "5001" ]
-   [ $IMAGE = "datadatdat:latest" ]
+   [ $IMAGE = "dit:latest" ]
 }
 
 @test "user overrides propagated correctly" {
@@ -21,11 +21,11 @@ util_script=/test/src/scripts/util.sh
 
    export DATADATDAT_IDENTITY=test
    export DATADATDAT_PORT=6001
-   export DATADATDAT_IMAGE=datadatdat/datadatdat:test
+   export DATADATDAT_IMAGE=ditdotdev/dit:test
    source $util_script
    [ $IDENTITY = "test" ]
    [ $PORT = "6001" ]
-   [ $IMAGE = "datadatdat/datadatdat:test" ]
+   [ $IMAGE = "ditdotdev/dit:test" ]
 }
 
 @test "derived variables set correctly" {
@@ -33,15 +33,15 @@ util_script=/test/src/scripts/util.sh
   function jq() { echo "/path"; }
 
    source $util_script
-   [ $POOL = "datadatdat" ]
-   [ $VOLUME = "datadatdat-data" ]
-   [ $BASE_DIR = "/var/lib/datadatdat" ]
-   [ $DATA_DIR = "/var/lib/datadatdat/data" ]
-   [ $INSTALL_DIR = "/var/lib/datadatdat/data/install" ]
+   [ $POOL = "dit" ]
+   [ $VOLUME = "dit-data" ]
+   [ $BASE_DIR = "/var/lib/dit" ]
+   [ $DATA_DIR = "/var/lib/ditdotdev/data" ]
+   [ $INSTALL_DIR = "/var/lib/ditdotdev/data/install" ]
    [ $POOL_DIR = "/path/pool" ]
-   [ $MNT_DIR = "/var/lib/datadatdat/mnt" ]
-   [ $SYSTEM_MODULES = "/var/lib/datadatdat/system" ]
-   [ $COMPILED_MODULES = "/var/lib/datadatdat/data/modules" ]
+   [ $MNT_DIR = "/var/lib/ditdotdev/mnt" ]
+   [ $SYSTEM_MODULES = "/var/lib/ditdotdev/system" ]
+   [ $COMPILED_MODULES = "/var/lib/ditdotdev/data/modules" ]
 }
 
 @test "timestamp returns date output" {
