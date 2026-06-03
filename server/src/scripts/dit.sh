@@ -139,5 +139,5 @@ function launch_server() {
       -p $port:5001 \
       --network $identity \
       $image \
-      /ditdotdev/run
+      /dit/run
 }

@@ -122,18 +122,18 @@ if [[ $DIT_CONTEXT = "docker-zfs" ]]; then
   start_database $DB_DIR
 
   # Forward docker volume requests to dit-server
-  /ditdotdev/docker-volume-proxy /run/docker/plugins/$DIT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
+  /dit/docker-volume-proxy /run/docker/plugins/$DIT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
 
   # -Ddit.debug=true enables stack traces in ApiError.details
   # responses. Safe here — this image serves the local CLI over
   # loopback; the user is the operator and the stack helps diagnose
   # ZFS / Docker plumbing issues. NOT set in dit-remote-server
   # which fronts the API to remote clients.
-  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=pool=$DIT_IDENTITY -Ddit.debug=true -jar /ditdotdev/dit-server.jar
+  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=pool=$DIT_IDENTITY -Ddit.debug=true -jar /dit/dit-server.jar
 elif [[ $DIT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /ditdotdev/dit-server.jar
+  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /dit/dit-server.jar
 else
   log_error "Unknown context $DIT_CONTEXT"
 fi

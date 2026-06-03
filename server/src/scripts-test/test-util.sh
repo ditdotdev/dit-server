@@ -36,12 +36,12 @@ util_script=/test/src/scripts/util.sh
    [ $POOL = "dit" ]
    [ $VOLUME = "dit-data" ]
    [ $BASE_DIR = "/var/lib/dit" ]
-   [ $DATA_DIR = "/var/lib/ditdotdev/data" ]
-   [ $INSTALL_DIR = "/var/lib/ditdotdev/data/install" ]
+   [ $DATA_DIR = "/var/lib/dit/data" ]
+   [ $INSTALL_DIR = "/var/lib/dit/data/install" ]
    [ $POOL_DIR = "/path/pool" ]
-   [ $MNT_DIR = "/var/lib/ditdotdev/mnt" ]
-   [ $SYSTEM_MODULES = "/var/lib/ditdotdev/system" ]
-   [ $COMPILED_MODULES = "/var/lib/ditdotdev/data/modules" ]
+   [ $MNT_DIR = "/var/lib/dit/mnt" ]
+   [ $SYSTEM_MODULES = "/var/lib/dit/system" ]
+   [ $COMPILED_MODULES = "/var/lib/dit/data/modules" ]
 }
 
 @test "timestamp returns date output" {
