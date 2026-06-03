@@ -1,27 +1,27 @@
 #!/bin/bash
 
-# Script to add GitHub secrets to all Datadatdat repositories
+# Script to add GitHub secrets to all Dit repositories
 # Run this after installing and authenticating with GitHub CLI
 
 set -e
 
 # Repository list
 REPOS=(
-    "datadatdat/command-executor"
-    "datadatdat/delphix-remote"
-    "datadatdat/nop-remote" 
-    "datadatdat/plugin-launcher"
-    "datadatdat/remote-sdk"
-    "datadatdat/s3-remote"
-    "datadatdat/s3web-remote"
-    "datadatdat/ssh-remote"
-    "datadatdat/datadatdat-server"
+    "ditdotdev/command-executor"
+    "ditdotdev/delphix-remote"
+    "ditdotdev/nop-remote" 
+    "ditdotdev/plugin-launcher"
+    "ditdotdev/remote-sdk"
+    "ditdotdev/s3-remote"
+    "ditdotdev/s3web-remote"
+    "ditdotdev/ssh-remote"
+    "ditdotdev/dit-server"
 )
 
 # Secrets to add
-MAVEN_BUCKET="datadatdat-maven"
+MAVEN_BUCKET="dit-maven"
 
-echo "🔐 Adding GitHub secrets to all Datadatdat repositories..."
+echo "🔐 Adding GitHub secrets to all Dit repositories..."
 echo ""
 
 # Check if GitHub CLI is available and authenticated

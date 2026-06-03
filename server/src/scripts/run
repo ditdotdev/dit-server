@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 #
-# Main entry point for the datadatdat server. This server can be run in different contexts, such as managing local
-# docker containers or kubernetes pods. The behavior is controlled via the DATADATDAT_CONTEXT environemnt variable.
+# Main entry point for the dit server. This server can be run in different contexts, such as managing local
+# docker containers or kubernetes pods. The behavior is controlled via the DIT_CONTEXT environemnt variable.
 # We currently support two contexts:
 #
-#   docker-zfs      Controls local containers on your laptops, backing storage via ZFS. The DATADATDAT_IDENTITY
+#   docker-zfs      Controls local containers on your laptops, backing storage via ZFS. The DIT_IDENTITY
 #                   environment variable must be set, which must also match the name of the corresponding storage
 #                   pool, and the container must be run via the 'launch' script to ensure that ZFS is properly
 #                   configured.
 #
 #   kubernetes-csi  Controls remote containers running in a kubernetes cluster, backing storage via a CSI
-#                   driver. The DATADATDAT_IDENTITY variable must be set to determine where to place the persistent
-#                   database in /var/lib/$DATADATDAT_IDENTITY, which should be backed by a persistent volume. Unlike
+#                   driver. The DIT_IDENTITY variable must be set to determine where to place the persistent
+#                   database in /var/lib/$DIT_IDENTITY, which should be backed by a persistent volume. Unlike
 #                   the docker-zfs context, the server doesn't need to be run via 'launch', and can operate
 #                   in any docker environment even if kernel ZFS support isn't present. Additional context
-#                   can be passed through the DATADATDAT_CONFIG variable, which is a list of name=value pairs,
+#                   can be passed through the DIT_CONFIG variable, which is a list of name=value pairs,
 #                   separated by commas.
 #
 
@@ -39,15 +39,15 @@ function log_error {
 }
 
 #
-# Mount the database filesystem for the datadatdat server.
+# Mount the database filesystem for the dit server.
 #
 function mount_database() {
   local db_dir=$1
-  mount | grep ^$DATADATDAT_IDENTITY/db > /dev/null
+  mount | grep ^$DIT_IDENTITY/db > /dev/null
   if [[ $? != 0 ]]; then
-    echo "Mounting $DATADATDAT_IDENTITY/db at $db_dir"
+    echo "Mounting $DIT_IDENTITY/db at $db_dir"
     mkdir -p $db_dir
-    mount -i -t zfs $DATADATDAT_IDENTITY/db $db_dir || log_error "failed to mount database directory"
+    mount -i -t zfs $DIT_IDENTITY/db $db_dir || log_error "failed to mount database directory"
   fi
 }
 
@@ -102,38 +102,38 @@ function start_database() {
     cat /var/log/postgresql/logfile
     exit 1
   fi
-  [[ $create_db == "true" ]] && su - postgres -c "$PG_BIN/createdb datadatdat"
+  [[ $create_db == "true" ]] && su - postgres -c "$PG_BIN/createdb dit"
   echo "Postgres started"
 }
 
 #
 # Check that our context is configured correctly
 #
-[[ -z $DATADATDAT_CONTEXT ]] && log_error "DATADATDAT_CONTEXT must be set"
-[[ -z $DATADATDAT_IDENTITY ]] && log_error "DATADATDAT_IDENTITY must be set"
+[[ -z $DIT_CONTEXT ]] && log_error "DIT_CONTEXT must be set"
+[[ -z $DIT_IDENTITY ]] && log_error "DIT_IDENTITY must be set"
 
 #
 # Check or configure any context-specific configuration.
 #
-DB_DIR=/var/lib/$DATADATDAT_IDENTITY/mnt/_db
-if [[ $DATADATDAT_CONTEXT = "docker-zfs" ]]; then
+DB_DIR=/var/lib/$DIT_IDENTITY/mnt/_db
+if [[ $DIT_CONTEXT = "docker-zfs" ]]; then
   mount_database $DB_DIR
   fix_database_permissions $DB_DIR
   start_database $DB_DIR
 
-  # Forward docker volume requests to datadatdat-server
-  /datadatdat/docker-volume-proxy /run/docker/plugins/$DATADATDAT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
+  # Forward docker volume requests to dit-server
+  /ditdotdev/docker-volume-proxy /run/docker/plugins/$DIT_IDENTITY.sock > /var/log/docker-proxy.log 2>&1 &
 
-  # -Ddatadatdat.debug=true enables stack traces in ApiError.details
+  # -Ddit.debug=true enables stack traces in ApiError.details
   # responses. Safe here — this image serves the local CLI over
   # loopback; the user is the operator and the stack helps diagnose
-  # ZFS / Docker plumbing issues. NOT set in datadatdat-remote-server
+  # ZFS / Docker plumbing issues. NOT set in dit-remote-server
   # which fronts the API to remote clients.
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=pool=$DATADATDAT_IDENTITY -Ddatadatdat.debug=true -jar /datadatdat/datadatdat-server.jar
-elif [[ $DATADATDAT_CONTEXT = "kubernetes-csi" ]]; then
+  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=pool=$DIT_IDENTITY -Ddit.debug=true -jar /ditdotdev/dit-server.jar
+elif [[ $DIT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddatadatdat.context=$DATADATDAT_CONTEXT -Ddatadatdat.contextConfig=$DATADATDAT_CONFIG -Ddatadatdat.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /datadatdat/datadatdat-server.jar
+  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /ditdotdev/dit-server.jar
 else
-  log_error "Unknown context $DATADATDAT_CONTEXT"
+  log_error "Unknown context $DIT_CONTEXT"
 fi

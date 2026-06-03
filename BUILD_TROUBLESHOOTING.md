@@ -1,4 +1,4 @@
-# Datadatdat Server Build Troubleshooting & Dependencies
+# Dit Server Build Troubleshooting & Dependencies
 
 ## ✅ SUCCESS: Build Issues Resolved
 
@@ -36,7 +36,7 @@ BUILD SUCCESSFUL in 11s
 
 ## Overview
 
-This document details the build fixes applied to datadatdat-server and the dependency resolution strategy for remote modules.
+This document details the build fixes applied to dit-server and the dependency resolution strategy for remote modules.
 
 ## Issues Resolved
 
@@ -63,17 +63,17 @@ This document details the build fixes applied to datadatdat-server and the depen
 
 ### 2. Remote Dependencies Mystery 🔍
 
-**Problem**: Missing `com.datadatdat:*` artifacts causing build failures
+**Problem**: Missing `dev.dit:*` artifacts causing build failures
 
 **Root Cause Discovered**: Remote dependencies are **NOT published to Maven Central**
-- They're published to a **private S3 Maven repository**: `s3://datadatdat-maven`
-- datadatdat-server's `repositories` block only includes public repositories
-- No S3 Maven repository configured in datadatdat-server
+- They're published to a **private S3 Maven repository**: `s3://dit-maven`
+- dit-server's `repositories` block only includes public repositories
+- No S3 Maven repository configured in dit-server
 
 **Evidence**:
-- Maven Central search for "datadatdat": **0 results**
+- Maven Central search for "dit": **0 results**
 - Remote projects have publishing config pointing to S3: `url = uri("s3://$mavenBucket")`
-- Default bucket: `"datadatdat-maven"`
+- Default bucket: `"dit-maven"`
 - Authentication: AWS IAM required
 
 ### 3. Workspace Project Structure 📁
@@ -81,7 +81,7 @@ This document details the build fixes applied to datadatdat-server and the depen
 The workspace contains these standalone remote projects:
 ```
 c:\dev\
-├── datadatdat-server/      # Core server (this project)
+├── dit-server/      # Core server (this project)
 ├── remote-sdk/             # Base SDK for remote implementations  
 ├── command-executor/       # Command execution utilities
 ├── plugin-launcher/        # Plugin loading infrastructure
@@ -102,11 +102,11 @@ Each remote project:
 **Status**: Remote dependencies are **commented out** in `server/build.gradle.kts`
 ```kotlin
 // Remote dependencies - local modules, need to be built first
-// implementation("com.datadatdat:remote-sdk:0.2.0")
-// implementation("com.datadatdat:nop-remote-server:0.2.0") 
-// implementation("com.datadatdat:ssh-remote-server:0.2.1")
-// implementation("com.datadatdat:s3-remote-server:0.2.0")
-// implementation("com.datadatdat:s3web-remote-server:0.2.0")
+// implementation("dev.dit:remote-sdk:0.2.0")
+// implementation("dev.dit:nop-remote-server:0.2.0") 
+// implementation("dev.dit:ssh-remote-server:0.2.1")
+// implementation("dev.dit:s3-remote-server:0.2.0")
+// implementation("dev.dit:s3web-remote-server:0.2.0")
 ```
 
 **Why**: To allow core server compilation while resolving dependency access
@@ -127,7 +127,7 @@ Create a composite build including all remote projects:
 ### Option 2: S3 Maven Repository Access
 Configure S3 Maven repository access:
 
-1. **Add S3 repository** to datadatdat-server repositories
+1. **Add S3 repository** to dit-server repositories
 2. **Configure AWS credentials** for bucket access
 3. **Benefits**: 
    - Matches production setup
@@ -154,7 +154,7 @@ Publish to local Maven repository:
 **Phase 2** (Next): Implement project dependencies
 - Create composite build structure
 - Update all remote projects to Kotlin 1.5.31
-- Add project dependencies to datadatdat-server
+- Add project dependencies to dit-server
 - Test full integration build
 
 **Phase 3** (Future): Production dependency strategy
@@ -168,11 +168,11 @@ Publish to local Maven repository:
    - Upgraded Kotlin: 1.3.61 → 1.5.31
    - Fixed compiler args: `-Xuse-experimental` → `-Xopt-in`
 
-2. **`server/src/main/kotlin/com/datadatdat/metadata/table/Commits.kt`**:
+2. **`server/src/main/kotlin/dev/dit/metadata/table/Commits.kt`**:
    - Fixed import: `exposed.dao.IntIdTable` → `exposed.dao.id.IntIdTable`
    - Added: `import org.jetbrains.exposed.sql.javatime.datetime`
 
-3. **`server/src/main/kotlin/com/datadatdat/metadata/table/ProgressEntries.kt`**:
+3. **`server/src/main/kotlin/dev/dit/metadata/table/ProgressEntries.kt`**:
    - Fixed import: `exposed.dao.IntIdTable` → `exposed.dao.id.IntIdTable`
 
 ## Maven Central Dependencies ✅

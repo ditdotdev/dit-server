@@ -28,5 +28,5 @@ Default output format [None]: json
 
 ## Next Steps After Configuration:
 1. Test with: aws sts get-caller-identity
-2. Create S3 bucket: datadatdat-maven
+2. Create S3 bucket: dit-maven
 3. Set up IAM user for GitHub Actions

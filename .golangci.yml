@@ -1,4 +1,4 @@
-# golangci-lint configuration for datadatdat-server
+# golangci-lint configuration for dit-server
 # Configuration compatible with golangci-lint v2.5.0
 version: "2"
 
