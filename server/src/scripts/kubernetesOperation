@@ -4,9 +4,9 @@
 #
 
 #
-# Entry point for running a kubernetes operation. See KubernetesRunner for how this works. We expect the DATADATDAT_PATH
+# Entry point for running a kubernetes operation. See KubernetesRunner for how this works. We expect the DIT_PATH
 # environment variable to point to the base path for volumes and configuration, which is then passed to the runner.
 #
 
-exec java -DbasePath=$DATADATDAT_PATH -cp /ditdotdev/dit-server.jar dev.dit.context.kubernetes.KubernetesRunnerKt
+exec java -DbasePath=$DIT_PATH -cp /ditdotdev/dit-server.jar dev.dit.context.kubernetes.KubernetesRunnerKt
 

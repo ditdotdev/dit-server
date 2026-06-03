@@ -85,7 +85,7 @@ class KubernetesCsiContext(
         const val HOST_ALIAS_AUTO = "auto"
 
         /**
-         * Parse the `DATADATDAT_K8S_POD_HOST_ALIASES` env var into a list of
+         * Parse the `DIT_K8S_POD_HOST_ALIASES` env var into a list of
          * V1HostAlias entries to inject into job-pod specs.
          *
          * Format: `host1=ip1,host2=ip2`. Whitespace and empty entries are
@@ -720,7 +720,7 @@ class KubernetesCsiContext(
         val basePath = "/var/dit"
         val hostAliases =
             resolveHostAliasEntries(
-                System.getenv("DATADATDAT_K8S_POD_HOST_ALIASES"),
+                System.getenv("DIT_K8S_POD_HOST_ALIASES"),
                 ::discoverHostAliasIp,
             )
 
@@ -764,7 +764,7 @@ class KubernetesCsiContext(
                                                             }.toTypedArray(),
                                                     ).withEnv(
                                                         V1EnvVarBuilder()
-                                                            .withName("DATADATDAT_PATH")
+                                                            .withName("DIT_PATH")
                                                             .withValue(basePath)
                                                             .build(),
                                                     ).build(),

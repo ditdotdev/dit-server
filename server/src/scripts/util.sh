@@ -10,9 +10,9 @@
 # dit instances to run, such as when running end to end tests with an existing dit
 # installation. The
 #
-IDENTITY=${DATADATDAT_IDENTITY:-dit}
-PORT=${DATADATDAT_PORT:-5001}
-IMAGE=${DATADATDAT_IMAGE:-dit:latest}
+IDENTITY=${DIT_IDENTITY:-dit}
+PORT=${DIT_PORT:-5001}
+IMAGE=${DIT_IMAGE:-dit:latest}
 
 echo "=== User configuration ==="
 echo "IDENTITY = $IDENTITY"
@@ -51,7 +51,7 @@ echo "KERNEL_RELEASE = $KERNEL_RELEASE"
 # Primary delimiter for log messages. Lines that contain this delimiter (after the timestamp)
 # will be processed by the CLI during log scanning.
 #
-log_delimiter=DATADATDAT
+log_delimiter=DIT
 
 #
 # Return a timestamp to use in log messages and elsewhere.

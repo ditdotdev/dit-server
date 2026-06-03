@@ -134,8 +134,8 @@ function launch_server() {
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v /run/docker/plugins:/run/docker/plugins \
       -v $mount:$mount:rshared \
-      -e DATADATDAT_CONTEXT=docker-zfs \
-      -e DATADATDAT_IDENTITY=$identity \
+      -e DIT_CONTEXT=docker-zfs \
+      -e DIT_IDENTITY=$identity \
       -p $port:5001 \
       --network $identity \
       $image \

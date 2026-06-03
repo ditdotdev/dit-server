@@ -19,9 +19,9 @@ util_script=/test/src/scripts/util.sh
   function docker() { /bin/true; }
   function jq() { /bin/true; }
 
-   export DATADATDAT_IDENTITY=test
-   export DATADATDAT_PORT=6001
-   export DATADATDAT_IMAGE=ditdotdev/dit:test
+   export DIT_IDENTITY=test
+   export DIT_PORT=6001
+   export DIT_IMAGE=ditdotdev/dit:test
    source $util_script
    [ $IDENTITY = "test" ]
    [ $PORT = "6001" ]
@@ -65,7 +65,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_begin
   [ $status -eq 0 ]
-  [ "$output" = "ts DATADATDAT BEGIN" ]
+  [ "$output" = "ts DIT BEGIN" ]
 }
 
 @test "log start prints marker" {
@@ -77,7 +77,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_start "this is my message"
   [ $status -eq 0 ]
-  [ "$output" = "ts DATADATDAT START this is my message" ]
+  [ "$output" = "ts DIT START this is my message" ]
 }
 
 @test "log end prints marker" {
@@ -89,7 +89,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_end
   [ $status -eq 0 ]
-  [ "$output" = "ts DATADATDAT END" ]
+  [ "$output" = "ts DIT END" ]
 }
 
 @test "log finish prints marker" {
@@ -101,7 +101,7 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_finished
   [ $status -eq 0 ]
-  [ "$output" = "ts DATADATDAT FINISHED" ]
+  [ "$output" = "ts DIT FINISHED" ]
 }
 
 @test "log error exits program" {
@@ -113,5 +113,5 @@ util_script=/test/src/scripts/util.sh
   export -f timestamp
   run log_error "this is my message"
   [ $status -eq 1 ]
-  [ "$output" = "ts DATADATDAT ERROR this is my message" ]
+  [ "$output" = "ts DIT ERROR this is my message" ]
 }

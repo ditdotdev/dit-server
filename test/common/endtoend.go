@@ -98,9 +98,9 @@ func (e *EndToEndTest) RunDitDocker(entryPoint string, daemon bool) error {
 	args = append(args,
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s/data", e.Identity, e.Identity),
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
-		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("DATADATDAT_IMAGE=%s", e.Image),
-		"-e", fmt.Sprintf("DATADATDAT_PORT=%d", e.Port),
+		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DIT_IMAGE=%s", e.Image),
+		"-e", fmt.Sprintf("DIT_PORT=%d", e.Port),
 		e.Image, "/bin/bash", fmt.Sprintf("/ditdotdev/%s", entryPoint))
 
 	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
@@ -119,7 +119,7 @@ func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string)
 		}
 	}
 	if !imageSpecified {
-		image := os.Getenv("DATADATDAT_IMAGE")
+		image := os.Getenv("DIT_IMAGE")
 		if image == "" {
 			image = "ditdotdev/dit:latest"
 		}
@@ -130,9 +130,9 @@ func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string)
 		"run", "-d", "--restart", "always", "--name", e.GetPrimaryContainer(),
 		"-v", fmt.Sprintf("%s/.kube:/root/.kube", e.HomeDir),
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s", e.Identity, e.Identity),
-		"-e", "DATADATDAT_CONTEXT=kubernetes-csi",
-		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("DATADATDAT_CONFIG=%s", strings.Join(parameters, ",")),
+		"-e", "DIT_CONTEXT=kubernetes-csi",
+		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DIT_CONFIG=%s", strings.Join(parameters, ",")),
 		"-p", fmt.Sprintf("%d:5001", e.Port), e.Image, "/bin/bash",
 		fmt.Sprintf("/ditdotdev/%s", entryPoint),
 	}
