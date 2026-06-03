@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 #
@@ -15,7 +15,7 @@ min_zfs_version=2.0.0
 : "${ZFS_PROC_CONFIG_GZ:=/proc/config.gz}"
 
 # S3 bucket for prebuilt ZFS kernel modules
-ZFS_MODULES_BUCKET="datadatdat-zfs-builds.s3-website-us-west-2.amazonaws.com"
+ZFS_MODULES_BUCKET="dit-zfs-builds.s3-website-us-west-2.amazonaws.com"
 
 
 #
@@ -239,7 +239,7 @@ function destroy_pool() {
 # If we update to a new ZFS version but don't restart the docker host, we may find that we have
 # an older ZFS version already loaded. We can't simply unload & re-install, as we may have active
 # containers in use. If and when we come to that point, we'll need to coordinate with the CLI
-# to stop all repositories, unload ZFS through datadatdat, and re-install.
+# to stop all repositories, unload ZFS through dit, and re-install.
 #
 function check_running_zfs() {
   log_start "Checking if compatible ZFS is running"
@@ -433,7 +433,7 @@ function insmod_prebuilt_zfs() {
 
     if [[ "$downloaded" != "true" ]]; then
       echo "ERROR: No prebuilt ZFS modules available for kernel $krel"
-      echo "Submit a request at https://github.com/datadatdat/zfs-releases/issues"
+      echo "Submit a request at https://github.com/ditdotdev/zfs-releases/issues"
       log_end; return 1
     fi
   fi

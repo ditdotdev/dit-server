@@ -7,9 +7,9 @@ plugins {
     id("com.gradleup.shadow") version("9.3.1")
 }
 
-val datadatdatVersion: String by rootProject.extra
-group = "com.datadatdat"
-version = datadatdatVersion
+val ditVersion: String by rootProject.extra
+group = "dev.dit"
+version = ditVersion
 
 repositories {
     mavenLocal()
@@ -17,8 +17,8 @@ repositories {
     gradlePluginPortal()
     maven("https://repo1.maven.org/maven2/")
     maven {
-        name = "datadatdat-maven"
-        url = uri("s3://datadatdat-maven")
+        name = "dit-maven"
+        url = uri("s3://dit-maven")
         authentication {
             create<AwsImAuthentication>("awsIm")
         }
@@ -48,17 +48,17 @@ dependencies {
     implementation("joda-time:joda-time:2.14.2")
     implementation("io.kubernetes:client-java:26.0.0")
     implementation("io.kubernetes:client-java-api-fluent:26.0.0")
-    implementation("com.datadatdat:command-executor:1.9.2")
+    implementation("dev.dit:command-executor:1.9.3")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("com.datadatdat:remote-sdk:1.9.2")
-        implementation("com.datadatdat:datadatdat-remote-server:1.9.2")
-        implementation("com.datadatdat:nop-remote-server:1.9.2")
-        implementation("com.datadatdat:ssh-remote-server:1.9.2")
-        implementation("com.datadatdat:s3-remote-server:1.9.2")
-        implementation("com.datadatdat:s3web-remote-server:1.9.2")
+        implementation("dev.dit:remote-sdk:1.9.3")
+        implementation("dev.dit:dit-remote-server:1.9.3")
+        implementation("dev.dit:nop-remote-server:1.9.3")
+        implementation("dev.dit:ssh-remote-server:1.9.3")
+        implementation("dev.dit:s3-remote-server:1.9.3")
+        implementation("dev.dit:s3web-remote-server:1.9.3")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
@@ -88,11 +88,11 @@ tasks.test {
 }
 
 application {
-    mainClass.set("com.datadatdat.ApplicationKt")
+    mainClass.set("dev.dit.ApplicationKt")
 }
 
 tasks.withType<ShadowJar> {
-    archiveFileName.set("datadatdat-server.jar")
+    archiveFileName.set("dit-server.jar")
     // Must set duplicatesStrategy for service files BEFORE mergeServiceFiles()
     // or the default EXCLUDE strategy will discard all but the first service file
     // See: https://gradleup.com/shadow/configuration/merging/#handling-duplicates-strategy

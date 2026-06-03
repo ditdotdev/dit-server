@@ -3,7 +3,7 @@
 # Create IAM user and policies for GitHub Actions Maven publishing
 set -e
 
-BUCKET_NAME="datadatdat-maven"
+BUCKET_NAME="dit-maven"
 IAM_USER="github-actions-maven"
 POLICY_NAME="MavenS3PublishPolicy"
 

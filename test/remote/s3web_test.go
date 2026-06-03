@@ -1,5 +1,5 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package remote
 
@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	dit "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -25,10 +25,10 @@ type S3WebTestSuite struct {
 
 	s3bucket      string
 	s3path        string
-	s3remote      datadatdat.Remote
-	webRemote     datadatdat.Remote
-	s3parameters  datadatdat.RemoteParameters
-	webParameters datadatdat.RemoteParameters
+	s3remote      dit.Remote
+	webRemote     dit.Remote
+	s3parameters  dit.RemoteParameters
+	webParameters dit.RemoteParameters
 
 	// clearBucketFn lets unit tests substitute the bucket-clearing call. In
 	// production it is wired to ClearBucket during SetupSuite. See issue #156.
@@ -85,7 +85,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	s.s3remote = datadatdat.Remote{
+	s.s3remote = dit.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -96,7 +96,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 			"region":    cfg.Region,
 		},
 	}
-	s.webRemote = datadatdat.Remote{
+	s.webRemote = dit.Remote{
 		Provider: "s3web",
 		Name:     "web",
 		Properties: map[string]interface{}{
@@ -109,12 +109,12 @@ func (s *S3WebTestSuite) SetupSuite() {
 
 	s.ctx = context.Background()
 
-	s.s3parameters = datadatdat.RemoteParameters{
+	s.s3parameters = dit.RemoteParameters{
 		Provider:   "s3",
 		Properties: map[string]interface{}{},
 	}
 
-	s.webParameters = datadatdat.RemoteParameters{
+	s.webParameters = dit.RemoteParameters{
 		Provider:   "s3web",
 		Properties: map[string]interface{}{},
 	}
@@ -138,7 +138,7 @@ func TestS3WebTestSuite(t *testing.T) {
 }
 
 func (s *S3WebTestSuite) TestS3Web_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -146,7 +146,7 @@ func (s *S3WebTestSuite) TestS3Web_001_CreateRepository() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -167,7 +167,7 @@ func (s *S3WebTestSuite) TestS3Web_003_CreateFile() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -237,7 +237,7 @@ func (s *S3WebTestSuite) TestS3Web_023_ListRemoteFilterInclude() {
 }
 
 func (s *S3WebTestSuite) TestS3Web_030_CreateSecondCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id:         "id2",
 		Properties: map[string]interface{}{},
 	}).Execute()

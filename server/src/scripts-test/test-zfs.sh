@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright Datadatdat.
+# Copyright Dit.
 #
 
 zfs_script=/test/src/scripts/zfs.sh
@@ -582,7 +582,7 @@ util_script=/test/src/scripts/util.sh
   [ $status -eq 0 ]
 }
 
-@test "unload zfs succeeds if modules were not installed by datadatdat" {
+@test "unload zfs succeeds if modules were not installed by dit" {
   source $zfs_script
 
   function lsmod() { /bin/true; }

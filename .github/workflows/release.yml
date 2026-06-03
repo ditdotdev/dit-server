@@ -12,7 +12,7 @@ on: create
 
 jobs:
   health:
-    uses: datadatdat/.github/.github/workflows/repo-health.yml@master
+    uses: ditdotdev/.github/.github/workflows/repo-health.yml@master
     with:
       language: kotlin
       coverage-floor: 90
@@ -34,7 +34,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Build and test
-        run: ./gradlew build -PserverImageName=datadatdat/datadatdat -PdatadatdatVersion=${GITHUB_REF#refs/tags/}
+        run: ./gradlew build -PserverImageName=ditdotdev/dit -PditVersion=${GITHUB_REF#refs/tags/}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -48,9 +48,9 @@ jobs:
           git config --global url."https://x-access-token:${{ secrets.GO_MODULES_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: Configure Go for private modules
         run: |
-          go env -w GOPRIVATE=github.com/datadatdat/*
-          go env -w GONOPROXY=github.com/datadatdat/*
-          go env -w GONOSUMDB=github.com/datadatdat/*
+          go env -w GOPRIVATE=github.com/ditdotdev/*
+          go env -w GONOPROXY=github.com/ditdotdev/*
+          go env -w GONOSUMDB=github.com/ditdotdev/*
       - name: End to End tests
         run: |
           uname -a
@@ -80,10 +80,10 @@ jobs:
         run: |
           docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
           # publishDockerServer builds and pushes multi-arch images (amd64, arm64) with the version tag
-          ./gradlew publishDockerServer -PserverImageName=datadatdat/datadatdat -PdatadatdatVersion=${GITHUB_REF#refs/tags/}
+          ./gradlew publishDockerServer -PserverImageName=ditdotdev/dit -PditVersion=${GITHUB_REF#refs/tags/}
           # Create :latest tag pointing to the versioned multi-arch manifest
           docker buildx imagetools create \
-            --tag datadatdat/datadatdat:latest \
-            datadatdat/datadatdat:${GITHUB_REF#refs/tags/}
+            --tag ditdotdev/dit:latest \
+            ditdotdev/dit:${GITHUB_REF#refs/tags/}
         env:
           GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}

@@ -1,4 +1,4 @@
-rootProject.name = "datadatdat-server"
+rootProject.name = "dit-server"
 
 include("server")
 
@@ -8,44 +8,44 @@ include("server")
 
 // includeBuild("../remote-sdk") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:remote-sdk")).using(project(":"))
+//         substitute(module("dev.dit:remote-sdk")).using(project(":"))
 //     }
 // }
 
 // includeBuild("../command-executor") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:command-executor")).using(project(":"))
+//         substitute(module("dev.dit:command-executor")).using(project(":"))
 //     }
 // }
 
 // // Multi-module remote projects - include their server modules
 // includeBuild("../nop-remote") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:nop-remote-server")).using(project(":server"))
+//         substitute(module("dev.dit:nop-remote-server")).using(project(":server"))
 //     }
 // }
 
 // includeBuild("../ssh-remote") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:ssh-remote-server")).using(project(":server"))
+//         substitute(module("dev.dit:ssh-remote-server")).using(project(":server"))
 //     }
 // }
 
 // includeBuild("../s3-remote") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:s3-remote-server")).using(project(":server"))
+//         substitute(module("dev.dit:s3-remote-server")).using(project(":server"))
 //     }
 // }
 
 // includeBuild("../s3web-remote") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:s3web-remote-server")).using(project(":server"))
+//         substitute(module("dev.dit:s3web-remote-server")).using(project(":server"))
 //     }
 // }
 
-// includeBuild("../datadatdat-remote") {
+// includeBuild("../dit-remote") {
 //     dependencySubstitution {
-//         substitute(module("com.datadatdat:datadatdat-remote-server")).using(project(":server"))
-//         substitute(module("com.datadatdat:datadatdat-remote-client")).using(project(":client"))
+//         substitute(module("dev.dit:dit-remote-server")).using(project(":server"))
+//         substitute(module("dev.dit:dit-remote-client")).using(project(":client"))
 //     }
 // }

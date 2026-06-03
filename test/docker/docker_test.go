@@ -1,12 +1,12 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package docker
 
 import (
 	"context"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	dit "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 	"strings"
 	"testing"
@@ -19,8 +19,8 @@ type WorkflowTestSuite struct {
 	ctx context.Context
 
 	volumeMountpoint string
-	remoteParams     datadatdat.RemoteParameters
-	currentOp        datadatdat.Operation
+	remoteParams     dit.RemoteParameters
+	currentOp        dit.Operation
 }
 
 func (s *WorkflowTestSuite) SetupSuite() {
@@ -28,7 +28,7 @@ func (s *WorkflowTestSuite) SetupSuite() {
 	s.e.SetupStandardDocker()
 	s.ctx = context.Background()
 
-	s.remoteParams = datadatdat.RemoteParameters{
+	s.remoteParams = dit.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{},
 	}
@@ -59,7 +59,7 @@ func (s *WorkflowTestSuite) TestLocal_002_EmptyRepoList() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_003_CreateRepository() {
-	res, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	res, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{"a": "b"},
 	}).Execute()
@@ -91,7 +91,7 @@ func (s *WorkflowTestSuite) TestLocal_005_ListRepositoryPresent() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_006_CreateDuplicate() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -99,7 +99,7 @@ func (s *WorkflowTestSuite) TestLocal_006_CreateDuplicate() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_010_CreateVolume() {
-	res, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	res, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	}).Execute()
@@ -111,7 +111,7 @@ func (s *WorkflowTestSuite) TestLocal_010_CreateVolume() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_011_CreateVolumeBadRepo() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "bar").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "bar").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	}).Execute()
@@ -119,7 +119,7 @@ func (s *WorkflowTestSuite) TestLocal_011_CreateVolumeBadRepo() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_012_CreateVolumeDuplicate() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{"a": "b"},
 	}).Execute()
@@ -175,7 +175,7 @@ func (s *WorkflowTestSuite) TestLocal_020_LastCommitEmpty() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_021_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -189,7 +189,7 @@ func (s *WorkflowTestSuite) TestLocal_021_CreateCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_022_DuplicateCommit() {
-	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	_, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id:         "id",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -210,7 +210,7 @@ func (s *WorkflowTestSuite) TestLocal_024_GetBadCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_025_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
@@ -338,7 +338,7 @@ func (s *WorkflowTestSuite) TestLocal_046_SourceCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_050_AddRemote() {
-	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
+	res, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(dit.Remote{
 		Provider:   "nop",
 		Name:       "a",
 		Properties: map[string]interface{}{},
@@ -357,7 +357,7 @@ func (s *WorkflowTestSuite) TestLocal_051_GetRemote() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_052_DuplicateRemote() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(dit.Remote{
 		Provider:   "nop",
 		Name:       "a",
 		Properties: map[string]interface{}{},
@@ -393,7 +393,7 @@ func (s *WorkflowTestSuite) TestLocal_056_DeleteNonExistentRemote() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_057_UpdateRemote() {
-	_, _, err := s.e.RemoteApi.UpdateRemote(s.ctx, "foo", "a").Remote(datadatdat.Remote{
+	_, _, err := s.e.RemoteApi.UpdateRemote(s.ctx, "foo", "a").Remote(dit.Remote{
 		Provider:   "nop",
 		Name:       "b",
 		Properties: map[string]interface{}{},
@@ -535,7 +535,7 @@ func (s *WorkflowTestSuite) TestLocal_083_PushBadCommit() {
 }
 
 func (s *WorkflowTestSuite) TestLocal_090_AbortOperation() {
-	params := datadatdat.RemoteParameters{
+	params := dit.RemoteParameters{
 		Provider:   "nop",
 		Properties: map[string]interface{}{"delay": 10},
 	}

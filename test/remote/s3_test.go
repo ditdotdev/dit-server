@@ -1,5 +1,5 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package remote
 
@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
-	endtoend "github.com/datadatdat/datadatdat-server/test/common"
+	dit "github.com/ditdotdev/dit-client-go"
+	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"strings"
@@ -23,8 +23,8 @@ type S3TestSuite struct {
 
 	s3bucket     string
 	s3path       string
-	remote       datadatdat.Remote
-	remoteParams datadatdat.RemoteParameters
+	remote       dit.Remote
+	remoteParams dit.RemoteParameters
 
 	// clearBucketFn lets unit tests substitute the bucket-clearing call. In
 	// production it is wired to ClearBucket during SetupSuite. See issue #156.
@@ -81,7 +81,7 @@ func (s *S3TestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	s.remote = datadatdat.Remote{
+	s.remote = dit.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -98,7 +98,7 @@ func (s *S3TestSuite) SetupSuite() {
 
 	s.ctx = context.Background()
 
-	s.remoteParams = datadatdat.RemoteParameters{
+	s.remoteParams = dit.RemoteParameters{
 		Provider:   "s3",
 		Properties: map[string]interface{}{},
 	}
@@ -122,7 +122,7 @@ func TestS3TestSuite(t *testing.T) {
 }
 
 func (s *S3TestSuite) TestS3_001_CreateRepository() {
-	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(datadatdat.Repository{
+	_, _, err := s.e.RepoApi.CreateRepository(s.ctx).Repository(dit.Repository{
 		Name:       "foo",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -130,7 +130,7 @@ func (s *S3TestSuite) TestS3_001_CreateRepository() {
 }
 
 func (s *S3TestSuite) TestS3_002_CreateMountVolume() {
-	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(datadatdat.Volume{
+	_, _, err := s.e.VolumeApi.CreateVolume(s.ctx, "foo").Volume(dit.Volume{
 		Name:       "vol",
 		Properties: map[string]interface{}{},
 	}).Execute()
@@ -151,7 +151,7 @@ func (s *S3TestSuite) TestS3_003_CreateFile() {
 }
 
 func (s *S3TestSuite) TestS3_004_CreateCommit() {
-	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.CreateCommit(s.ctx, "foo").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "b",
@@ -225,7 +225,7 @@ func (s *S3TestSuite) TestS3_030_PushDuplicateCommit() {
 }
 
 func (s *S3TestSuite) TestS3_031_UpdateCommit() {
-	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(datadatdat.Commit{
+	res, _, err := s.e.CommitApi.UpdateCommit(s.ctx, "foo", "id").Commit(dit.Commit{
 		Id: "id",
 		Properties: map[string]interface{}{"tags": map[string]string{
 			"a": "B",
@@ -322,7 +322,7 @@ func (s *S3TestSuite) TestS3_050_RemoveRemote() {
 }
 
 func (s *S3TestSuite) TestS3_051_AddRemoteNoKeys() {
-	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(datadatdat.Remote{
+	_, _, err := s.e.RemoteApi.CreateRemote(s.ctx, "foo").Remote(dit.Remote{
 		Provider: "s3",
 		Name:     "origin",
 		Properties: map[string]interface{}{
@@ -335,7 +335,7 @@ func (s *S3TestSuite) TestS3_051_AddRemoteNoKeys() {
 
 func (s *S3TestSuite) TestS3_052_ListCommitsKeys() {
 	res, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
-		RemoteParameters(datadatdat.RemoteParameters{
+		RemoteParameters(dit.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": s.remote.Properties["accessKey"],
@@ -356,7 +356,7 @@ func (s *S3TestSuite) TestS3_053_ListCommitsNoKeys() {
 
 func (s *S3TestSuite) TestS3_054_ListCommitsIncorrectKeys() {
 	_, _, err := s.e.RemoteApi.ListRemoteCommits(s.ctx, "foo", "origin").
-		RemoteParameters(datadatdat.RemoteParameters{
+		RemoteParameters(dit.RemoteParameters{
 			Provider: "s3",
 			Properties: map[string]interface{}{
 				"accessKey": "ACCESS",
@@ -371,7 +371,7 @@ func (s *S3TestSuite) TestS3_055_PullKeys() {
 	_, err := s.e.CommitApi.DeleteCommit(s.ctx, "foo", "id").Execute()
 	if s.e.NoError(err) {
 		res, _, err := s.e.OperationsApi.Pull(s.ctx, "foo", "origin", "id").
-			RemoteParameters(datadatdat.RemoteParameters{
+			RemoteParameters(dit.RemoteParameters{
 				Provider: "s3",
 				Properties: map[string]interface{}{
 					"accessKey": s.remote.Properties["accessKey"],

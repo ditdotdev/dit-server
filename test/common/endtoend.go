@@ -1,5 +1,5 @@
 /*
- * Copyright Datadatdat.
+ * Copyright Dit.
  */
 package common
 
@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	datadatdat "github.com/datadatdat/datadatdat-client-go"
+	dit "github.com/ditdotdev/dit-client-go"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/ssh"
 	"os"
@@ -20,9 +20,9 @@ import (
 const dockerZfsContext = "docker-zfs"
 
 /*
- * Utility class for managing endtoend tests of datadatdat-server. There are two types of
- * containers we care about: the datadatdat server container and a remote SSH container. The datadatdat
- * server is run on an alternate pool and port so as not to conflict with the running datadatdat-server.
+ * Utility class for managing endtoend tests of dit-server. There are two types of
+ * containers we care about: the dit server container and a remote SSH container. The dit
+ * server is run on an alternate pool and port so as not to conflict with the running dit-server.
  * For the remote SSH server, we use 'rastasheep/ubuntu-sshd', which comes pre-built for remote access
  * over SSH.
  */
@@ -36,13 +36,13 @@ type EndToEndTest struct {
 	SshHost  string
 	HomeDir  string
 
-	Client *datadatdat.APIClient
+	Client *dit.APIClient
 
-	RepoApi       *datadatdat.RepositoriesApiService
-	RemoteApi     *datadatdat.RemotesApiService
-	VolumeApi     *datadatdat.VolumesApiService
-	CommitApi     *datadatdat.CommitsApiService
-	OperationsApi *datadatdat.OperationsApiService
+	RepoApi       *dit.RepositoriesApiService
+	RemoteApi     *dit.RemotesApiService
+	VolumeApi     *dit.VolumesApiService
+	CommitApi     *dit.CommitsApiService
+	OperationsApi *dit.OperationsApiService
 }
 
 const waitTimeout = 1
@@ -56,13 +56,13 @@ func NewEndToEndTest(s *suite.Suite, context string) *EndToEndTest {
 		Context:  context,
 		Identity: "test",
 		Port:     6001,
-		Image:    "datadatdat:latest",
+		Image:    "dit:latest",
 		SshPort:  6003,
 	}
 
-	cfg := datadatdat.NewConfiguration()
+	cfg := dit.NewConfiguration()
 	cfg.Host = fmt.Sprintf("localhost:%d", ret.Port)
-	ret.Client = datadatdat.NewAPIClient(cfg)
+	ret.Client = dit.NewAPIClient(cfg)
 
 	ret.RepoApi = ret.Client.RepositoriesApi
 	ret.VolumeApi = ret.Client.VolumesApi
@@ -83,10 +83,10 @@ func NewEndToEndTest(s *suite.Suite, context string) *EndToEndTest {
 }
 
 /*
- * Run a specific entry point within datadatdat-server. This can either run a full-fledged launch, or can be used to
+ * Run a specific entry point within dit-server. This can either run a full-fledged launch, or can be used to
  * teardown the test environment.
  */
-func (e *EndToEndTest) RunDatadatdatDocker(entryPoint string, daemon bool) error {
+func (e *EndToEndTest) RunDitDocker(entryPoint string, daemon bool) error {
 	args := []string{"run", "--privileged", "--pid=host", "--network=host",
 		"-v", "/var/lib:/var/lib", "-v", "/run/docker:/run/docker"}
 	if daemon {
@@ -98,43 +98,43 @@ func (e *EndToEndTest) RunDatadatdatDocker(entryPoint string, daemon bool) error
 	args = append(args,
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s/data", e.Identity, e.Identity),
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
-		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("DATADATDAT_IMAGE=%s", e.Image),
-		"-e", fmt.Sprintf("DATADATDAT_PORT=%d", e.Port),
-		e.Image, "/bin/bash", fmt.Sprintf("/datadatdat/%s", entryPoint))
+		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DIT_IMAGE=%s", e.Image),
+		"-e", fmt.Sprintf("DIT_PORT=%d", e.Port),
+		e.Image, "/bin/bash", fmt.Sprintf("/ditdotdev/%s", entryPoint))
 
 	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
 }
 
 /*
- * Run an entry point within kubernetes. This always spawns it as a daemon, and runs datadatdat-server directly without
+ * Run an entry point within kubernetes. This always spawns it as a daemon, and runs dit-server directly without
  * going through the launch script.
  */
-func (e *EndToEndTest) RunDatadatdatKubernetes(entryPoint string, parameters ...string) error {
+func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string) error {
 	imageSpecified := false
 	for _, p := range parameters {
-		if strings.Index(p, "datadatdatImage=") == 0 {
+		if strings.Index(p, "ditImage=") == 0 {
 			imageSpecified = true
 			break
 		}
 	}
 	if !imageSpecified {
-		image := os.Getenv("DATADATDAT_IMAGE")
+		image := os.Getenv("DIT_IMAGE")
 		if image == "" {
-			image = "datadatdat/datadatdat:latest"
+			image = "ditdotdev/dit:latest"
 		}
-		parameters = append(parameters, fmt.Sprintf("datadatdatImage=%s", image))
+		parameters = append(parameters, fmt.Sprintf("ditImage=%s", image))
 	}
 
 	args := []string{
 		"run", "-d", "--restart", "always", "--name", e.GetPrimaryContainer(),
 		"-v", fmt.Sprintf("%s/.kube:/root/.kube", e.HomeDir),
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s", e.Identity, e.Identity),
-		"-e", "DATADATDAT_CONTEXT=kubernetes-csi",
-		"-e", fmt.Sprintf("DATADATDAT_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("DATADATDAT_CONFIG=%s", strings.Join(parameters, ",")),
+		"-e", "DIT_CONTEXT=kubernetes-csi",
+		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
+		"-e", fmt.Sprintf("DIT_CONFIG=%s", strings.Join(parameters, ",")),
 		"-p", fmt.Sprintf("%d:5001", e.Port), e.Image, "/bin/bash",
-		fmt.Sprintf("/datadatdat/%s", entryPoint),
+		fmt.Sprintf("/ditdotdev/%s", entryPoint),
 	}
 
 	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
@@ -149,9 +149,9 @@ func (e *EndToEndTest) StartServer(parameters ...string) error {
 		return err
 	}
 	if e.Context == dockerZfsContext {
-		return e.RunDatadatdatDocker("launch", true)
+		return e.RunDitDocker("launch", true)
 	} else {
-		return e.RunDatadatdatKubernetes("run", parameters...)
+		return e.RunDitKubernetes("run", parameters...)
 	}
 }
 
@@ -223,7 +223,7 @@ func (e *EndToEndTest) StopServer(ignoreErrors bool) error {
 	}
 
 	if e.Context == dockerZfsContext {
-		err = e.RunDatadatdatDocker("teardown", false)
+		err = e.RunDitDocker("teardown", false)
 		if err != nil && !ignoreErrors {
 			return err
 		}
@@ -325,7 +325,7 @@ func (e *EndToEndTest) MkdirSsh(path string) error {
 
 func (e *EndToEndTest) StartSsh() error {
 	return exec.Command("docker", "run", "-p", fmt.Sprintf("%d:22", e.SshPort), "-d", "--name", e.GetContainer("ssh"), // #nosec G204,G702 - controlled docker run command in test
-		"--network", e.Identity, "datadatdat/ssh-test-server:latest").Run()
+		"--network", e.Identity, "ditdotdev/ssh-test-server:latest").Run()
 }
 
 func (e *EndToEndTest) StopSsh() error {
@@ -408,9 +408,9 @@ func (e *EndToEndTest) TeardownStandardSsh() {
 }
 
 func (e *EndToEndTest) APIError(err error, code string) bool {
-	if openApiError, ok := err.(*datadatdat.GenericOpenAPIError); ok {
-		if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
-			return e.Equal(code, datadatdatApiError.GetCode(), datadatdatApiError.Message)
+	if openApiError, ok := err.(*dit.GenericOpenAPIError); ok {
+		if ditApiError, ok := openApiError.Model().(dit.ApiError); ok {
+			return e.Equal(code, ditApiError.GetCode(), ditApiError.Message)
 		}
 	}
 	return e.Error(err)
@@ -418,26 +418,26 @@ func (e *EndToEndTest) APIError(err error, code string) bool {
 
 func (e *EndToEndTest) NoError(err error) bool {
 	if err != nil {
-		if openApiError, ok := err.(*datadatdat.GenericOpenAPIError); ok {
-			if datadatdatApiError, ok := openApiError.Model().(datadatdat.ApiError); ok {
-				return e.Fail("unexpected error", datadatdatApiError.Message)
+		if openApiError, ok := err.(*dit.GenericOpenAPIError); ok {
+			if ditApiError, ok := openApiError.Model().(dit.ApiError); ok {
+				return e.Fail("unexpected error", ditApiError.Message)
 			}
 		}
 	}
 	return e.Suite.NoError(err)
 }
 
-func (e *EndToEndTest) GetTag(commit datadatdat.Commit, tag string) string {
+func (e *EndToEndTest) GetTag(commit dit.Commit, tag string) string {
 	if tags, ok := commit.Properties["tags"].(map[string]interface{}); ok {
 		return tags[tag].(string)
 	}
 	return ""
 }
 
-func (e *EndToEndTest) WaitForOperation(id string) ([]datadatdat.ProgressEntry, error) {
+func (e *EndToEndTest) WaitForOperation(id string) ([]dit.ProgressEntry, error) {
 	completed := false
 	var lastEntry int32 = 0
-	result := []datadatdat.ProgressEntry{}
+	result := []dit.ProgressEntry{}
 	for ok := true; ok; ok = !completed {
 		progress, _, err := e.Client.OperationsApi.GetOperationProgress(context.Background(), id).
 			LastId(lastEntry).Execute()

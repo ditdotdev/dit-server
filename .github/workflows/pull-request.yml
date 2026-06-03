@@ -111,9 +111,9 @@ jobs:
 
       - name: Configure Go for private modules
         run: |
-          go env -w GOPRIVATE=github.com/datadatdat/*
-          go env -w GONOPROXY=github.com/datadatdat/*
-          go env -w GONOSUMDB=github.com/datadatdat/*
+          go env -w GOPRIVATE=github.com/ditdotdev/*
+          go env -w GONOPROXY=github.com/ditdotdev/*
+          go env -w GONOSUMDB=github.com/ditdotdev/*
 
       - name: End to End tests
         run: |
@@ -203,17 +203,17 @@ jobs:
           echo "## OpenAPI Spec Changes" >> $GITHUB_STEP_SUMMARY
 
           # Check for breaking changes
-          if oasdiff breaking base/openapi/datadatdat.yml openapi/datadatdat.yml; then
+          if oasdiff breaking base/openapi/dit.yml openapi/dit.yml; then
             echo "No breaking changes detected." >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Breaking changes detected** — verify datadatdat-client-go compatibility." >> $GITHUB_STEP_SUMMARY
+            echo "**Breaking changes detected** — verify dit-client-go compatibility." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
 
           # Show diff summary
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Changelog" >> $GITHUB_STEP_SUMMARY
-          oasdiff changelog base/openapi/datadatdat.yml openapi/datadatdat.yml >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          oasdiff changelog base/openapi/dit.yml openapi/dit.yml >> $GITHUB_STEP_SUMMARY 2>&1 || true
 
   # Go code quality checks
   go-quality:
@@ -240,11 +240,11 @@ jobs:
 
       - name: Configure Go for private modules
         run: |
-          go env -w GOPRIVATE=github.com/datadatdat/*
-          go env -w GONOPROXY=github.com/datadatdat/*
-          go env -w GONOSUMDB=github.com/datadatdat/*
+          go env -w GOPRIVATE=github.com/ditdotdev/*
+          go env -w GONOPROXY=github.com/ditdotdev/*
+          go env -w GONOSUMDB=github.com/ditdotdev/*
           # Leave GOPROXY at its default (https://proxy.golang.org,direct).
-          # GOPRIVATE above already opts datadatdat/* repos out of the proxy,
+          # GOPRIVATE above already opts ditdotdev/* repos out of the proxy,
           # so direct VCS fetches are scoped to private modules. Public
           # transitive deps — notably gopkg.in/evanphx/json-patch.v4, pulled
           # in by k8s.io/client-go — go through proxy.golang.org's cache
@@ -252,9 +252,9 @@ jobs:
           # which has timed out the Go Code Quality job repeatedly.
         shell: bash
         env:
-          GOPRIVATE: github.com/datadatdat/*
-          GONOPROXY: github.com/datadatdat/*
-          GONOSUMDB: github.com/datadatdat/*
+          GOPRIVATE: github.com/ditdotdev/*
+          GONOPROXY: github.com/ditdotdev/*
+          GONOSUMDB: github.com/ditdotdev/*
 
       - name: Cache Go modules
         uses: actions/cache@v5
@@ -269,9 +269,9 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
         env:
-          GOPRIVATE: github.com/datadatdat/*
-          GONOPROXY: github.com/datadatdat/*
-          GONOSUMDB: github.com/datadatdat/*
+          GOPRIVATE: github.com/ditdotdev/*
+          GONOPROXY: github.com/ditdotdev/*
+          GONOSUMDB: github.com/ditdotdev/*
           GIT_TERMINAL_PROMPT: 0
 
       - name: Run golangci-lint
@@ -292,9 +292,9 @@ jobs:
       - name: Run go vet
         run: go vet ./...
         env:
-          GOPRIVATE: github.com/datadatdat/*
-          GONOPROXY: github.com/datadatdat/*
-          GONOSUMDB: github.com/datadatdat/*
+          GOPRIVATE: github.com/ditdotdev/*
+          GONOPROXY: github.com/ditdotdev/*
+          GONOSUMDB: github.com/ditdotdev/*
           GIT_TERMINAL_PROMPT: 0
 
       - name: Run Go security scanner (gosec)
@@ -302,7 +302,7 @@ jobs:
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec ./...
         env:
-          GOPRIVATE: github.com/datadatdat/*
-          GONOPROXY: github.com/datadatdat/*
-          GONOSUMDB: github.com/datadatdat/*
+          GOPRIVATE: github.com/ditdotdev/*
+          GONOPROXY: github.com/ditdotdev/*
+          GONOSUMDB: github.com/ditdotdev/*
           GIT_TERMINAL_PROMPT: 0
