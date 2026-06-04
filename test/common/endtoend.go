@@ -101,7 +101,7 @@ func (e *EndToEndTest) RunDitDocker(entryPoint string, daemon bool) error {
 		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
 		"-e", fmt.Sprintf("DIT_IMAGE=%s", e.Image),
 		"-e", fmt.Sprintf("DIT_PORT=%d", e.Port),
-		e.Image, "/bin/bash", fmt.Sprintf("/ditdotdev/%s", entryPoint))
+		e.Image, "/bin/bash", fmt.Sprintf("/dit/%s", entryPoint))
 
 	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
 }
@@ -134,7 +134,7 @@ func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string)
 		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
 		"-e", fmt.Sprintf("DIT_CONFIG=%s", strings.Join(parameters, ",")),
 		"-p", fmt.Sprintf("%d:5001", e.Port), e.Image, "/bin/bash",
-		fmt.Sprintf("/ditdotdev/%s", entryPoint),
+		fmt.Sprintf("/dit/%s", entryPoint),
 	}
 
 	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test

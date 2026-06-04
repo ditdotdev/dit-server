@@ -40,8 +40,8 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Dit software installation and configuration
 ################################################
 
-COPY build/libs/dit-server.jar /ditdotdev/
-COPY src/scripts/* /ditdotdev/
+COPY build/libs/dit-server.jar /dit/
+COPY src/scripts/* /dit/
 
 # Download pre-built docker-volume-proxy binary from GitHub Releases
 RUN --mount=type=secret,id=gh_token \
@@ -50,8 +50,8 @@ RUN --mount=type=secret,id=gh_token \
       "https://api.github.com/repos/ditdotdev/dit-docker-proxy/releases/latest" | \
       jq -r '.assets[] | select(.name == "docker-volume-proxy") | .url') && \
     curl -fsSL -H "Authorization: token $GH_TOKEN" -H "Accept: application/octet-stream" \
-      "$ASSET_URL" -o /ditdotdev/docker-volume-proxy && \
-    chmod 755 /ditdotdev/docker-volume-proxy
+      "$ASSET_URL" -o /dit/docker-volume-proxy && \
+    chmod 755 /dit/docker-volume-proxy
 
 RUN echo 'alias psql="psql postgres://postgres:postgres@localhost/dit"' >> /etc/bash.bashrc
 

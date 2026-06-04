@@ -15,7 +15,7 @@ import java.util.ServiceLoader
  *
  * The runner is passed the base path to the directory tree with the data and configuration. This should look like:
  *
- *      /var/ditdotdev/
+ *      /var/dit/
  *          x-secret/config      Operation configuration (serialized KubernetesParameters)
  *          x-scratch/           Scratch space
  *          <volume>/           One or more volumes
