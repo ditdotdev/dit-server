@@ -52,7 +52,7 @@ class DockerZfsContextTest : StringSpec() {
 
     fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation =
         RemoteOperation(
-            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
+            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> },
             operationId = UUID.randomUUID().toString(),
             commitId = "commit",
             commit = null,

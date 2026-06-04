@@ -90,7 +90,7 @@ class OperationExecutorTest : StringSpec() {
 
     fun createRemoteOperation(type: RemoteOperationType = RemoteOperationType.PULL): RemoteOperation =
         RemoteOperation(
-            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> Unit },
+            updateProgress = { _: RemoteProgress, _: String?, _: Int? -> },
             operationId = vs,
             commitId = "commit",
             commit = null,
