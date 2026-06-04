@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dit "github.com/dit/dit-client-go"
+	dit "github.com/ditdotdev/dit-client-go"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/ssh"
 	"os"
