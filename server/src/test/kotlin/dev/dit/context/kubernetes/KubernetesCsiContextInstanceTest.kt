@@ -701,7 +701,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -760,7 +760,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -903,7 +903,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -967,7 +967,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -1042,7 +1042,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -1093,7 +1093,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
@@ -1145,7 +1145,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             val ctx = newMockedContext(coreApi = core, batchApi = batch, executor = exec)
             val op =
                 RemoteOperation(
-                    updateProgress = { _, _, _ -> Unit },
+                    updateProgress = { _, _, _ -> },
                     operationId = UUID.randomUUID().toString(),
                     commitId = "c",
                     commit = null,
