@@ -8,5 +8,5 @@
 # environment variable to point to the base path for volumes and configuration, which is then passed to the runner.
 #
 
-exec java -DbasePath=$DIT_PATH -cp /ditdotdev/dit-server.jar dev.dit.context.kubernetes.KubernetesRunnerKt
+exec java -DbasePath=$DIT_PATH -cp /dit/dit-server.jar dev.dit.context.kubernetes.KubernetesRunnerKt
 

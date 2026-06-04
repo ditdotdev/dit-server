@@ -744,7 +744,7 @@ class KubernetesCsiContext(
                                                 V1ContainerBuilder()
                                                     .withName("operation")
                                                     .withImage(image)
-                                                    .withCommand("/ditdotdev/kubernetesOperation")
+                                                    .withCommand("/dit/kubernetesOperation")
                                                     .withVolumeMounts(
                                                         V1VolumeMountBuilder()
                                                             .withName("x-secret")

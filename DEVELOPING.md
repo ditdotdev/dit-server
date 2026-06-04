@@ -86,14 +86,14 @@ precompiled binaries can be found.
 
 The second piece requires that we leverage an external volume (`dit-data`) to store any ZFS
 storage pool or other data that we need to persist beyond the lifetime of the Docker VM. This
-volume is created by the CLI and mounted at `/var/lib/ditdotdev/data`. We then create the following
+volume is created by the CLI and mounted at `/var/lib/dit/data`. We then create the following
 directories:
 
-   * `/var/lib/ditdotdev/data/pool` - The underlying file backing the storage pool we create
-   * `/var/lib/ditdotdev/mnt` - Root mountpoint for all filesystems created in the pool. This must
+   * `/var/lib/dit/data/pool` - The underlying file backing the storage pool we create
+   * `/var/lib/dit/mnt` - Root mountpoint for all filesystems created in the pool. This must
      exist on the root VM and not within the `dit-data` volume in order for bind mounts to 
      work properly.
-   * `/var/lib/ditdotdev/data/modules` - Stash of ZFS modules (built or installed) to match the current
+   * `/var/lib/dit/data/modules` - Stash of ZFS modules (built or installed) to match the current
      kernel.
 
 The third piece is a nuance of how Linux filesystems work in container namespaces. For more
