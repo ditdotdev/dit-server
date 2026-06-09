@@ -53,17 +53,53 @@ func (s *S3TestSuite) ClearBucket() error {
 	return nil
 }
 
-func (s *S3TestSuite) SetupSuite() {
-	location := os.Getenv("S3_LOCATION")
-	if location == "" {
-		panic("S3_LOCATION must be set in environment")
+// splitS3Location parses an S3_LOCATION value into its bucket and path.
+// It tolerates an optional scheme (e.g. "s3://") on the location: the
+// S3_TEST_LOCATION secret was migrated to an `s3://dit-*` URI form
+// (ditdotdev/dit#165), but the S3 / S3Web suites need the bare bucket name to
+// call the S3 API directly. Panics if no '/' separates bucket from path.
+func splitS3Location(location string) (bucket, path string) {
+	if i := strings.Index(location, "://"); i >= 0 {
+		location = location[i+len("://"):]
 	}
 	idx := strings.IndexByte(location, '/')
 	if idx < 0 {
 		panic("S3_LOCATION must be in the format 'bucket/path', got: " + location)
 	}
-	s.s3bucket = location[:idx]
-	s.s3path = location[idx+1:]
+	return location[:idx], location[idx+1:]
+}
+
+func TestSplitS3Location(t *testing.T) {
+	cases := []struct {
+		in, bucket, path string
+	}{
+		{"s3://dit-testdata/run-1-1", "dit-testdata", "run-1-1"}, // s3:// scheme (post ditdotdev/dit#165)
+		{"dit-testdata/run-1-1", "dit-testdata", "run-1-1"},      // bare bucket/path
+		{"s3://dit-testdata/sub/run-1", "dit-testdata", "sub/run-1"},
+	}
+	for _, c := range cases {
+		b, p := splitS3Location(c.in)
+		if b != c.bucket || p != c.path {
+			t.Errorf("splitS3Location(%q) = (%q, %q), want (%q, %q)", c.in, b, p, c.bucket, c.path)
+		}
+	}
+}
+
+func TestSplitS3LocationPanicsWithoutSlash(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("expected panic for location without '/'")
+		}
+	}()
+	splitS3Location("nopath")
+}
+
+func (s *S3TestSuite) SetupSuite() {
+	location := os.Getenv("S3_LOCATION")
+	if location == "" {
+		panic("S3_LOCATION must be set in environment")
+	}
+	s.s3bucket, s.s3path = splitS3Location(location)
 	if s.clearBucketFn == nil {
 		s.clearBucketFn = s.ClearBucket
 	}

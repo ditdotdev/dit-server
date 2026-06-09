@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -62,12 +61,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 	if location == "" {
 		panic("S3_LOCATION must be set in environment")
 	}
-	idx := strings.IndexByte(location, '/')
-	if idx < 0 {
-		panic("S3_LOCATION must be in the format 'bucket/path', got: " + location)
-	}
-	s.s3bucket = location[:idx]
-	s.s3path = location[idx+1:]
+	s.s3bucket, s.s3path = splitS3Location(location)
 	if s.clearBucketFn == nil {
 		s.clearBucketFn = s.ClearBucket
 	}
