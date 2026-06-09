@@ -18,8 +18,8 @@
 #                   database in /var/lib/$DIT_IDENTITY, which should be backed by a persistent volume. Unlike
 #                   the docker-zfs context, the server doesn't need to be run via 'launch', and can operate
 #                   in any docker environment even if kernel ZFS support isn't present. Additional context
-#                   can be passed through the DIT_CONFIG variable, which is a list of name=value pairs,
-#                   separated by commas.
+#                   can be passed through the DIT_CONTEXT_CONFIG variable, which is a list of name=value
+#                   pairs, separated by commas (e.g. storageClass=csi-hostpath-sc,snapshotClass=csi-hostpath-snapclass).
 #
 
 set -x
@@ -133,7 +133,7 @@ if [[ $DIT_CONTEXT = "docker-zfs" ]]; then
 elif [[ $DIT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /dit/dit-server.jar
+  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONTEXT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /dit/dit-server.jar
 else
   log_error "Unknown context $DIT_CONTEXT"
 fi
