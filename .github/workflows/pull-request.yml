@@ -65,7 +65,7 @@ jobs:
       # can track coverage trends. continue-on-error so Codecov hiccups
       # don't fail the whole PR.
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         if: always()
         with:
           files: ./server/build/reports/jacoco/test/jacocoTestReport.xml
