@@ -38,7 +38,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:1.5.34")
     implementation("com.google.code.gson:gson:2.14.0")
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:okhttp:5.4.0")
     implementation("org.jetbrains.exposed:exposed-core:1.3.0")
     implementation("org.jetbrains.exposed:exposed-dao:1.3.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.0")
