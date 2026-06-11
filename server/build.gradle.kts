@@ -53,12 +53,12 @@ dependencies {
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
     try {
-        implementation("dev.dit:remote-sdk:1.9.5")
-        implementation("dev.dit:dit-remote-server:1.9.5")
-        implementation("dev.dit:nop-remote-server:1.9.5")
-        implementation("dev.dit:ssh-remote-server:1.9.5")
-        implementation("dev.dit:s3-remote-server:1.9.5")
-        implementation("dev.dit:s3web-remote-server:1.9.5")
+        implementation("dev.dit:remote-sdk:1.9.6")
+        implementation("dev.dit:dit-remote-server:1.9.6")
+        implementation("dev.dit:nop-remote-server:1.9.6")
+        implementation("dev.dit:ssh-remote-server:1.9.6")
+        implementation("dev.dit:s3-remote-server:1.9.6")
+        implementation("dev.dit:s3web-remote-server:1.9.6")
     } catch (e: Exception) {
         // Remote dependencies not available (likely CI environment)
         println("Remote dependencies not available, will skip related tests")
