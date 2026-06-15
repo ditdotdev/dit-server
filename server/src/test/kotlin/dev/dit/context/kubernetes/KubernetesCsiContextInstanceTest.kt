@@ -37,6 +37,7 @@ import io.kubernetes.client.openapi.models.V1StorageClass
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import java.io.File
 import java.nio.file.Files
@@ -372,6 +373,33 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             cfg["namespace"] shouldBe "default"
             cfg["size"] shouldBe "5Gi"
             verify { exec.exec("kubectl", "apply", "-f", any()) }
+        }
+
+        "cloneVolume applies the configured storage class to the cloned PVC" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            val pathSlot = slot<String>()
+            var appliedYaml = ""
+            every { exec.exec("kubectl", "apply", "-f", capture(pathSlot)) } answers {
+                // Read the manifest before applyYaml deletes the temp file.
+                appliedYaml = File(pathSlot.captured).readText()
+                ""
+            }
+            val ctx = newMockedContext(mapOf("storageClass" to "csi-hostpath-sc"), executor = exec)
+            ctx.cloneVolume("src", "commit", "dst", "vol", mapOf("size" to "1Gi"))
+            appliedYaml.contains("storageClassName: csi-hostpath-sc") shouldBe true
+        }
+
+        "cloneVolume omits the storage class when not configured" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            val pathSlot = slot<String>()
+            var appliedYaml = ""
+            every { exec.exec("kubectl", "apply", "-f", capture(pathSlot)) } answers {
+                appliedYaml = File(pathSlot.captured).readText()
+                ""
+            }
+            val ctx = newMockedContext(executor = exec)
+            ctx.cloneVolume("src", "commit", "dst", "vol", mapOf("size" to "1Gi"))
+            appliedYaml.contains("storageClassName") shouldBe false
         }
 
         "cloneVolume rejects malformed sourceVolumeSet" {

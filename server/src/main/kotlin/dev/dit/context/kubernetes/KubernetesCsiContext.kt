@@ -503,6 +503,14 @@ class KubernetesCsiContext(
         requireValidK8sName(volumeName, "volumeName")
         require(size.matches("^[0-9]+[a-zA-Z]+$".toRegex())) { "invalid k8s size string: '$size'" }
 
+        // Honor the configured storage class on the cloned PVC, exactly as
+        // createVolume does. Without this a clone/checkout PVC silently falls
+        // back to the cluster-default StorageClass, which on end-user clusters
+        // is often non-CSI and cannot be snapshotted — so a later `dit commit`
+        // on the restored volume fails (dit-server#212). When unset, omit the
+        // field and let the cluster default apply, matching createVolume.
+        val storageClassLine =
+            properties["storageClass"]?.let { "  storageClassName: $it\n" } ?: ""
         val yaml =
             "apiVersion: v1\n" +
                 "kind: PersistentVolumeClaim\n" +
@@ -511,6 +519,7 @@ class KubernetesCsiContext(
                 "  labels:\n" +
                 "    ditVolume: $volumeName\n" +
                 "spec:\n" +
+                storageClassLine +
                 "  dataSource:\n" +
                 "    kind: VolumeSnapshot\n" +
                 "    apiGroup: snapshot.storage.k8s.io\n" +
