@@ -48,7 +48,7 @@ dependencies {
     implementation("joda-time:joda-time:2.14.2")
     implementation("io.kubernetes:client-java:26.0.0")
     implementation("io.kubernetes:client-java-api-fluent:26.0.0")
-    implementation("dev.dit:command-executor:1.9.7")
+    implementation("dev.dit:command-executor:1.9.8")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
     // In CI environment these dependencies are not available, tests will be skipped
