@@ -158,11 +158,12 @@ class KubernetesCsiContext(
      * Best-effort discovery of an IP that pods in this cluster can reach
      * the docker host on. Two strategies, in order:
      *
-     *   1. Probe pod resolves `host.minikube.internal`. minikube auto-injects
-     *      this entry into every pod's /etc/hosts on every driver EXCEPT
-     *      `--driver=none`, where the node IS the host so no special name
-     *      is needed. Works on docker / hyperv / hyperkit / kvm2 / qemu —
-     *      i.e. every Mac / Windows local-dev configuration.
+     *   1. A `hostNetwork` probe pod reads `host.minikube.internal` out of
+     *      `/etc/hosts`. minikube records this entry against the host on
+     *      every driver EXCEPT `--driver=none` (where the node IS the host,
+     *      so no special name is needed). Works on docker / hyperv /
+     *      hyperkit / kvm2 / qemu — i.e. every Mac / Windows local-dev
+     *      configuration.
      *
      *   2. Fall back to the kubernetes node's InternalIP. On `--driver=none`
      *      (used by Linux CI) the node IP equals the host IP and host port
@@ -193,16 +194,42 @@ class KubernetesCsiContext(
     }
 
     /**
-     * Spawn a short-lived busybox pod, run `getent hosts host.minikube.internal`,
-     * return the first whitespace-separated token from stdout (the IPv4
-     * address). Returns null on any failure, including timeout, image pull
-     * errors, missing hostname, or unparsable output.
+     * Spawn a short-lived `hostNetwork` busybox pod, grep
+     * `host.minikube.internal` out of `/etc/hosts`, and return the first
+     * whitespace-separated token from stdout (the IPv4 address). Returns null
+     * on any failure, including timeout, image pull errors, missing hostname,
+     * or unparsable output.
+     *
+     * Two non-obvious details, both verified against minikube on the Hyper-V
+     * driver (Windows):
+     *
+     *   - `hostNetwork: true` is required. A normal pod has NO
+     *     `host.minikube.internal` entry in its kubelet-managed /etc/hosts;
+     *     the name is served by cluster DNS (CoreDNS), whose record can go
+     *     stale after a host reboot (the Hyper-V Default Switch re-subnets,
+     *     so CoreDNS hands back an IP that no longer routes to the host and
+     *     every push/pull job times out). A hostNetwork pod instead sees the
+     *     node's /etc/hosts, which minikube keeps pointed at the *current*,
+     *     reachable host IP.
+     *
+     *   - We grep `/etc/hosts` rather than `getent hosts ...`: the busybox
+     *     image ships no `getent` binary, so the old call ALWAYS failed and
+     *     discovery silently fell through to the node InternalIP — wrong on
+     *     every driver except `--driver=none`.
      *
      * The pod name is randomized so concurrent probes don't collide; --rm
      * cleans it up either way.
      */
     private fun probeHostMinikubeInternal(): String? {
         val podName = "dit-host-probe-${java.util.UUID.randomUUID().toString().substring(0, 8)}"
+        // hostNetwork is set via --overrides because `kubectl run` has no flag
+        // for it. The container command greps the host entry out of
+        // /etc/hosts; grep exits non-zero (→ CommandException → null →
+        // node-InternalIP fallback) when the entry is absent, which is exactly
+        // the --driver=none case where minikube doesn't add it.
+        val overrides =
+            """{"spec":{"hostNetwork":true,"containers":[{"name":"probe","image":"busybox",""" +
+                """"stdin":true,"command":["sh","-c","grep host.minikube.internal /etc/hosts"]}]}}"""
         return try {
             val out =
                 executor.exec(
@@ -216,11 +243,7 @@ class KubernetesCsiContext(
                     "--image=busybox",
                     "--namespace",
                     namespace,
-                    "--command",
-                    "--",
-                    "getent",
-                    "hosts",
-                    "host.minikube.internal",
+                    "--overrides=$overrides",
                 )
             val ip =
                 out
