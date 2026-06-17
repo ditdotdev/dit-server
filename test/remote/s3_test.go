@@ -32,17 +32,17 @@ type S3TestSuite struct {
 }
 
 func (s *S3TestSuite) ClearBucket() error {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return err
 	}
 	svc := s3.NewFromConfig(cfg)
-	res, err := svc.ListObjects(context.TODO(), &s3.ListObjectsInput{Bucket: aws.String(s.s3bucket), Prefix: aws.String(s.s3path)})
+	res, err := svc.ListObjects(context.Background(), &s3.ListObjectsInput{Bucket: aws.String(s.s3bucket), Prefix: aws.String(s.s3path)})
 	if err != nil {
 		return err
 	}
 	for _, obj := range res.Contents {
-		_, err = svc.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		_, err = svc.DeleteObject(context.Background(), &s3.DeleteObjectInput{
 			Bucket: aws.String(s.s3bucket),
 			Key:    obj.Key,
 		})
@@ -108,11 +108,11 @@ func (s *S3TestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	creds, err := cfg.Credentials.Retrieve(context.TODO())
+	creds, err := cfg.Credentials.Retrieve(context.Background())
 	if err != nil {
 		panic(err)
 	}
