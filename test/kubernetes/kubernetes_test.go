@@ -98,7 +98,7 @@ func TestKubernetesWorkflowTestSuite(t *testing.T) {
 func (s *KubernetesWorkflowTestSuite) WaitForPod(name string) error {
 	ready := false
 	for ok := true; ok; ok = !ready {
-		res, err := s.Clientset.CoreV1().Pods(s.namespace).Get(context.TODO(), name, apiV1.GetOptions{})
+		res, err := s.Clientset.CoreV1().Pods(s.namespace).Get(context.Background(), name, apiV1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (s *KubernetesWorkflowTestSuite) WaitForPod(name string) error {
 }
 
 func (s *KubernetesWorkflowTestSuite) LaunchPod(name string, claim string) error {
-	_, err := s.Clientset.CoreV1().Pods(s.namespace).Create(context.TODO(), &coreV1.Pod{
+	_, err := s.Clientset.CoreV1().Pods(s.namespace).Create(context.Background(), &coreV1.Pod{
 		ObjectMeta: apiV1.ObjectMeta{
 			Name: name,
 		},
