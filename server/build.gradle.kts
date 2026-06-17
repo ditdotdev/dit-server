@@ -44,7 +44,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.0")
     implementation("org.jetbrains.exposed:exposed-java-time:1.3.0")
     implementation("org.postgresql:postgresql:42.7.11")
-    implementation("com.zaxxer:HikariCP:7.0.2")
+    implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("joda-time:joda-time:2.14.2")
     implementation("io.kubernetes:client-java:26.0.0")
     implementation("io.kubernetes:client-java-api-fluent:26.0.0")
