@@ -670,6 +670,31 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             ctx.discoverHostAliasIp() shouldBe null
         }
 
+        "discoverHostAliasIp probe runs a hostNetwork pod and greps /etc/hosts, not getent" {
+            // Regression guard: the probe used to shell `getent hosts ...` into
+            // a busybox pod, but busybox ships no getent, so it always failed
+            // and discovery fell through to the (wrong) node InternalIP. The
+            // fix runs a hostNetwork pod and greps host.minikube.internal out
+            // of /etc/hosts. grep emits "<ip>\thost.minikube.internal".
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            val seen = mutableListOf<String>()
+            every { exec.exec("kubectl", "run", *anyVararg()) } answers {
+                seen.clear()
+                invocation.args.forEach { a ->
+                    when (a) {
+                        is String -> seen.add(a)
+                        is Array<*> -> a.forEach { if (it is String) seen.add(it) }
+                    }
+                }
+                "172.28.176.1\thost.minikube.internal\n"
+            }
+            val ctx = newMockedContext(executor = exec)
+            ctx.discoverHostAliasIp() shouldBe "172.28.176.1"
+            seen.any { it.startsWith("--overrides=") && it.contains("\"hostNetwork\":true") } shouldBe true
+            seen.any { it.contains("/etc/hosts") } shouldBe true
+            seen.any { it.contains("getent") } shouldBe false
+        }
+
         // --- syncVolumes (end-to-end happy path with heavy mocking) ---
 
         "syncVolumes runs createSecret, createJob, polls until success" {
