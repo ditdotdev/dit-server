@@ -46,8 +46,8 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("joda-time:joda-time:2.14.2")
-    implementation("io.kubernetes:client-java:26.0.0")
-    implementation("io.kubernetes:client-java-api-fluent:26.0.0")
+    implementation("io.kubernetes:client-java:26.0.1")
+    implementation("io.kubernetes:client-java-api-fluent:26.0.1")
     implementation("dev.dit:command-executor:1.9.8")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
