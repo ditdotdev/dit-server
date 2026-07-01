@@ -25,7 +25,7 @@ repositories {
     }
 }
 
-val ktorVersion = "3.5.0"
+val ktorVersion = "3.5.1"
 
 dependencies {
     implementation(kotlin("stdlib"))
