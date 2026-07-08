@@ -34,7 +34,7 @@ func writeTestKeypair(s *suite.Suite) {
 
 	pub, err := ssh.NewPublicKey(&key.PublicKey)
 	s.Require().NoError(err)
-	s.Require().NoError(os.WriteFile("id_rsa.pub", ssh.MarshalAuthorizedKey(pub), 0o644))
+	s.Require().NoError(os.WriteFile("id_rsa.pub", ssh.MarshalAuthorizedKey(pub), 0o600))
 }
 
 type SshTestSuite struct {

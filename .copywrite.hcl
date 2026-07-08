@@ -13,5 +13,9 @@ project {
     "**/build/**",
     ".health/**",
     "**/*.out",
+    # OpenAPI source spec (copied into the generated dit-client-go) and
+    # logback config resources — not Dit source code needing a header.
+    "openapi/dit.yml",
+    "**/resources/logback*.xml",
   ]
 }
