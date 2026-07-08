@@ -1,3 +1,6 @@
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
+
 @file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
 
 package dev.dit.metadata.table

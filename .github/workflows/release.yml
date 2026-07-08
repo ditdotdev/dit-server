@@ -1,3 +1,6 @@
+# Copyright Dit 2026
+# SPDX-License-Identifier: BUSL-1.1
+
 #
 # On release, we perform the same actions as the push handler, but with a
 # specific tagged version. We then:

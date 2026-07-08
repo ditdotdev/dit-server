@@ -1,27 +1,5 @@
-/*
- * Copyright Dit.
- *
- * Contract validation in two layers:
- *
- *   1. Path + method coverage — every operation defined in the OpenAPI
- *      spec must have a corresponding Ktor route handler, and the spec
- *      must not have orphan endpoints with no implementation.
- *
- *   2. Schema shape validation — for every `components.schemas.X` in the
- *      spec, the corresponding Kotlin `dev.dit.models.X` data
- *      class must:
- *
- *        a. Exist with the expected fully-qualified name.
- *        b. Have every spec-required field declared as a non-nullable
- *           property with the same name.
- *        c. Not have extra non-spec properties that would indicate the
- *           Kotlin model has drifted ahead of the spec.
- *
- *      This catches drift the path-coverage check misses: e.g. spec
- *      adding a required field that the implementation never emits, or
- *      the implementation adding a field that consumers can't rely on
- *      because it's not in the spec.
- */
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
 
 package dev.dit
 
