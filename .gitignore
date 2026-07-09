@@ -17,3 +17,7 @@ out
 /notes
 /.env
 /.claude
+
+# Test SSH keypair — generated at runtime by ssh_test.go, never committed
+test/remote/id_rsa
+test/remote/id_rsa.pub

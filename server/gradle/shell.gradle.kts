@@ -1,3 +1,6 @@
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
+
 var batsVersion = "v1.1.0"
 
 var testShell = tasks.register<Exec>("testShell") {

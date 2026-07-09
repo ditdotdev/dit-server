@@ -1,3 +1,6 @@
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
+
 val imageName = when(project.hasProperty("serverImageName")) {
     true -> project.property("serverImageName")
     false -> "ditdotdev/dit"

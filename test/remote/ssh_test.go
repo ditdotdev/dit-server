@@ -1,16 +1,41 @@
-/*
- * Copyright Dit.
- */
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
+
 package remote
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	dit "github.com/ditdotdev/dit-client-go"
 	endtoend "github.com/ditdotdev/dit-server/test/common"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/crypto/ssh"
 	"os"
 	"testing"
 )
+
+// writeTestKeypair generates a throwaway RSA keypair and writes id_rsa /
+// id_rsa.pub to the test working directory. The keys are generated per run
+// rather than committed so no key material lives in the public repository;
+// the .pub is OpenSSH authorized_keys format and the private key is a PKCS#1
+// PEM, matching what the SSH tests below read from disk.
+func writeTestKeypair(s *suite.Suite) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	s.Require().NoError(err)
+
+	privPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+	s.Require().NoError(os.WriteFile("id_rsa", privPEM, 0o600))
+
+	pub, err := ssh.NewPublicKey(&key.PublicKey)
+	s.Require().NoError(err)
+	s.Require().NoError(os.WriteFile("id_rsa.pub", ssh.MarshalAuthorizedKey(pub), 0o600))
+}
 
 type SshTestSuite struct {
 	suite.Suite
@@ -21,6 +46,8 @@ type SshTestSuite struct {
 }
 
 func (s *SshTestSuite) SetupSuite() {
+	writeTestKeypair(&s.Suite)
+
 	s.e = endtoend.NewEndToEndTest(&s.Suite, "docker-zfs")
 	s.e.SetupStandardDocker()
 	s.e.SetupStandardSsh()

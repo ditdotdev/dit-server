@@ -1,6 +1,7 @@
+// Copyright Dit 2026
+// SPDX-License-Identifier: BUSL-1.1
+
 /*
- * Copyright Dit.
- *
  * Contract validation in two layers:
  *
  *   1. Path + method coverage — every operation defined in the OpenAPI
