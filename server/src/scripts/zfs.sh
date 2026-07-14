@@ -15,8 +15,8 @@ min_zfs_version=2.0.0
 : "${ZFS_SYS_MODULE_VERSION:=/sys/module/zfs/version}"
 : "${ZFS_PROC_CONFIG_GZ:=/proc/config.gz}"
 
-# S3 bucket for prebuilt ZFS kernel modules
-ZFS_MODULES_BUCKET="dit-zfs-builds.s3-website-us-west-2.amazonaws.com"
+# Host serving prebuilt ZFS kernel modules (Cloudflare-fronted dit-zfs-builds bucket)
+ZFS_MODULES_BUCKET="zfs.dit.dev"
 
 
 #
