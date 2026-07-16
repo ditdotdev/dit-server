@@ -61,11 +61,15 @@ import kotlin.io.path.writeText
  *
  *      namespace       Cluster namespace, defaults to "default".
  *
- *      storageClass    Default volume storage class to use when creating volumes. If unspecified, then the
- *                      cluster default is used.
+ *      storageClass    Default volume storage class to use when creating volumes. If unspecified, the cluster
+ *                      default is used when it is snapshot-capable; otherwise a snapshot-capable class is
+ *                      auto-selected (deterministically, logged) so `dit commit` works out of the box (#217).
+ *                      When nothing on the cluster can fulfill VolumeSnapshots, the cluster default applies
+ *                      and a warning is logged and recorded in the volume config.
  *
- *      snapshotClass   Default snapshot class to use when createing snapshots. If unspecified, then the cluster
- *                      default is used.
+ *      snapshotClass   Default snapshot class to use when creating snapshots. If unspecified, the cluster
+ *                      default is used when it matches the volume's CSI driver; otherwise the matching
+ *                      VolumeSnapshotClass is auto-selected (#217).
  *
  *      ditImage      Dit image to use when running operations. This should be the same image as the current
  *                      dit server, and defaults to "dit:latest". It must be accessible from within the
@@ -86,6 +90,138 @@ class KubernetesCsiContext(
 
         /** Sentinel value in the env var that triggers IP auto-discovery. */
         const val HOST_ALIAS_AUTO = "auto"
+
+        /** Snapshot-capability view of a cluster StorageClass. */
+        data class StorageClassInfo(
+            val name: String,
+            val provisioner: String,
+            val isDefault: Boolean,
+        )
+
+        /** Name + driver view of a cluster VolumeSnapshotClass. */
+        data class SnapshotClassInfo(
+            val name: String,
+            val driver: String,
+            val isDefault: Boolean,
+        )
+
+        /**
+         * Outcome of storage-class resolution for a new PVC. A null
+         * [className] means "omit the field and let the cluster default
+         * apply". [warning] carries the none-capable message surfaced in
+         * the volume config and the server log.
+         */
+        data class StorageClassResolution(
+            val className: String?,
+            val reason: String,
+            val warning: String? = null,
+        )
+
+        /** Parse `kubectl get storageclasses -o json` output. */
+        fun parseStorageClassList(json: String): List<StorageClassInfo> =
+            JsonParser
+                .parseString(json)
+                .asJsonObject
+                .getAsJsonArray("items")
+                ?.mapNotNull { item ->
+                    val obj = item.asJsonObject
+                    val meta = obj.getAsJsonObject("metadata") ?: return@mapNotNull null
+                    val name = meta.get("name")?.asString ?: return@mapNotNull null
+                    val provisioner = obj.get("provisioner")?.asString ?: return@mapNotNull null
+                    val isDefault =
+                        meta
+                            .getAsJsonObject("annotations")
+                            ?.get("storageclass.kubernetes.io/is-default-class")
+                            ?.asString == "true"
+                    StorageClassInfo(name, provisioner, isDefault)
+                } ?: emptyList()
+
+        /** Parse `kubectl get volumesnapshotclasses -o json` output. */
+        fun parseSnapshotClassList(json: String): List<SnapshotClassInfo> =
+            JsonParser
+                .parseString(json)
+                .asJsonObject
+                .getAsJsonArray("items")
+                ?.mapNotNull { item ->
+                    val obj = item.asJsonObject
+                    val meta = obj.getAsJsonObject("metadata") ?: return@mapNotNull null
+                    val name = meta.get("name")?.asString ?: return@mapNotNull null
+                    val driver = obj.get("driver")?.asString ?: return@mapNotNull null
+                    val isDefault =
+                        meta
+                            .getAsJsonObject("annotations")
+                            ?.get("snapshot.storage.kubernetes.io/is-default-class")
+                            ?.asString == "true"
+                    SnapshotClassInfo(name, driver, isDefault)
+                } ?: emptyList()
+
+        /**
+         * Decide which StorageClass a new dit volume should use (#217).
+         *
+         * Resolution order: explicit configuration → cluster default when
+         * it is snapshot-capable → the alphabetically-first snapshot-capable
+         * class (logged, deterministic) → cluster default with a warning
+         * when nothing on the cluster can fulfill VolumeSnapshots. A class
+         * is snapshot-capable when its provisioner matches the driver of
+         * some VolumeSnapshotClass on the cluster.
+         */
+        fun resolveStorageClass(
+            configured: String?,
+            classes: List<StorageClassInfo>,
+            snapshotDrivers: Set<String>,
+        ): StorageClassResolution {
+            if (configured != null) {
+                return StorageClassResolution(configured, "using configured storageClass '$configured'")
+            }
+            val default = classes.firstOrNull { it.isDefault }
+            if (default != null && default.provisioner in snapshotDrivers) {
+                return StorageClassResolution(
+                    null,
+                    "cluster default StorageClass '${default.name}' is snapshot-capable",
+                )
+            }
+            val defaultDesc = default?.let { "'${it.name}' (${it.provisioner})" } ?: "<none>"
+            val capable = classes.filter { it.provisioner in snapshotDrivers }.sortedBy { it.name }
+            if (capable.isEmpty()) {
+                return StorageClassResolution(
+                    null,
+                    "no snapshot-capable StorageClass found; falling back to cluster default $defaultDesc",
+                    "No StorageClass on this cluster has a matching VolumeSnapshotClass, so 'dit commit' " +
+                        "will fail with 'snapshotting non-CSI volumes is not supported'. Install a CSI " +
+                        "driver with snapshot support or pass -p storageClass=<class> at context install.",
+                )
+            }
+            val picked = capable.first()
+            val candidates =
+                if (capable.size > 1) {
+                    " (candidates: ${capable.joinToString(", ") { it.name }})"
+                } else {
+                    ""
+                }
+            return StorageClassResolution(
+                picked.name,
+                "auto-selected snapshot-capable StorageClass '${picked.name}'$candidates: " +
+                    "cluster default $defaultDesc cannot fulfill VolumeSnapshots",
+            )
+        }
+
+        /**
+         * Decide which VolumeSnapshotClass a commit's snapshot should use
+         * (#217). A null return means "omit the field and rely on the
+         * cluster default": either the default VolumeSnapshotClass already
+         * matches the volume's driver, or nothing matches and the snapshot
+         * surfaces the cluster's own error.
+         */
+        fun resolveSnapshotClass(
+            configured: String?,
+            provisioner: String?,
+            snapshotClasses: List<SnapshotClassInfo>,
+        ): String? {
+            if (configured != null) return configured
+            if (provisioner == null) return null
+            if (snapshotClasses.any { it.isDefault && it.driver == provisioner }) return null
+            return snapshotClasses.filter { it.driver == provisioner }.minByOrNull { it.name }?.name
+        }
 
         /**
          * Parse the `DIT_K8S_POD_HOST_ALIASES` env var into a list of
@@ -408,16 +544,26 @@ class KubernetesCsiContext(
                                 .build(),
                         ).build(),
                 ).build()
-        if (properties["storageClass"] != null) {
-            request.spec!!.storageClassName = properties["storageClass"]
+        val resolution = resolveVolumeStorageClass()
+        log.info(resolution.reason)
+        resolution.warning?.let { log.warn(it) }
+        if (resolution.className != null) {
+            requireValidK8sName(resolution.className, "storageClass")
+            request.spec!!.storageClassName = resolution.className
         }
         val claim = coreApi.createNamespacedPersistentVolumeClaim(namespace, request).execute()
         log.info("Created PersistentVolumeClaim '$name', status = ${claim.status?.phase}")
-        return mapOf(
-            "pvc" to name,
-            "namespace" to namespace,
-            "size" to size,
-        )
+        val config =
+            mutableMapOf<String, Any>(
+                "pvc" to name,
+                "namespace" to namespace,
+                "size" to size,
+            )
+        // Record the resolved class so clones stay on the same class and the
+        // choice (or the none-capable warning) is visible in dit metadata.
+        resolution.className?.let { config["storageClass"] = it }
+        resolution.warning?.let { config["storageClassWarning"] = it }
+        return config
     }
 
     override fun deleteVolume(
@@ -471,7 +617,7 @@ class KubernetesCsiContext(
         val pvc = config["pvc"] as? String ?: throw IllegalStateException("missing or invalid pvc name in volume config")
         val size = config["size"] as? String ?: throw IllegalStateException("missing or invalid size in volume config")
         val name = "$pvc-$commitId"
-        val snapshotClass = properties["snapshotClass"]
+        val snapshotClass = resolveCommitSnapshotClass(pvc)
 
         // Validate every interpolated string. Size strings are an
         // exception — they include digits + a unit suffix (e.g. "10Gi")
@@ -529,14 +675,28 @@ class KubernetesCsiContext(
         requireValidK8sName(volumeName, "volumeName")
         require(size.matches("^[0-9]+[a-zA-Z]+$".toRegex())) { "invalid k8s size string: '$size'" }
 
-        // Honor the configured storage class on the cloned PVC, exactly as
-        // createVolume does. Without this a clone/checkout PVC silently falls
-        // back to the cluster-default StorageClass, which on end-user clusters
-        // is often non-CSI and cannot be snapshotted — so a later `dit commit`
-        // on the restored volume fails (dit-server#212). When unset, omit the
-        // field and let the cluster default apply, matching createVolume.
+        // Resolve the storage class exactly as createVolume does (#212, #217):
+        // an explicit -p storageClass wins; otherwise inherit the class the
+        // source volume was created with (recorded in its config) so clones
+        // stay on the same class; otherwise run auto-selection. Without this
+        // a clone/checkout PVC silently fell back to the cluster-default
+        // StorageClass, which on end-user clusters is often non-CSI and
+        // cannot be snapshotted - so a later `dit commit` on the restored
+        // volume failed.
+        val resolution =
+            if (properties["storageClass"] == null && sourceConfig["storageClass"] is String) {
+                StorageClassResolution(
+                    sourceConfig["storageClass"] as String,
+                    "inheriting StorageClass '${sourceConfig["storageClass"]}' from the source volume",
+                )
+            } else {
+                resolveVolumeStorageClass()
+            }
+        log.info(resolution.reason)
+        resolution.warning?.let { log.warn(it) }
+        resolution.className?.let { requireValidK8sName(it, "storageClass") }
         val storageClassLine =
-            properties["storageClass"]?.let { "  storageClassName: $it\n" } ?: ""
+            resolution.className?.let { "  storageClassName: $it\n" } ?: ""
         val yaml =
             "apiVersion: v1\n" +
                 "kind: PersistentVolumeClaim\n" +
@@ -557,11 +717,14 @@ class KubernetesCsiContext(
                 "      storage: $size\n"
         applyYaml(yaml, "PersistentVolumeClaim/$name (cloned from VolumeSnapshot/$snapshotName)")
 
-        return mapOf(
-            "pvc" to name,
-            "namespace" to namespace,
-            "size" to size,
-        )
+        val config =
+            mutableMapOf<String, Any>(
+                "pvc" to name,
+                "namespace" to namespace,
+                "size" to size,
+            )
+        resolution.className?.let { config["storageClass"] = it }
+        return config
     }
 
     fun getPvcStatus(pvc: String): Pair<Boolean, String?> {
@@ -604,6 +767,70 @@ class KubernetesCsiContext(
             ready = ready,
             error = error,
         )
+    }
+
+    /**
+     * Cluster reads for storage-class resolution (#217). kubectl JSON keeps
+     * the codepath uniform with the other snapshot-domain reads (see
+     * getSnapshot) and the parsing statically testable.
+     */
+    private fun listStorageClasses(): List<StorageClassInfo> =
+        parseStorageClassList(executor.exec("kubectl", "get", "storageclasses", "-o", "json"))
+
+    private fun listSnapshotClasses(): List<SnapshotClassInfo> =
+        try {
+            parseSnapshotClassList(executor.exec("kubectl", "get", "volumesnapshotclasses", "-o", "json"))
+        } catch (e: CommandException) {
+            // CRDs not installed - the cluster has no snapshot support.
+            log.info("VolumeSnapshotClass listing failed; treating as none installed: ${e.message}")
+            emptyList()
+        }
+
+    /**
+     * Resolve the StorageClass for a new PVC, degrading to the legacy
+     * behavior (configured value or cluster default) if the cluster reads
+     * fail - auto-selection must never block volume creation.
+     */
+    private fun resolveVolumeStorageClass(): StorageClassResolution =
+        try {
+            resolveStorageClass(
+                properties["storageClass"],
+                listStorageClasses(),
+                listSnapshotClasses().map { it.driver }.toSet(),
+            )
+        } catch (e: Exception) {
+            log.warn("storage-class auto-selection failed; using legacy behavior: ${e.message}")
+            StorageClassResolution(properties["storageClass"], "storage-class resolution failed")
+        }
+
+    /**
+     * Resolve the VolumeSnapshotClass for a commit's snapshot (#217): an
+     * explicitly configured class wins; otherwise pair by driver with the
+     * volume's actual StorageClass when the cluster default snapshot class
+     * would not match. Failures degrade to the cluster default.
+     */
+    private fun resolveCommitSnapshotClass(pvc: String): String? {
+        properties["snapshotClass"]?.let { return it }
+        return try {
+            val className =
+                coreApi
+                    .readNamespacedPersistentVolumeClaim(pvc, namespace)
+                    .execute()
+                    .spec
+                    ?.storageClassName ?: return null
+            val provisioner = storageApi.readStorageClass(className).execute().provisioner
+            val resolved = resolveSnapshotClass(null, provisioner, listSnapshotClasses())
+            if (resolved != null) {
+                log.info(
+                    "auto-selected VolumeSnapshotClass '$resolved' for StorageClass '$className' " +
+                        "(driver $provisioner): the cluster default VolumeSnapshotClass does not match",
+                )
+            }
+            resolved
+        } catch (e: Exception) {
+            log.warn("snapshot-class auto-selection failed; relying on cluster default: ${e.message}")
+            null
+        }
     }
 
     private fun getSnapshot(name: String): JsonObject? {
