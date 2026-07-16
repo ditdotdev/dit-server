@@ -119,7 +119,9 @@ class KubernetesCsiContext(
 
         /** Parse `kubectl get storageclasses -o json` output. */
         fun parseStorageClassList(json: String): List<StorageClassInfo> =
-            JsonParser.parseString(json).asJsonObject
+            JsonParser
+                .parseString(json)
+                .asJsonObject
                 .getAsJsonArray("items")
                 ?.mapNotNull { item ->
                     val obj = item.asJsonObject
@@ -127,14 +129,18 @@ class KubernetesCsiContext(
                     val name = meta.get("name")?.asString ?: return@mapNotNull null
                     val provisioner = obj.get("provisioner")?.asString ?: return@mapNotNull null
                     val isDefault =
-                        meta.getAsJsonObject("annotations")
-                            ?.get("storageclass.kubernetes.io/is-default-class")?.asString == "true"
+                        meta
+                            .getAsJsonObject("annotations")
+                            ?.get("storageclass.kubernetes.io/is-default-class")
+                            ?.asString == "true"
                     StorageClassInfo(name, provisioner, isDefault)
                 } ?: emptyList()
 
         /** Parse `kubectl get volumesnapshotclasses -o json` output. */
         fun parseSnapshotClassList(json: String): List<SnapshotClassInfo> =
-            JsonParser.parseString(json).asJsonObject
+            JsonParser
+                .parseString(json)
+                .asJsonObject
                 .getAsJsonArray("items")
                 ?.mapNotNull { item ->
                     val obj = item.asJsonObject
@@ -142,8 +148,10 @@ class KubernetesCsiContext(
                     val name = meta.get("name")?.asString ?: return@mapNotNull null
                     val driver = obj.get("driver")?.asString ?: return@mapNotNull null
                     val isDefault =
-                        meta.getAsJsonObject("annotations")
-                            ?.get("snapshot.storage.kubernetes.io/is-default-class")?.asString == "true"
+                        meta
+                            .getAsJsonObject("annotations")
+                            ?.get("snapshot.storage.kubernetes.io/is-default-class")
+                            ?.asString == "true"
                     SnapshotClassInfo(name, driver, isDefault)
                 } ?: emptyList()
 
@@ -545,11 +553,12 @@ class KubernetesCsiContext(
         }
         val claim = coreApi.createNamespacedPersistentVolumeClaim(namespace, request).execute()
         log.info("Created PersistentVolumeClaim '$name', status = ${claim.status?.phase}")
-        val config = mutableMapOf<String, Any>(
-            "pvc" to name,
-            "namespace" to namespace,
-            "size" to size,
-        )
+        val config =
+            mutableMapOf<String, Any>(
+                "pvc" to name,
+                "namespace" to namespace,
+                "size" to size,
+            )
         // Record the resolved class so clones stay on the same class and the
         // choice (or the none-capable warning) is visible in dit metadata.
         resolution.className?.let { config["storageClass"] = it }
@@ -708,11 +717,12 @@ class KubernetesCsiContext(
                 "      storage: $size\n"
         applyYaml(yaml, "PersistentVolumeClaim/$name (cloned from VolumeSnapshot/$snapshotName)")
 
-        val config = mutableMapOf<String, Any>(
-            "pvc" to name,
-            "namespace" to namespace,
-            "size" to size,
-        )
+        val config =
+            mutableMapOf<String, Any>(
+                "pvc" to name,
+                "namespace" to namespace,
+                "size" to size,
+            )
         resolution.className?.let { config["storageClass"] = it }
         return config
     }
@@ -803,8 +813,11 @@ class KubernetesCsiContext(
         properties["snapshotClass"]?.let { return it }
         return try {
             val className =
-                coreApi.readNamespacedPersistentVolumeClaim(pvc, namespace).execute()
-                    .spec?.storageClassName ?: return null
+                coreApi
+                    .readNamespacedPersistentVolumeClaim(pvc, namespace)
+                    .execute()
+                    .spec
+                    ?.storageClassName ?: return null
             val provisioner = storageApi.readStorageClass(className).execute().provisioner
             val resolved = resolveSnapshotClass(null, provisioner, listSnapshotClasses())
             if (resolved != null) {
