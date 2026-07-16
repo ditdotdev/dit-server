@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -56,6 +57,21 @@ func (s *S3WebTestSuite) ClearBucket() error {
 	return nil
 }
 
+// s3webURL returns the anonymous HTTP endpoint for the test bucket. Anonymous
+// reads on the dit buckets only work through their Cloudflare-proxied
+// hostnames since direct S3 access was locked to Cloudflare's edge IPs
+// (dit-remote-server#886) - the raw endpoint now returns 403. S3WEB_URL
+// overrides the base (no trailing slash) for buckets outside the dit account.
+func s3webURL(bucket string, path string) string {
+	if override := os.Getenv("S3WEB_URL"); override != "" {
+		return fmt.Sprintf("%s/%s", strings.TrimRight(override, "/"), path)
+	}
+	if bucket == "dit-testdata" {
+		return fmt.Sprintf("https://testdata.dit.dev/%s", path)
+	}
+	return fmt.Sprintf("http://%s.s3.amazonaws.com/%s", bucket, path)
+}
+
 func (s *S3WebTestSuite) SetupSuite() {
 	location := os.Getenv("S3_LOCATION")
 	if location == "" {
@@ -94,7 +110,7 @@ func (s *S3WebTestSuite) SetupSuite() {
 		Provider: "s3web",
 		Name:     "web",
 		Properties: map[string]interface{}{
-			"url": fmt.Sprintf("http://%s.s3.amazonaws.com/%s", s.s3bucket, s.s3path),
+			"url": s3webURL(s.s3bucket, s.s3path),
 		},
 	}
 
