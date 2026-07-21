@@ -631,6 +631,21 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             ctx.discoverHostAliasIp() shouldBe null
         }
 
+        "discoverHostAliasIp rejects loopback probe result and falls back to node InternalIP" {
+            // --driver=none maps host.minikube.internal to 127.0.0.1 (the
+            // node IS the host); loopback inside a regular job pod is the pod
+            // itself, so discovery must fall through to the node InternalIP.
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every {
+                exec.exec("kubectl", "run", *anyVararg())
+            } returns "127.0.0.1   host.minikube.internal\n"
+            every {
+                exec.exec("kubectl", "get", "nodes", *anyVararg())
+            } returns "10.1.0.99"
+            val ctx = newMockedContext(executor = exec)
+            ctx.discoverHostAliasIp() shouldBe "10.1.0.99"
+        }
+
         "discoverHostAliasIp probe pod returns null on blank stdout" {
             val exec = mockk<CommandExecutor>(relaxed = true)
             every { exec.exec("kubectl", "run", *anyVararg()) } returns "   \n"

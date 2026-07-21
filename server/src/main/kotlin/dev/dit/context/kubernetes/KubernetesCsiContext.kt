@@ -299,10 +299,11 @@ class KubernetesCsiContext(
      *
      *   1. A `hostNetwork` probe pod reads `host.minikube.internal` out of
      *      `/etc/hosts`. minikube records this entry against the host on
-     *      every driver EXCEPT `--driver=none` (where the node IS the host,
-     *      so no special name is needed). Works on docker / hyperv /
-     *      hyperkit / kvm2 / qemu — i.e. every Mac / Windows local-dev
-     *      configuration.
+     *      every driver — on VM/container drivers (docker / hyperv /
+     *      hyperkit / kvm2 / qemu, i.e. every Mac / Windows local-dev
+     *      configuration) it holds a routable host IP; on `--driver=none`
+     *      it holds loopback (the node IS the host), which is rejected so
+     *      strategy 2 applies.
      *
      *   2. Fall back to the kubernetes node's InternalIP. On `--driver=none`
      *      (used by Linux CI) the node IP equals the host IP and host port
@@ -364,8 +365,7 @@ class KubernetesCsiContext(
         // hostNetwork is set via --overrides because `kubectl run` has no flag
         // for it. The container command greps the host entry out of
         // /etc/hosts; grep exits non-zero (→ CommandException → null →
-        // node-InternalIP fallback) when the entry is absent, which is exactly
-        // the --driver=none case where minikube doesn't add it.
+        // node-InternalIP fallback) when the entry is absent.
         val overrides =
             """{"spec":{"hostNetwork":true,"containers":[{"name":"probe","image":"busybox",""" +
                 """"stdin":true,"command":["sh","-c","grep host.minikube.internal /etc/hosts"]}]}}"""
@@ -391,7 +391,31 @@ class KubernetesCsiContext(
                     ?.trim()
                     ?.split(Regex("\\s+"))
                     ?.firstOrNull()
-            if (ip.isNullOrBlank()) null else ip
+            when {
+                ip.isNullOrBlank() -> {
+                    null
+                }
+
+                // On --driver=none the node IS the host and minikube maps
+                // host.minikube.internal to loopback. That is correct for the
+                // hostNetwork probe pod but useless inside a regular job pod
+                // (127.0.0.1 there is the pod itself), so treat loopback as
+                // "not found" and fall through to the node-InternalIP
+                // strategy, which on that driver equals the reachable host
+                // IP. Broke dit-remote-server CI e2e (driver=none) when this
+                // probe first shipped in a published image.
+                ip.startsWith("127.") || ip == "::1" -> {
+                    log.debug(
+                        "host.minikube.internal resolves to loopback ($ip); " +
+                            "falling back to node InternalIP",
+                    )
+                    null
+                }
+
+                else -> {
+                    ip
+                }
+            }
         } catch (e: CommandException) {
             log.debug("host.minikube.internal probe pod failed: ${e.output.lineSequence().firstOrNull()}")
             null
