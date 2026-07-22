@@ -117,9 +117,17 @@ server.
 ./gradlew build
 ```
 
-This will build the server and client, run style checks, as well as unit tests and integration tests. It will
-then package the server into the dit docker image. If you run into lint or style errors, you can run
-`./gradlew ktlintFormat` to automatically format the code.
+This will build the server and client, run style checks, as well as unit tests and integration tests. If you
+run into lint or style errors, you can run `./gradlew ktlintFormat` to automatically format the code.
+
+To package the server into the dit docker image, run the docker tasks explicitly:
+
+```
+./gradlew buildDockerServer tagDockerServer tagLocalDockerServer
+```
+
+This requires Docker and a GitHub token (`GO_MODULES_TOKEN` or `gh auth token`) and takes considerably
+longer than the plain build.
 
 
 ## Testing

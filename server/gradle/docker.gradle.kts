@@ -64,11 +64,11 @@ var tagLocalDockerServer = tasks.register<Exec>("tagLocalDockerServer") {
     mustRunAfter(tasks.named("buildDockerServer"))
 }
 
-tasks.named("assemble").configure {
-    dependsOn(buildDockerServer)
-    dependsOn(tagDockerServer)
-    dependsOn(tagLocalDockerServer)
-}
+// The docker image is intentionally NOT hooked onto the `assemble` lifecycle:
+// plain `./gradlew build` must work without Docker or a GitHub token, and
+// image builds take many minutes. Callers that need the image run
+// `buildDockerServer tagDockerServer tagLocalDockerServer` explicitly
+// (see .github/workflows/release.yml and pull-request.yml).
 
 tasks.named("rebuild").configure {
     dependsOn(tasks.named("shadowJar"))
