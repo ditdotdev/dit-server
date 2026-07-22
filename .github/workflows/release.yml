@@ -27,7 +27,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Build and test
-        run: ./gradlew build -PserverImageName=ditdotdev/dit -PditVersion=${GITHUB_REF#refs/tags/}
+        run: ./gradlew build buildDockerServer tagDockerServer tagLocalDockerServer -PserverImageName=ditdotdev/dit -PditVersion=${GITHUB_REF#refs/tags/}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
