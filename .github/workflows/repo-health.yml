@@ -19,10 +19,3 @@ jobs:
       mode: block
     secrets:
       GO_MODULES_TOKEN: ${{ secrets.GO_MODULES_TOKEN }}
-      # Gradle resolves dev.dit artifacts from s3://dit-maven via
-      # AwsImAuthentication; without credentials every uncached artifact
-      # fails resolution and the health run dies with a bogus 0% coverage
-      # (issue #259).
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}

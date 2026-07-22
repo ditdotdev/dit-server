@@ -19,12 +19,14 @@ repositories {
     mavenCentral()
     gradlePluginPortal()
     maven("https://repo1.maven.org/maven2/")
+    // Resolve dev.dit artifacts through the Cloudflare-fronted public
+    // hostname (asset-proxy Worker -> S3), like every other Kotlin repo in
+    // the ecosystem. The dit-maven bucket's anonymous-read policy is locked
+    // to Cloudflare edge IPs (dit-remote-server#886), so direct s3://
+    // resolution 403s without IAM identity — only publishing uses s3://.
     maven {
-        name = "dit-maven"
-        url = uri("s3://dit-maven")
-        authentication {
-            create<AwsImAuthentication>("awsIm")
-        }
+        name = "dit"
+        url = uri("https://maven.dit.dev")
     }
 }
 
