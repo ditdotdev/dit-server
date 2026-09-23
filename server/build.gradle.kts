@@ -50,7 +50,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:1.5.0")
     implementation("org.jetbrains.exposed:exposed-java-time:1.5.0")
     implementation("com.zaxxer:HikariCP:7.1.0")
-    implementation("joda-time:joda-time:2.14.3")
+    implementation("joda-time:joda-time:2.14.4")
     implementation("io.kubernetes:client-java:27.0.0")
     implementation("io.kubernetes:client-java-api-fluent:27.0.0")
     implementation("dev.dit:command-executor:1.10.2")
