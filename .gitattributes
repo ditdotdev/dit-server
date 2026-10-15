@@ -3,9 +3,11 @@
 # (as with our launch and shell test scripts)
 * text eol=lf
 
-# Windows batch files (namely gradlew.bat) should always be CRLF so they
-# can work as-is on Windows.
-*.bat eol=crlf
+# Windows batch files (namely gradlew.bat) are committed with CRLF, exactly as
+# Gradle ships them and as Dependabot wrapper bumps write them. Leave them
+# untouched: with eol=crlf git expected LF in the repository, so every
+# checkout showed gradlew.bat modified and blocked rebases.
+*.bat -text
 
 # Binary files that should not be modified
 server/zfs/kernel/* binary
