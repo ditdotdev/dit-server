@@ -213,6 +213,15 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_020_CreateCommit() {
 		Properties: map[string]interface{}{},
 	}).Execute()
 	s.e.NoError(err)
+
+	// #313: the commit API must not return until the CSI driver has cut the
+	// snapshot, so the commit is ready the moment CreateCommit returns (no
+	// WaitForCommit here, unlike _021).
+	res, _, err := s.e.CommitApi.GetCommitStatus(s.ctx, "foo", "id").Execute()
+	if s.e.NoError(err) {
+		s.True(res.Ready, "commit must be ready immediately after CreateCommit returns (#313)")
+		s.Empty(res.GetError())
+	}
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_021_CommitStatus() {

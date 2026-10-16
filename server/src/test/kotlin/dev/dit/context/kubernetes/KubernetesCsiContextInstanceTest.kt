@@ -14,6 +14,7 @@ import io.kotlintest.Spec
 import io.kotlintest.TestCase
 import io.kotlintest.TestCaseOrder
 import io.kotlintest.TestResult
+import io.kotlintest.matchers.string.shouldContain
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldNotBe
 import io.kotlintest.shouldThrow
@@ -38,6 +39,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import io.mockk.verifyOrder
 import java.io.File
 import java.nio.file.Files
 import java.util.UUID
@@ -50,6 +52,11 @@ import java.util.UUID
  * for mockk instances via reflection so we never actually talk to a cluster.
  */
 class KubernetesCsiContextInstanceTest : StringSpec() {
+    private companion object {
+        /** A VolumeSnapshot that the CSI driver has already cut (#313). */
+        const val READY_SNAPSHOT_JSON = """{"status":{"readyToUse":true,"creationTime":"2026-10-16T16:34:29Z"}}"""
+    }
+
     private var tempHome: File? = null
     private var savedHome: String? = null
 
@@ -283,6 +290,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
         "commitVolume applies a VolumeSnapshot manifest" {
             val exec = mockk<CommandExecutor>(relaxed = true)
             every { exec.exec(*anyVararg()) } returns ""
+            every { exec.exec("kubectl", "get", "volumesnapshot", any(), "-o", "json") } returns READY_SNAPSHOT_JSON
             val ctx = newMockedContext(executor = exec)
             ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
             verify { exec.exec("kubectl", "apply", "-f", any()) }
@@ -291,6 +299,7 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
         "commitVolume includes snapshotClass when configured" {
             val exec = mockk<CommandExecutor>(relaxed = true)
             every { exec.exec(*anyVararg()) } returns ""
+            every { exec.exec("kubectl", "get", "volumesnapshot", any(), "-o", "json") } returns READY_SNAPSHOT_JSON
             val ctx = newMockedContext(mapOf("snapshotClass" to "csi"), executor = exec)
             ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "10Gi"))
             verify { exec.exec("kubectl", "apply", "-f", any()) }
@@ -347,6 +356,116 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             shouldThrow<CommandException> {
                 ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
             }
+        }
+
+        // --- commitVolume waits for the snapshot (#313) ---
+        //
+        // Before #313 commitVolume returned as soon as `kubectl apply` did, so
+        // the API answered 201 (and the CLI printed "Commit <id>") before the
+        // CSI driver had cut the snapshot. Writes landing in that window were
+        // captured by the commit. These tests pin the synchronous contract:
+        // commitVolume returns only once the VolumeSnapshot reports
+        // readyToUse=true AND a creationTime, fails on a snapshot error, and
+        // is bounded by the snapshotReadyTimeout property.
+
+        "commitVolume returns only after the VolumeSnapshot is readyToUse with a creationTime" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
+            every {
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            } returnsMany
+                listOf(
+                    """{"metadata":{"name":"vs-vol-commit"}}""",
+                    """{"status":{"readyToUse":false}}""",
+                    """{"status":{"readyToUse":true}}""",
+                    """{"status":{"readyToUse":true,"creationTime":"2026-10-16T16:34:29Z"}}""",
+                )
+            val ctx = newMockedContext(executor = exec)
+            val sleeps = mutableListOf<Long>()
+            ctx.sleeper = { sleeps.add(it) }
+
+            ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
+
+            verifyOrder {
+                exec.exec("kubectl", "apply", "-f", any())
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            }
+            verify(exactly = 4) { exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json") }
+            sleeps.size shouldBe 3
+        }
+
+        "commitVolume returns immediately when the snapshot is already ready" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
+            every {
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            } returns """{"status":{"readyToUse":true,"creationTime":"2026-10-16T16:34:29Z"}}"""
+            val ctx = newMockedContext(executor = exec)
+            var sleeps = 0
+            ctx.sleeper = { sleeps++ }
+
+            ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
+
+            verify(exactly = 1) { exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json") }
+            sleeps shouldBe 0
+        }
+
+        "commitVolume throws when the snapshot reports an error" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
+            every {
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            } returns """{"status":{"readyToUse":false,"error":{"message":"snapshot blew up"}}}"""
+            val ctx = newMockedContext(executor = exec)
+            var sleeps = 0
+            ctx.sleeper = { sleeps++ }
+
+            val e =
+                shouldThrow<IllegalStateException> {
+                    ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
+                }
+            e.message!! shouldContain "snapshot blew up"
+            e.message!! shouldContain "vs-vol-commit"
+            // An error is terminal: no further polling.
+            verify(exactly = 1) { exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json") }
+            sleeps shouldBe 0
+        }
+
+        "commitVolume times out when the snapshot never becomes ready" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
+            every {
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            } returns """{"status":{"readyToUse":false}}"""
+            val ctx = newMockedContext(mapOf("snapshotReadyTimeout" to "2"), executor = exec)
+            var sleeps = 0
+            ctx.sleeper = { sleeps++ }
+
+            val e =
+                shouldThrow<IllegalStateException> {
+                    ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
+                }
+            e.message!! shouldContain "timed out"
+            e.message!! shouldContain "vs-vol-commit"
+            // 2s timeout / 1s poll interval = 2 polls, then give up.
+            verify(exactly = 2) { exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json") }
+            sleeps shouldBe 2
+        }
+
+        "commitVolume tolerates a transient kubectl get failure while polling" {
+            val exec = mockk<CommandExecutor>(relaxed = true)
+            every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
+            every {
+                exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
+            } throws
+                CommandException("", 1, "Error from server (NotFound): volumesnapshots \"vs-vol-commit\" not found") andThen
+                READY_SNAPSHOT_JSON
+            val ctx = newMockedContext(executor = exec)
+            ctx.sleeper = { }
+
+            ctx.commitVolume("vs", "commit", "vol", mapOf("pvc" to "vs-vol", "size" to "1Gi"))
+
+            verify(exactly = 2) { exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json") }
         }
 
         // --- deleteVolumeCommit ---

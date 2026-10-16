@@ -71,6 +71,10 @@ import kotlin.io.path.writeText
  *                      default is used when it matches the volume's CSI driver; otherwise the matching
  *                      VolumeSnapshotClass is auto-selected (#217).
  *
+ *      snapshotReadyTimeout
+ *                      Seconds to wait for each commit VolumeSnapshot to report readyToUse (and a
+ *                      creationTime) before the commit fails. Defaults to 300. See #313.
+ *
  *      ditImage      Dit image to use when running operations. This should be the same image as the current
  *                      dit server, and defaults to "dit:latest". It must be accessible from within the
  *                      kubernetes cluster.
@@ -83,6 +87,14 @@ class KubernetesCsiContext(
     private val batchApi: BatchV1Api
     val namespace: String
     internal val executor = CommandExecutor()
+
+    /**
+     * Injectable sleep so the snapshot-readiness poll (#313) is unit-testable without wall-clock waits.
+     */
+    internal var sleeper: (Long) -> Unit = { Thread.sleep(it) }
+
+    private val snapshotReadyTimeoutSeconds: Long =
+        properties["snapshotReadyTimeout"]?.toLongOrNull() ?: DEFAULT_SNAPSHOT_READY_TIMEOUT_SECONDS
     private val gson = GsonBuilder().create()
 
     companion object {
@@ -90,6 +102,38 @@ class KubernetesCsiContext(
 
         /** Sentinel value in the env var that triggers IP auto-discovery. */
         const val HOST_ALIAS_AUTO = "auto"
+
+        /** Default bound on the commitVolume snapshot wait; matches the CLI checkout timeout (#313). */
+        const val DEFAULT_SNAPSHOT_READY_TIMEOUT_SECONDS = 300L
+
+        /** Poll interval for the commitVolume snapshot wait, same cadence as waitForVolumesReady. */
+        const val SNAPSHOT_POLL_INTERVAL_MILLIS = 1000L
+
+        /** Readiness view of a VolumeSnapshot, shared by getCommitStatus and the commitVolume wait (#313). */
+        data class SnapshotReadiness(
+            val ready: Boolean,
+            val error: String?,
+            val creationTime: String? = null,
+        )
+
+        /**
+         * Decide readiness from `kubectl get volumesnapshot -o json` output. kubectl emits
+         * `status.readyToUse` as a JSON boolean; Gson's asString renders either a boolean or a
+         * string primitive as "true", so both shapes are accepted. A missing status means the
+         * snapshot controller has not picked the object up yet.
+         */
+        fun snapshotReadiness(snapshot: JsonObject?): SnapshotReadiness {
+            val status = snapshot?.getAsJsonObject("status") ?: return SnapshotReadiness(ready = false, error = null)
+            val ready = status.get("readyToUse")?.takeIf { it.isJsonPrimitive }?.asString == "true"
+            val error =
+                status
+                    .getAsJsonObject("error")
+                    ?.get("message")
+                    ?.takeIf { it.isJsonPrimitive }
+                    ?.asString
+            val creationTime = status.get("creationTime")?.takeIf { it.isJsonPrimitive }?.asString
+            return SnapshotReadiness(ready = ready, error = error, creationTime = creationTime)
+        }
 
         /** Snapshot-capability view of a cluster StorageClass. */
         data class StorageClassInfo(
@@ -631,6 +675,11 @@ class KubernetesCsiContext(
      * v1alpha1 → v1 field shape changes captured here:
      *   - spec.source.{kind, name}        →  spec.source.persistentVolumeClaimName
      *   - spec.snapshotClassName          →  spec.volumeSnapshotClassName
+     *
+     * Returns only once the driver has actually cut the snapshot (readyToUse + creationTime), so the API
+     * answering 201 and the CLI printing "Commit <id>" mean the snapshot point has passed, the same
+     * semantics as the synchronous ZFS snapshot on Docker contexts (#313). A snapshot error fails the
+     * commit (CommitOrchestrator then rolls back the metadata row and the snapshot).
      */
     override fun commitVolume(
         volumeSet: String,
@@ -672,6 +721,7 @@ class KubernetesCsiContext(
                     ""
                 }
         applyYaml(yaml, "VolumeSnapshot/$name")
+        waitForSnapshotReady(name)
     }
 
     override fun deleteVolumeCommit(
@@ -863,6 +913,40 @@ class KubernetesCsiContext(
         return json.asJsonObject
     }
 
+    /**
+     * Block until the VolumeSnapshot named [name] reports readyToUse=true and a creationTime, or fail.
+     * A transient `kubectl get` failure (the object can lag the apply for a moment) counts as "not yet".
+     * A `status.error` is terminal: the driver gave up, so the commit must fail rather than hang. See #313.
+     */
+    private fun waitForSnapshotReady(name: String) {
+        val maxPolls = maxOf(1L, snapshotReadyTimeoutSeconds * 1000 / SNAPSHOT_POLL_INTERVAL_MILLIS)
+        val started = System.currentTimeMillis()
+        for (poll in 1..maxPolls) {
+            val snapshot =
+                try {
+                    getSnapshot(name)
+                } catch (e: CommandException) {
+                    log.debug("VolumeSnapshot '$name' not readable yet (poll $poll): ${e.output.trim()}")
+                    null
+                }
+            val readiness = snapshotReadiness(snapshot)
+            if (readiness.error != null) {
+                throw IllegalStateException("VolumeSnapshot '$name' failed: ${readiness.error}")
+            }
+            if (readiness.ready && !readiness.creationTime.isNullOrBlank()) {
+                log.info(
+                    "VolumeSnapshot '$name' readyToUse (creationTime ${readiness.creationTime}) after " +
+                        "${System.currentTimeMillis() - started}ms",
+                )
+                return
+            }
+            sleeper(SNAPSHOT_POLL_INTERVAL_MILLIS)
+        }
+        throw IllegalStateException(
+            "timed out after ${snapshotReadyTimeoutSeconds}s waiting for VolumeSnapshot '$name' to become readyToUse",
+        )
+    }
+
     override fun getCommitStatus(
         volumeSet: String,
         commitId: String,
@@ -874,17 +958,12 @@ class KubernetesCsiContext(
         for (v in volumeNames) {
             val snapshotName = "$volumeSet-$v-$commitId"
             val snapshot = getSnapshot(snapshotName)
-            val status = snapshot?.getAsJsonObject("status")
-
-            if (status == null) {
+            val readiness = snapshotReadiness(snapshot)
+            if (!readiness.ready) {
                 ready = false
-            } else if (status.get("readyToUse") != null) {
-                if (status.get("readyToUse").asString != "true") {
-                    ready = false
-                }
-                if (error == null) {
-                    error = status.getAsJsonObject("error")?.get("message")?.asString
-                }
+            }
+            if (error == null) {
+                error = readiness.error
             }
 
             val sizeLabel =
