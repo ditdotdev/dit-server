@@ -457,8 +457,9 @@ class KubernetesCsiContextInstanceTest : StringSpec() {
             every { exec.exec("kubectl", "apply", "-f", any()) } returns ""
             every {
                 exec.exec("kubectl", "get", "volumesnapshot", "vs-vol-commit", "-o", "json")
-            } throws CommandException("", 1, "Error from server (NotFound): volumesnapshots.snapshot.storage.k8s.io \"vs-vol-commit\" not found") andThen
-                """{"status":{"readyToUse":true,"creationTime":"2026-10-16T16:34:29Z"}}"""
+            } throws
+                CommandException("", 1, "Error from server (NotFound): volumesnapshots \"vs-vol-commit\" not found") andThen
+                READY_SNAPSHOT_JSON
             val ctx = newMockedContext(executor = exec)
             ctx.sleeper = { }
 
