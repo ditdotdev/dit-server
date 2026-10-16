@@ -24,6 +24,9 @@
 
 set -x
 
+# JVM command line per context (BATS-tested in tests/test_context.bats).
+source "$(dirname "$0")/context.sh"
+
 #
 # Return a timestamp to use in log messages and elsewhere.
 #
@@ -129,11 +132,11 @@ if [[ $DIT_CONTEXT = "docker-zfs" ]]; then
   # loopback; the user is the operator and the stack helps diagnose
   # ZFS / Docker plumbing issues. NOT set in dit-remote-server
   # which fronts the API to remote clients.
-  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=pool=$DIT_IDENTITY -Ddit.debug=true -jar /dit/dit-server.jar
+  exec java $(server_java_args)
 elif [[ $DIT_CONTEXT = "kubernetes-csi" ]]; then
   start_database $DB_DIR
 
-  exec java -Ddit.context=$DIT_CONTEXT -Ddit.contextConfig=$DIT_CONTEXT_CONFIG -Ddit.debug=true -Djdk.tls.client.protocols=TLSv1.2 -jar /dit/dit-server.jar
+  exec java $(server_java_args)
 else
   log_error "Unknown context $DIT_CONTEXT"
 fi

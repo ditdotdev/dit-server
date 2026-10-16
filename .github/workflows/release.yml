@@ -51,7 +51,7 @@ jobs:
           echo "Checking for ZFS module compatibility..."
           apt-cache search "linux-modules-$(uname -r)" || echo "No exact kernel modules found"
           apt-cache search "linux-modules-extra-$(uname -r)" || echo "No extra kernel modules found"
-          go test -p 1 -v ./test/docker ./test/remote
+          go test -p 1 -v ./test/common ./test/docker ./test/remote
         env:
           # Per-run S3 prefix isolates concurrent CI runs so their suites do
           # not clobber each other's commits. See issue #156.

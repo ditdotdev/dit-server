@@ -192,7 +192,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_012_LaunchPod() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_013_WriteData() {
-	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo one > /data/out; sync; sleep 1;").Run() // #nosec G204,G702 - controlled kubectl command in test
+	_, err := s.e.KubectlExec(s.pod1, "sh", "-c", "echo one > /data/out; sync; sleep 1;")
 	s.e.NoError(err)
 }
 
@@ -236,7 +236,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_021_CommitStatus() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_022_UpdateData() {
-	err := exec.Command("kubectl", "exec", s.pod1, "--", "sh", "-c", "echo two > /data/out; sync; sleep 1;").Run() // #nosec G204,G702 - controlled kubectl command in test
+	_, err := s.e.KubectlExec(s.pod1, "sh", "-c", "echo two > /data/out; sync; sleep 1;")
 	s.e.NoError(err)
 }
 
@@ -263,7 +263,7 @@ func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_031_LaunchNewPod() {
 }
 
 func (s *KubernetesWorkflowTestSuite) TestKubernetesConfig_032_VerifyContents() {
-	out, err := exec.Command("kubectl", "exec", s.pod2, "cat", "/data/out").Output() // #nosec G204,G702 - controlled kubectl command in test
+	out, err := s.e.KubectlExec(s.pod2, "cat", "/data/out")
 	if s.e.NoError(err) {
 		s.Equal("one", strings.TrimSpace(string(out)))
 	}

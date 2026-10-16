@@ -157,7 +157,23 @@ There are three types of tests:
     In CI, this is set via the `S3_TEST_LOCATION` GitHub secret (both repo and dependabot).
     These tests will eventually be moved into the corresponding remote repositories.
   * `kubernetes` - Runs tests dependent on kubernetes. Must have a working, supported kubernetes cluster as the
-    default cluster.
+    default (current) kubectl context, with a snapshot-capable storage class (on minikube: the
+    `csi-hostpath-driver` and `volumesnapshots` addons). Not run in CI. Run it on its own with
+    `go test -p 1 -v ./test/kubernetes`. Environment variables:
+      * `DIT_IMAGE` - the server image the test server launches in the cluster (default `ditdotdev/dit:latest`).
+        The test server container itself is `dit:latest`, so build and tag a local image first with
+        `./gradlew shadowJar buildDockerServer tagLocalDockerServer`.
+      * `KUBERNETES_CONFIG` - comma-separated `name=value` context properties for the workflow suite
+        (e.g. `storageClass=csi-hostpath-sc,snapshotClass=csi-hostpath-snapclass`). The harness forwards them
+        to the server container as `DIT_CONTEXT_CONFIG`, the variable `/dit/run` reads.
+    The harness flattens `~/.kube/config` into `~/.dit/e2e-kubeconfig-test` before mounting it, so kubeconfigs
+    that reference certificate files by path (minikube's default, including Windows paths) work without a
+    manual `kubectl config view --flatten`. After a failed run, clean up with
+    `docker rm -f test-server; docker volume rm test-data`.
+
+The server shell scripts have BATS tests under `server/src/scripts/tests`. Run them with
+`bats server/src/scripts/tests/` (needs `npm install -g bats`) or `./gradlew testShell` from `server/`
+(uses the `bats/bats` Docker image; skipped when `CI` is set).
     
 If you want to run all of the endtoend tests, note that `go test` by default runs different packages in paralell. You
 will need to explicitly use `go test -p 1`, such as `go test -p 1 ./test/...`

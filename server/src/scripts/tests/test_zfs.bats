@@ -22,14 +22,14 @@ setup() {
 
     # Create mock lsmod that returns no ZFS by default
     cat > "$TEST_TMPDIR/bin/lsmod" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Module                  Size  Used by"
 MOCK
     chmod +x "$TEST_TMPDIR/bin/lsmod"
 
     # Create mock zfs command that fails by default
     cat > "$TEST_TMPDIR/bin/zfs" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/zfs"
@@ -55,7 +55,7 @@ teardown() {
 
 @test "is_zfs_loaded returns true when ZFS is in lsmod (module loaded)" {
     cat > "$TEST_TMPDIR/bin/lsmod" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Module                  Size  Used by"
 echo "zfs                  3145728  5"
 echo "spl                   131072  1 zfs"
@@ -97,7 +97,7 @@ EOF
 
 @test "is_zfs_loaded prefers lsmod check (both lsmod and proc/filesystems have ZFS)" {
     cat > "$TEST_TMPDIR/bin/lsmod" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Module                  Size  Used by"
 echo "zfs                  3145728  5"
 MOCK
@@ -129,7 +129,7 @@ EOF
 
     # Mock zfs version command to return version info
     cat > "$TEST_TMPDIR/bin/zfs" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 if [ "$1" = "version" ]; then
     echo "zfs-2.3.4-1"
     echo "zfs-kmod-2.3.4-1"
@@ -149,7 +149,7 @@ MOCK
 
     # zfs command fails (not installed)
     cat > "$TEST_TMPDIR/bin/zfs" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/zfs"
@@ -193,7 +193,7 @@ MOCK
 
 @test "detect_package_manager returns apt when apt-get available" {
     cat > "$TEST_TMPDIR/bin/apt-get" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/apt-get"
@@ -207,7 +207,7 @@ MOCK
     # Remove apt-get if present
     rm -f "$TEST_TMPDIR/bin/apt-get"
     cat > "$TEST_TMPDIR/bin/dnf" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/dnf"
@@ -260,7 +260,7 @@ MOCK
 
 @test "check_zfs_in_repos returns true when apt-cache finds zfsutils-linux" {
     cat > "$TEST_TMPDIR/bin/apt-cache" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 if [ "$1" = "show" ] && [ "$2" = "zfsutils-linux" ]; then
     echo "Package: zfsutils-linux"
     exit 0
@@ -275,7 +275,7 @@ MOCK
 
 @test "check_zfs_in_repos returns false when package not found" {
     cat > "$TEST_TMPDIR/bin/apt-cache" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/apt-cache"
@@ -316,7 +316,7 @@ MOCK
 @test "install_zfs_packages fails when CONFIG_MODULES not supported" {
     # Mock apt-get that handles all subcommands
     cat > "$TEST_TMPDIR/bin/apt-get" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/apt-get"
@@ -326,14 +326,14 @@ MOCK
 
     # modprobe --dry-run fails (no module support)
     cat > "$TEST_TMPDIR/bin/modprobe" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/modprobe"
 
     # No boot config either
     cat > "$TEST_TMPDIR/bin/uname" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "fake-kernel"
 MOCK
     chmod +x "$TEST_TMPDIR/bin/uname"
@@ -350,7 +350,7 @@ MOCK
 @test "install_zfs_packages fails when ZFS not in repos" {
     # Mock apt-get that handles all subcommands without calling real apt
     cat > "$TEST_TMPDIR/bin/apt-get" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/apt-get"
@@ -361,14 +361,14 @@ MOCK
 
     # ZFS not in repos
     cat > "$TEST_TMPDIR/bin/apt-cache" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/apt-cache"
 
     # dpkg says not installed
     cat > "$TEST_TMPDIR/bin/dpkg" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/dpkg"
@@ -397,21 +397,21 @@ MOCK
 
     # Mock curl (won't be called since files already cached)
     cat > "$TEST_TMPDIR/bin/curl" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/curl"
 
     # Mock insmod to succeed
     cat > "$TEST_TMPDIR/bin/insmod" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 0
 MOCK
     chmod +x "$TEST_TMPDIR/bin/insmod"
 
     # Mock lsmod to show ZFS loaded after insmod
     cat > "$TEST_TMPDIR/bin/lsmod" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Module                  Size  Used by"
 echo "zfs                  3145728  0"
 echo "spl                   131072  1 zfs"
@@ -420,7 +420,7 @@ MOCK
 
     # Mock check_zfs_device
     cat > "$TEST_TMPDIR/bin/cat" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 echo "10 249"
 MOCK
     chmod +x "$TEST_TMPDIR/bin/cat"
@@ -439,7 +439,7 @@ MOCK
 
     # Mock curl to fail (no modules available for this kernel)
     cat > "$TEST_TMPDIR/bin/curl" << 'MOCK'
-#!/bin/bash
+#!/usr/bin/env bash
 exit 1
 MOCK
     chmod +x "$TEST_TMPDIR/bin/curl"
