@@ -13,11 +13,15 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 const dockerZfsContext = "docker-zfs"
+
+// execSubcommand is the "exec" subcommand shared by docker and kubectl.
+const execSubcommand = "exec"
 
 /*
  * Utility class for managing endtoend tests of dit-server. There are two types of
@@ -108,12 +112,26 @@ func (e *EndToEndTest) RunDitDocker(entryPoint string, daemon bool) error {
 
 /*
  * Run an entry point within kubernetes. This always spawns it as a daemon, and runs dit-server directly without
- * going through the launch script.
+ * going through the launch script. The host kubeconfig is flattened first so that certificate file references
+ * (which the container cannot read, and which are Windows paths on a Windows host) are inlined (issue #327).
  */
 func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string) error {
+	kubeconfig := filepath.Join(e.HomeDir, ".dit", fmt.Sprintf("e2e-kubeconfig-%s", e.Identity))
+	if err := flattenKubeconfig(filepath.Join(e.HomeDir, ".kube", "config"), kubeconfig); err != nil {
+		return err
+	}
+	args := e.kubernetesRunArgs(entryPoint, kubeconfig, parameters...)
+	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
+}
+
+/*
+ * Build the "docker run" arguments for the kubernetes-csi server container. The context properties are
+ * forwarded as DIT_CONTEXT_CONFIG, the variable /dit/run passes to the JVM as -Ddit.contextConfig (#208, #327).
+ */
+func (e *EndToEndTest) kubernetesRunArgs(entryPoint string, kubeconfig string, parameters ...string) []string {
 	imageSpecified := false
 	for _, p := range parameters {
-		if strings.Index(p, "ditImage=") == 0 {
+		if strings.HasPrefix(p, "ditImage=") {
 			imageSpecified = true
 			break
 		}
@@ -126,18 +144,37 @@ func (e *EndToEndTest) RunDitKubernetes(entryPoint string, parameters ...string)
 		parameters = append(parameters, fmt.Sprintf("ditImage=%s", image))
 	}
 
-	args := []string{
+	return []string{
 		"run", "-d", "--restart", "always", "--name", e.GetPrimaryContainer(),
-		"-v", fmt.Sprintf("%s/.kube:/root/.kube", e.HomeDir),
+		"-v", fmt.Sprintf("%s:/root/.kube/config:ro", kubeconfig),
 		"-v", fmt.Sprintf("%s-data:/var/lib/%s", e.Identity, e.Identity),
 		"-e", "DIT_CONTEXT=kubernetes-csi",
 		"-e", fmt.Sprintf("DIT_IDENTITY=%s", e.Identity),
-		"-e", fmt.Sprintf("DIT_CONFIG=%s", strings.Join(parameters, ",")),
+		"-e", fmt.Sprintf("DIT_CONTEXT_CONFIG=%s", strings.Join(parameters, ",")),
 		"-p", fmt.Sprintf("%d:5001", e.Port), e.Image, "/bin/bash",
 		fmt.Sprintf("/dit/%s", entryPoint),
 	}
+}
 
-	return exec.Command("docker", args...).Run() // #nosec G204,G702 - controlled docker command in test
+/*
+ * Build the arguments for running a command in a pod. kubectl no longer accepts "exec POD COMMAND"; the command
+ * must follow "--" (issue #327).
+ */
+func kubectlExecArgs(pod string, command ...string) []string {
+	args := []string{execSubcommand, pod, "--"}
+	return append(args, command...)
+}
+
+/*
+ * Run a command in a pod via kubectl. stdout and stderr are combined so that a failure message (such as the
+ * kubectl usage error or a missing file) is visible in the test output rather than discarded.
+ */
+func (e *EndToEndTest) KubectlExec(pod string, command ...string) (string, error) {
+	out, err := exec.Command("kubectl", kubectlExecArgs(pod, command...)...).CombinedOutput() // #nosec G204,G702 - controlled kubectl command in test
+	if err != nil {
+		return string(out), fmt.Errorf("kubectl exec %s %v: %w: %s", pod, command, err, strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
 }
 
 /*
@@ -252,7 +289,7 @@ func (e *EndToEndTest) GetVolumePath(repo string, volume string) (string, error)
  * Execute a command on the server container.
  */
 func (e *EndToEndTest) ExecServer(args ...string) (string, error) {
-	fullArgs := []string{"exec", e.GetContainer("server")}
+	fullArgs := []string{execSubcommand, e.GetContainer("server")}
 	fullArgs = append(fullArgs, args...)
 	out, err := exec.Command("docker", fullArgs...).Output() // #nosec G204,G702 - controlled docker command in test
 	if err != nil {
@@ -271,7 +308,7 @@ func (e *EndToEndTest) WriteFile(repo string, volume string, filename string, co
 		return err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	return exec.Command("docker", "exec", e.GetContainer("server"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
+	return exec.Command("docker", execSubcommand, e.GetContainer("server"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
 		fmt.Sprintf("echo -n \"%s\" > %s", content, path)).Run()
 }
 
@@ -284,7 +321,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
 		return "", err
 	}
 	path := fmt.Sprintf("%s/%s", mountpoint, filename)
-	out, err := exec.Command("docker", "exec", e.GetContainer("server"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
+	out, err := exec.Command("docker", execSubcommand, e.GetContainer("server"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -295,7 +332,7 @@ func (e *EndToEndTest) ReadFile(repo string, volume string, filename string) (st
  * Check to see whether the given path exists on the server
  */
 func (e *EndToEndTest) PathExists(path string) bool {
-	err := exec.Command("docker", "exec", e.GetContainer("server"), "ls", path).Run() // #nosec G204,G702 - controlled docker command in test
+	err := exec.Command("docker", execSubcommand, e.GetContainer("server"), "ls", path).Run() // #nosec G204,G702 - controlled docker command in test
 	return err != nil
 }
 
@@ -303,12 +340,12 @@ func (e *EndToEndTest) PathExists(path string) bool {
  * Write to a file on the SSH server.
  */
 func (e *EndToEndTest) WriteFileSsh(path string, content string) error {
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
+	return exec.Command("docker", execSubcommand, e.GetContainer("ssh"), "sh", "-c", // #nosec G204,G702 - controlled docker exec command in test
 		fmt.Sprintf("echo \"%s\" > %s", content, path)).Run()
 }
 
 func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
-	out, err := exec.Command("docker", "exec", e.GetContainer("ssh"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
+	out, err := exec.Command("docker", execSubcommand, e.GetContainer("ssh"), "cat", path).Output() // #nosec G204,G702 - controlled docker exec command in test
 	if err != nil {
 		return "", err
 	}
@@ -316,11 +353,11 @@ func (e *EndToEndTest) ReadFileSsh(path string) (string, error) {
 }
 
 func (e *EndToEndTest) MkdirSsh(path string) error {
-	err := exec.Command("docker", "exec", e.GetContainer("ssh"), "mkdir", "-p", path).Run() // #nosec G204,G702 - controlled docker command in test
+	err := exec.Command("docker", execSubcommand, e.GetContainer("ssh"), "mkdir", "-p", path).Run() // #nosec G204,G702 - controlled docker command in test
 	if err != nil {
 		return err
 	}
-	return exec.Command("docker", "exec", e.GetContainer("ssh"), "chown", sshUser, path).Run() // #nosec G204,G702 - controlled docker command in test
+	return exec.Command("docker", execSubcommand, e.GetContainer("ssh"), "chown", sshUser, path).Run() // #nosec G204,G702 - controlled docker command in test
 }
 
 func (e *EndToEndTest) StartSsh() error {
