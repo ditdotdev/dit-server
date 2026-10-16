@@ -3,6 +3,7 @@
 
 package dev.dit.context.kubernetes
 
+import com.google.gson.JsonParser
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
 
@@ -146,6 +147,44 @@ class KubernetesCsiContextTest : StringSpec() {
                 KubernetesCsiContext.resolveHostAliasEntries("no-equals,worker=,real=10.0.0.1") { null }
             out.size shouldBe 1
             out[0].hostnames shouldBe listOf("real")
+        }
+
+        // snapshotReadiness is the single readiness decision shared by
+        // getCommitStatus and the synchronous commitVolume wait (#313), so
+        // the two code paths cannot drift.
+
+        "snapshotReadiness reports not ready for a null snapshot" {
+            val r = KubernetesCsiContext.snapshotReadiness(null)
+            r.ready shouldBe false
+            r.error shouldBe null
+        }
+
+        "snapshotReadiness reports not ready when status is missing" {
+            val r = KubernetesCsiContext.snapshotReadiness(JsonParser.parseString("""{"metadata":{}}""").asJsonObject)
+            r.ready shouldBe false
+        }
+
+        "snapshotReadiness accepts a JSON boolean readyToUse (what kubectl emits)" {
+            val r = KubernetesCsiContext.snapshotReadiness(JsonParser.parseString("""{"status":{"readyToUse":true}}""").asJsonObject)
+            r.ready shouldBe true
+        }
+
+        "snapshotReadiness accepts a string readyToUse" {
+            val r = KubernetesCsiContext.snapshotReadiness(JsonParser.parseString("""{"status":{"readyToUse":"true"}}""").asJsonObject)
+            r.ready shouldBe true
+        }
+
+        "snapshotReadiness reports not ready for readyToUse false" {
+            val r = KubernetesCsiContext.snapshotReadiness(JsonParser.parseString("""{"status":{"readyToUse":false}}""").asJsonObject)
+            r.ready shouldBe false
+            r.error shouldBe null
+        }
+
+        "snapshotReadiness surfaces the snapshot error message" {
+            val json = """{"status":{"readyToUse":false,"error":{"message":"snapshot blew up"}}}"""
+            val r = KubernetesCsiContext.snapshotReadiness(JsonParser.parseString(json).asJsonObject)
+            r.ready shouldBe false
+            r.error shouldBe "snapshot blew up"
         }
     }
 }
