@@ -51,8 +51,8 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-java-time:1.6.0")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("joda-time:joda-time:2.15.0")
-    implementation("io.kubernetes:client-java:27.0.0")
-    implementation("io.kubernetes:client-java-api-fluent:27.0.0")
+    implementation("io.kubernetes:client-java:27.0.1")
+    implementation("io.kubernetes:client-java-api-fluent:27.0.1")
     implementation("dev.dit:command-executor:1.10.2")
 
     // Remote dependencies - conditionally included via composite build or skipped in CI
