@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Verify release tag
+        uses: ditdotdev/.github/actions/verify-release-tag@master
+        with:
+          prefix: v
       - uses: actions/setup-java@v6
         with:
           java-version: '17'
