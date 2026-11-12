@@ -152,7 +152,7 @@ There are three types of tests:
   * `docker` - Runs local workflows using docker. Should be runnable on any system that supports dit with ZFS.
   * `remote` - Runs tests for each of the remotes. In addition to having dit server running locally with docker,
     these tests require additional configuration, with `S3_LOCATION` set in the environment to a S3 bucket and path
-    in the format `bucket/path` (e.g. `dit-maven/titan-e2e-tests`). The bucket must have public read access
+    in the format `bucket/path` (e.g. `dit-testdata/e2e`). The bucket must have public read access
     and a ListBucket policy for the path prefix, as the S3Web tests access objects over HTTP.
     In CI, this is set via the `S3_TEST_LOCATION` GitHub secret (both repo and dependabot).
     These tests will eventually be moved into the corresponding remote repositories.
