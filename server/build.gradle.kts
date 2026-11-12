@@ -37,7 +37,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.postgresql:postgresql:42.7.14")
     implementation("org.jetbrains.exposed:exposed-core:1.6.1")
-    implementation("org.jetbrains.exposed:exposed-dao:1.6.0")
+    implementation("org.jetbrains.exposed:exposed-dao:1.6.1")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.6.1")
     implementation("org.jetbrains.exposed:exposed-java-time:1.6.0")
     implementation("com.zaxxer:HikariCP:7.1.0")
